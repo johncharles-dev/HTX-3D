@@ -1,0 +1,34 @@
+# Model weights (large, download separately)
+weights/
+!weights/.gitkeep
+
+# Gallery data
+gallery/
+!gallery/.gitkeep
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+.env
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Docker
+docker/.env
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp
+/tmp/
+**/tmp/
+*.log
+

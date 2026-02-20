@@ -1,0 +1,133 @@
+import type { TaskResponse, GenerationResult, GalleryItem, HealthStatus, GenerationSettings, ExportSettings, MultiImageMode } from '../types';
+
+const API_BASE = '/api';
+
+async function request<T>(url: string, options?: RequestInit): Promise<T> {
+  const res = await fetch(`${API_BASE}${url}`, options);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || `Request failed: ${res.status}`);
+  }
+  return res.json();
+}
+
+// ── Generation ────────────────────────────────────────
+
+export async function generateFromImage(
+  image: File,
+  settings: GenerationSettings,
+  exportSettings: ExportSettings,
+): Promise<TaskResponse> {
+  const form = new FormData();
+  form.append('image', image);
+  form.append('seed', String(settings.seed));
+  form.append('randomize_seed', String(settings.randomizeSeed));
+  form.append('ss_steps', String(settings.ssSteps));
+  form.append('ss_guidance', String(settings.ssGuidance));
+  form.append('slat_steps', String(settings.slatSteps));
+  form.append('slat_guidance', String(settings.slatGuidance));
+  form.append('formats', exportSettings.formats.join(','));
+  form.append('mesh_simplify', String(exportSettings.meshSimplify));
+  form.append('texture_size', String(exportSettings.textureSize));
+
+  return request<TaskResponse>('/generate/image', { method: 'POST', body: form });
+}
+
+export async function generateFromMultiImage(
+  images: File[],
+  mode: MultiImageMode,
+  settings: GenerationSettings,
+  exportSettings: ExportSettings,
+): Promise<TaskResponse> {
+  const form = new FormData();
+  images.forEach((img) => form.append('images', img));
+  form.append('mode', mode);
+  form.append('seed', String(settings.seed));
+  form.append('randomize_seed', String(settings.randomizeSeed));
+  form.append('ss_steps', String(settings.ssSteps));
+  form.append('ss_guidance', String(settings.ssGuidance));
+  form.append('slat_steps', String(settings.slatSteps));
+  form.append('slat_guidance', String(settings.slatGuidance));
+  form.append('formats', exportSettings.formats.join(','));
+  form.append('mesh_simplify', String(exportSettings.meshSimplify));
+  form.append('texture_size', String(exportSettings.textureSize));
+
+  return request<TaskResponse>('/generate/multi-image', { method: 'POST', body: form });
+}
+
+export async function generateFromText(
+  prompt: string,
+  settings: GenerationSettings,
+  exportSettings: ExportSettings,
+): Promise<TaskResponse> {
+  const form = new FormData();
+  form.append('prompt', prompt);
+  form.append('seed', String(settings.seed));
+  form.append('randomize_seed', String(settings.randomizeSeed));
+  form.append('ss_steps', String(settings.ssSteps));
+  form.append('ss_guidance', String(settings.ssGuidance));
+  form.append('slat_steps', String(settings.slatSteps));
+  form.append('slat_guidance', String(settings.slatGuidance));
+  form.append('formats', exportSettings.formats.join(','));
+  form.append('mesh_simplify', String(exportSettings.meshSimplify));
+  form.append('texture_size', String(exportSettings.textureSize));
+
+  return request<TaskResponse>('/generate/text', { method: 'POST', body: form });
+}
+
+// ── Text-Guided Edit ──────────────────────────────────
+
+export async function editWithText(
+  prompt: string,
+  settings: GenerationSettings,
+  exportSettings: ExportSettings,
+  baseTaskId?: string,
+  meshFile?: File,
+): Promise<TaskResponse> {
+  const form = new FormData();
+  form.append('prompt', prompt);
+  form.append('seed', String(settings.seed));
+  form.append('randomize_seed', String(settings.randomizeSeed));
+  form.append('slat_steps', String(settings.slatSteps));
+  form.append('slat_guidance', String(settings.slatGuidance));
+  form.append('formats', exportSettings.formats.join(','));
+  form.append('mesh_simplify', String(exportSettings.meshSimplify));
+  form.append('texture_size', String(exportSettings.textureSize));
+  if (baseTaskId) form.append('base_task_id', baseTaskId);
+  if (meshFile) form.append('mesh_file', meshFile);
+
+  return request<TaskResponse>('/generate/edit', { method: 'POST', body: form });
+}
+
+// ── Task ──────────────────────────────────────────────
+
+export async function getTaskStatus(taskId: string): Promise<GenerationResult> {
+  return request<GenerationResult>(`/task/${taskId}`);
+}
+
+// ── Gallery ───────────────────────────────────────────
+
+export async function getGallery(page = 1, perPage = 20): Promise<{ items: GalleryItem[]; total: number }> {
+  return request(`/gallery?page=${page}&per_page=${perPage}`);
+}
+
+export async function deleteGalleryItem(taskId: string): Promise<void> {
+  await request(`/gallery/${taskId}`, { method: 'DELETE' });
+}
+
+// ── Health ────────────────────────────────────────────
+
+export async function getHealth(): Promise<HealthStatus> {
+  return request('/health');
+}
+
+// ── WebSocket ─────────────────────────────────────────
+
+export function connectProgress(taskId: string, onMessage: (data: any) => void, onClose?: () => void): WebSocket {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const ws = new WebSocket(`${protocol}//${window.location.host}/ws/progress/${taskId}`);
+  ws.onmessage = (e) => onMessage(JSON.parse(e.data));
+  ws.onclose = () => onClose?.();
+  ws.onerror = () => onClose?.();
+  return ws;
+}

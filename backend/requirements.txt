@@ -1,0 +1,19 @@
+# FastAPI backend
+fastapi>=0.110.0
+uvicorn[standard]>=0.27.0
+python-multipart>=0.0.9
+websockets>=12.0
+pydantic>=2.0,<2.10
+
+# Image processing
+Pillow>=10.0
+imageio>=2.34
+imageio-ffmpeg>=0.4.9
+
+# GPU / ML (installed separately via CUDA-specific wheels)
+# torch>=2.7.0
+# torchvision
+# numpy
+
+# TRELLIS dependencies (from engine)
+# trimesh, xatlas, pyvista, rembg, etc. — installed with engine

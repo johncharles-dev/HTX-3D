@@ -1,0 +1,37 @@
+services:
+  htx-3d:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: htx-3d
+    ports:
+      - "8000:8000"
+    volumes:
+      # Model weights (download once, persist across rebuilds)
+      - ../weights:/app/weights
+      # Gallery storage (generated 3D models)
+      - ../gallery:/app/gallery
+    environment:
+      - XFORMERS_DISABLED=1
+      - ATTN_BACKEND=sdpa
+      - WEIGHTS_DIR=/app/weights
+      - GALLERY_DIR=/app/gallery
+      - CORS_ORIGINS=http://localhost:5173,http://localhost:8000
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+
+  # Optional: standalone frontend dev server (for development only)
+  # frontend-dev:
+  #   image: node:20-slim
+  #   working_dir: /app
+  #   volumes:
+  #     - ../frontend:/app
+  #   ports:
+  #     - "5173:5173"
+  #   command: sh -c "npm install && npm run dev -- --host"
