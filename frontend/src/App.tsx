@@ -312,6 +312,18 @@ export default function App() {
     <div className="h-screen flex flex-col overflow-hidden">
       <Header activeTab={activeTab} onTabChange={setActiveTab} health={health} />
 
+      {/* Segmentation modal — renders on top of everything */}
+      {showSegmentation && imageFiles.length === 1 && (
+        <SegmentationWorkspace
+          imageFile={imageFiles[0]}
+          onConfirm={(path) => {
+            setSegmentedImagePath(path);
+            setShowSegmentation(false);
+          }}
+          onCancel={() => setShowSegmentation(false)}
+        />
+      )}
+
       {activeTab === 'gallery' ? (
         <main className="flex-1 overflow-auto p-6">
           <Gallery onPreview={handleGalleryPreview} />
@@ -402,8 +414,8 @@ export default function App() {
                     </div>
                   )}
 
-                  {/* Segmentation section — only for single image mode */}
-                  {inputMode === 'single' && imageFiles.length === 1 && !showSegmentation && !segmentedImagePath && (
+                  {/* Segmentation buttons — only for single image mode */}
+                  {inputMode === 'single' && imageFiles.length === 1 && !segmentedImagePath && (
                     <div className="flex gap-2">
                       <button
                         onClick={() => setShowSegmentation(true)}
@@ -420,17 +432,6 @@ export default function App() {
                         Skip
                       </button>
                     </div>
-                  )}
-
-                  {showSegmentation && imageFiles.length === 1 && (
-                    <SegmentationWorkspace
-                      imageFile={imageFiles[0]}
-                      onConfirm={(path) => {
-                        setSegmentedImagePath(path);
-                        setShowSegmentation(false);
-                      }}
-                      onCancel={() => setShowSegmentation(false)}
-                    />
                   )}
 
                   {segmentedImagePath && (

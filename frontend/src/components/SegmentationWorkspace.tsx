@@ -1,12 +1,19 @@
-import { useState } from 'react';
-import { Wand2, RotateCcw, Check, X, MousePointer2 } from 'lucide-react';
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { Wand2, RotateCcw, Check, X, Plus, Minus, Type, Undo2 } from 'lucide-react';
 import type { MaskResult } from '../types/segmentation';
 import {
   startSegmentation,
   segmentText,
+  segmentPoints,
   resetSegmentation,
   confirmSegmentation,
 } from '../api/segmentation';
+
+interface PointPrompt {
+  x: number;
+  y: number;
+  label: number; // 1 = add, 0 = remove
+}
 
 interface Props {
   imageFile: File;
@@ -16,40 +23,79 @@ interface Props {
 
 export default function SegmentationWorkspace({ imageFile, onConfirm, onCancel }: Props) {
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [prompt, setPrompt] = useState('');
+  const [textPrompt, setTextPrompt] = useState('');
+  const [points, setPoints] = useState<PointPrompt[]>([]);
+  const [pointMode, setPointMode] = useState<'add' | 'remove'>('add');
   const [masks, setMasks] = useState<MaskResult[]>([]);
   const [selectedMask, setSelectedMask] = useState(0);
   const [overlayUrl, setOverlayUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [imageUrl] = useState(() => URL.createObjectURL(imageFile));
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
 
-  const handleStartAndSegment = async () => {
-    if (!prompt.trim()) return;
+  // Close on Escape
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onCancel]);
+
+  // Initialize session on mount
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const res = await startSegmentation(imageFile);
+        if (!cancelled) setSessionId(res.session_id);
+      } catch (e: any) {
+        if (!cancelled) setError(e.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [imageFile]);
+
+  const handleCanvasClick = useCallback(async (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!sessionId || loading) return;
+    const rect = imgRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    if (x < 0 || x > 1 || y < 0 || y > 1) return;
+
+    const label = pointMode === 'add' ? 1 : 0;
+    const newPoints = [...points, { x, y, label }];
+    setPoints(newPoints);
     setLoading(true);
     setError(null);
-
     try {
-      let sid = sessionId;
-      if (!sid) {
-        const res = await startSegmentation(imageFile);
-        sid = res.session_id;
-        setSessionId(sid);
-      }
-
-      const segResult = await segmentText(sid, prompt);
-      setMasks(segResult.masks);
-      setOverlayUrl(segResult.overlay_url || null);
+      const result = await segmentPoints(sessionId, newPoints.map(p => [p.x, p.y]), newPoints.map(p => p.label));
+      setMasks(result.masks);
+      setOverlayUrl(result.overlay_url ? result.overlay_url + `?t=${Date.now()}` : null);
       setSelectedMask(0);
+      if (result.masks.length === 0) setError('No objects found. Try clicking on the object.');
+    } catch (e: any) { setError(e.message); }
+    finally { setLoading(false); }
+  }, [sessionId, loading, pointMode, points]);
 
-      if (segResult.masks.length === 0) {
-        setError('No objects found. Try a different prompt.');
-      }
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
+  const handleTextSegment = async () => {
+    if (!sessionId || !textPrompt.trim() || loading) return;
+    setLoading(true);
+    setError(null);
+    try {
+      await resetSegmentation(sessionId);
+      setPoints([]);
+      const result = await segmentText(sessionId, textPrompt);
+      setMasks(result.masks);
+      setOverlayUrl(result.overlay_url ? result.overlay_url + `?t=${Date.now()}` : null);
+      setSelectedMask(0);
+      if (result.masks.length === 0) setError('No objects found. Try a different prompt.');
+    } catch (e: any) { setError(e.message); }
+    finally { setLoading(false); }
   };
 
   const handleReset = async () => {
@@ -57,126 +103,223 @@ export default function SegmentationWorkspace({ imageFile, onConfirm, onCancel }
     setLoading(true);
     try {
       await resetSegmentation(sessionId);
-      setMasks([]);
-      setOverlayUrl(null);
-      setPrompt('');
-      setError(null);
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
+      setMasks([]); setOverlayUrl(null); setPoints([]); setTextPrompt(''); setError(null);
+    } catch (e: any) { setError(e.message); }
+    finally { setLoading(false); }
+  };
+
+  const handleUndo = async () => {
+    if (!sessionId || points.length === 0 || loading) return;
+    const newPoints = points.slice(0, -1);
+    setPoints(newPoints);
+    setLoading(true);
+    setError(null);
+    try {
+      await resetSegmentation(sessionId);
+      if (newPoints.length === 0) { setMasks([]); setOverlayUrl(null); setLoading(false); return; }
+      const result = await segmentPoints(sessionId, newPoints.map(p => [p.x, p.y]), newPoints.map(p => p.label));
+      setMasks(result.masks);
+      setOverlayUrl(result.overlay_url ? result.overlay_url + `?t=${Date.now()}` : null);
+      setSelectedMask(0);
+    } catch (e: any) { setError(e.message); }
+    finally { setLoading(false); }
   };
 
   const handleConfirm = async () => {
-    if (!sessionId) return;
+    if (!sessionId || masks.length === 0) return;
     setLoading(true);
     setError(null);
     try {
       const res = await confirmSegmentation(sessionId, selectedMask);
       onConfirm(res.segmented_image_path);
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
+    } catch (e: any) { setError(e.message); }
+    finally { setLoading(false); }
   };
 
+  // -- Render: Full-screen modal overlay --
   return (
-    <div className="space-y-3">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-xs font-medium text-text-secondary flex items-center gap-1.5">
-          <Wand2 className="w-3.5 h-3.5 text-accent" />
-          Segment Object
-        </h3>
-        <button onClick={onCancel} className="text-text-muted hover:text-text-secondary">
-          <X className="w-4 h-4" />
-        </button>
-      </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+      <div className="bg-bg-primary border border-border rounded-2xl shadow-2xl flex flex-col max-w-4xl w-[95vw] max-h-[92vh] overflow-hidden">
 
-      {/* Image preview with overlay */}
-      <div className="relative rounded-lg overflow-hidden border border-border bg-bg-tertiary">
-        <img
-          src={overlayUrl || imageUrl}
-          alt="Segmentation"
-          className="w-full h-auto max-h-48 object-contain"
-        />
-        {loading && (
-          <div className="absolute inset-0 bg-bg-primary/60 flex items-center justify-center">
-            <svg className="w-6 h-6 animate-spin text-accent" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-25" />
-              <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-            </svg>
-          </div>
-        )}
-      </div>
-
-      {/* Text prompt */}
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleStartAndSegment()}
-          placeholder="Describe object to segment..."
-          className="flex-1 bg-bg-tertiary border border-border rounded-lg px-3 py-1.5 text-sm placeholder:text-text-muted/50"
-          disabled={loading}
-        />
-        <button
-          onClick={handleStartAndSegment}
-          disabled={loading || !prompt.trim()}
-          className="px-3 py-1.5 rounded-lg bg-accent text-white text-xs font-medium disabled:opacity-50 hover:bg-accent-hover transition-colors flex items-center gap-1"
-        >
-          <MousePointer2 className="w-3.5 h-3.5" />
-          Segment
-        </button>
-      </div>
-
-      {/* Mask results */}
-      {masks.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-xs text-text-muted">{masks.length} mask(s) found</p>
-          <div className="flex flex-wrap gap-1.5">
-            {masks.map((mask) => (
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-3 border-b border-border">
+          <h2 className="text-sm font-medium text-text-primary flex items-center gap-2">
+            <Wand2 className="w-4 h-4 text-accent" />
+            Segment Object
+          </h2>
+          <div className="flex items-center gap-3">
+            {/* Point mode toggle */}
+            <div className="flex gap-1 bg-bg-tertiary rounded-lg p-0.5">
               <button
-                key={mask.index}
-                onClick={() => setSelectedMask(mask.index)}
-                className={`text-xs px-2.5 py-1 rounded-lg border transition-colors
-                  ${selectedMask === mask.index
-                    ? 'border-accent bg-accent/10 text-accent'
-                    : 'border-border bg-bg-tertiary text-text-muted hover:border-border-hover'}`}
+                onClick={() => setPointMode('add')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors
+                  ${pointMode === 'add' ? 'bg-green-500/20 text-green-400' : 'text-text-muted hover:text-text-secondary'}`}
               >
-                #{mask.index + 1} ({(mask.score * 100).toFixed(0)}%)
+                <Plus className="w-3.5 h-3.5" />
+                Add
               </button>
-            ))}
-          </div>
+              <button
+                onClick={() => setPointMode('remove')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors
+                  ${pointMode === 'remove' ? 'bg-red-500/20 text-red-400' : 'text-text-muted hover:text-text-secondary'}`}
+              >
+                <Minus className="w-3.5 h-3.5" />
+                Remove
+              </button>
+            </div>
 
-          {/* Action buttons */}
-          <div className="flex gap-2">
-            <button
-              onClick={handleReset}
-              disabled={loading}
-              className="flex-1 py-1.5 rounded-lg border border-border text-xs text-text-muted hover:bg-bg-tertiary transition-colors flex items-center justify-center gap-1"
-            >
-              <RotateCcw className="w-3 h-3" />
-              Reset
-            </button>
-            <button
-              onClick={handleConfirm}
-              disabled={loading}
-              className="flex-1 py-1.5 rounded-lg bg-success/20 text-success text-xs font-medium hover:bg-success/30 transition-colors flex items-center justify-center gap-1"
-            >
-              <Check className="w-3 h-3" />
-              Use Mask #{selectedMask + 1}
+            {/* Undo + Reset */}
+            <div className="flex gap-1">
+              {points.length > 0 && (
+                <button
+                  onClick={handleUndo}
+                  disabled={loading}
+                  className="p-2 rounded-lg border border-border text-text-muted hover:bg-bg-tertiary transition-colors disabled:opacity-50"
+                  title="Undo last point"
+                >
+                  <Undo2 className="w-4 h-4" />
+                </button>
+              )}
+              <button
+                onClick={handleReset}
+                disabled={loading || (points.length === 0 && masks.length === 0)}
+                className="p-2 rounded-lg border border-border text-text-muted hover:bg-bg-tertiary transition-colors disabled:opacity-50"
+                title="Reset all"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Close */}
+            <button onClick={onCancel} className="p-2 rounded-lg text-text-muted hover:bg-bg-tertiary hover:text-text-secondary transition-colors">
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>
-      )}
 
-      {error && (
-        <p className="text-xs text-error">{error}</p>
-      )}
+        {/* Canvas area — large */}
+        <div className="flex-1 min-h-0 p-4 flex items-center justify-center bg-bg-secondary/50">
+          <div
+            ref={canvasRef}
+            onClick={handleCanvasClick}
+            className="relative rounded-xl overflow-hidden border border-border bg-black cursor-crosshair select-none max-h-full"
+          >
+            <img
+              ref={imgRef}
+              src={overlayUrl || imageUrl}
+              alt="Segmentation"
+              className="block max-w-full max-h-[60vh] object-contain"
+              draggable={false}
+            />
+
+            {/* Point markers */}
+            {imgRef.current && points.map((pt, i) => {
+              const rect = imgRef.current!.getBoundingClientRect();
+              const containerRect = canvasRef.current?.getBoundingClientRect();
+              if (!containerRect) return null;
+              const px = (rect.left - containerRect.left) + pt.x * rect.width;
+              const py = (rect.top - containerRect.top) + pt.y * rect.height;
+              return (
+                <div key={i} className="absolute pointer-events-none" style={{ left: px - 8, top: py - 8, width: 16, height: 16 }}>
+                  <div className={`w-4 h-4 rounded-full border-2 border-white shadow-lg ${pt.label === 1 ? 'bg-green-500' : 'bg-red-500'}`} />
+                </div>
+              );
+            })}
+
+            {/* Loading */}
+            {loading && (
+              <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                <svg className="w-8 h-8 animate-spin text-accent" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-25" />
+                  <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                </svg>
+              </div>
+            )}
+
+            {/* Hint */}
+            {!loading && masks.length === 0 && points.length === 0 && sessionId && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <span className="text-sm text-white/70 bg-black/50 px-4 py-2 rounded-lg">
+                  Click on the object to segment, or type a prompt below
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Bottom controls */}
+        <div className="px-5 py-3 border-t border-border space-y-3">
+
+          {/* Text prompt + mask badges row */}
+          <div className="flex items-center gap-3">
+            {/* Text prompt */}
+            <div className="relative flex-1 max-w-md">
+              <Type className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
+              <input
+                type="text"
+                value={textPrompt}
+                onChange={(e) => setTextPrompt(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleTextSegment()}
+                placeholder="Describe object to find..."
+                className="w-full bg-bg-tertiary border border-border rounded-lg pl-9 pr-3 py-2 text-sm placeholder:text-text-muted/50"
+                disabled={loading || !sessionId}
+              />
+            </div>
+            <button
+              onClick={handleTextSegment}
+              disabled={loading || !textPrompt.trim() || !sessionId}
+              className="px-4 py-2 rounded-lg bg-accent text-white text-sm font-medium disabled:opacity-50 hover:bg-accent-hover transition-colors"
+            >
+              Find
+            </button>
+
+            {/* Spacer */}
+            <div className="flex-1" />
+
+            {/* Mask badges */}
+            {masks.length > 0 && (
+              <div className="flex items-center gap-1.5">
+                {masks.map((mask) => (
+                  <button
+                    key={mask.index}
+                    onClick={() => setSelectedMask(mask.index)}
+                    className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors flex items-center gap-1.5
+                      ${selectedMask === mask.index
+                        ? 'border-accent bg-accent/10 text-accent'
+                        : 'border-border bg-bg-tertiary text-text-muted hover:border-border-hover'}`}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full ${
+                      mask.score > 0.8 ? 'bg-green-400' : mask.score > 0.6 ? 'bg-yellow-400' : 'bg-red-400'
+                    }`} />
+                    {masks.length > 1 ? `Mask ${mask.index + 1}` : 'Mask'}
+                    <span className="opacity-60">{(mask.score * 100).toFixed(0)}%</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Point count */}
+            {points.length > 0 && (
+              <span className="text-xs text-text-muted">{points.length} point{points.length !== 1 ? 's' : ''}</span>
+            )}
+
+            {/* Use Mask */}
+            <button
+              onClick={handleConfirm}
+              disabled={loading || masks.length === 0}
+              className="px-5 py-2 rounded-lg bg-success text-white text-sm font-medium disabled:opacity-30 hover:bg-success/90 transition-colors flex items-center gap-2"
+            >
+              <Check className="w-4 h-4" />
+              Use Mask
+            </button>
+          </div>
+
+          {/* Error */}
+          {error && (
+            <p className="text-xs text-error text-center">{error}</p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
