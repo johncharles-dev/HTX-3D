@@ -10,12 +10,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
-from .config import CORS_ORIGINS, TRELLIS_ENGINE_DIR, HUNYUAN_ENGINE_DIR, WEIGHTS_DIR, GALLERY_DIR, detect_gpu
-from .routers import generate, gallery
+from .config import CORS_ORIGINS, TRELLIS_ENGINE_DIR, HUNYUAN_ENGINE_DIR, SAM3D_OBJECTS_DIR, WEIGHTS_DIR, GALLERY_DIR, detect_gpu
+from .routers import generate, gallery, segment
 from .services.trellis import TrellisEngine
 from .services.hunyuan import HunyuanEngine
+from .services.sam3d_objects import Sam3DObjectsEngine
+from .services.sam3_segmentation import SAM3Service
 from .services.task_manager import TaskManager
-from .dependencies import set_task_manager, get_task_manager
+from .dependencies import set_task_manager, get_task_manager, set_sam3_service
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -44,6 +46,16 @@ async def lifespan(app: FastAPI):
     tm.register_engine(hunyuan)
     logger.info("Hunyuan3D engine registered (will load on first use)")
 
+    # Register SAM 3D Objects engine (not loaded until first use — lazy loading)
+    sam3d = Sam3DObjectsEngine(SAM3D_OBJECTS_DIR)
+    tm.register_engine(sam3d)
+    logger.info("SAM 3D Objects engine registered (will load on first use)")
+
+    # Initialize SAM3 segmentation service (loaded on-demand per session)
+    sam3_service = SAM3Service()
+    set_sam3_service(sam3_service)
+    logger.info("SAM3 segmentation service initialized")
+
     set_task_manager(tm)
     await tm.start()
 
@@ -54,11 +66,15 @@ async def lifespan(app: FastAPI):
         trellis.unload()
     if hunyuan.loaded:
         hunyuan.unload()
+    if sam3d.loaded:
+        sam3d.unload()
+    if sam3_service.loaded:
+        sam3_service.unload()
 
 
 app = FastAPI(
     title="HTX 3D Generation Tool",
-    description="Image-to-3D and Text-to-3D generation API powered by TRELLIS and Hunyuan3D",
+    description="Image-to-3D and Text-to-3D generation API powered by TRELLIS, Hunyuan3D, and SAM 3D Objects",
     version="0.2.0",
     lifespan=lifespan,
 )
@@ -75,6 +91,7 @@ app.add_middleware(
 # Routers
 app.include_router(generate.router)
 app.include_router(gallery.router)
+app.include_router(segment.router)
 
 
 # -- WebSocket for Progress --------------------------------

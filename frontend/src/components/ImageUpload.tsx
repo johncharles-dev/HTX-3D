@@ -1,15 +1,16 @@
 import { useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, X } from 'lucide-react';
+import { Upload, X, Check } from 'lucide-react';
 
 interface Props {
   files: File[];
   onChange: (files: File[]) => void;
   multiple?: boolean;
   maxFiles?: number;
+  isSegmented?: boolean;
 }
 
-export default function ImageUpload({ files, onChange, multiple = false, maxFiles = 4 }: Props) {
+export default function ImageUpload({ files, onChange, multiple = false, maxFiles = 4, isSegmented = false }: Props) {
   const onDrop = useCallback(
     (accepted: File[]) => {
       if (multiple) {
@@ -62,6 +63,11 @@ export default function ImageUpload({ files, onChange, multiple = false, maxFile
                 alt={file.name}
                 className="w-full h-full object-cover"
               />
+              {isSegmented && i === 0 && (
+                <div className="absolute bottom-0.5 left-0.5 bg-success rounded-full p-0.5">
+                  <Check className="w-2.5 h-2.5 text-white" />
+                </div>
+              )}
               <button
                 onClick={(e) => { e.stopPropagation(); removeFile(i); }}
                 className="absolute top-0.5 right-0.5 bg-bg-primary/80 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"

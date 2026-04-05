@@ -40,6 +40,7 @@ async def list_gallery(
             preview_video_url=f"/api/download/{task_id}/preview.mp4" if raw.get("has_video") else None,
             exports=exports,
             seed=raw.get("seed", 0),
+            generation_time_seconds=raw.get("generation_time_seconds"),
             created_at=raw.get("created_at", ""),
         ))
 

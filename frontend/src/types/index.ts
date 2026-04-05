@@ -1,11 +1,11 @@
-export type ModelType = 'trellis-image-to-3d' | 'trellis-text-to-3d' | 'hunyuan-image-to-3d';
+export type ModelType = 'trellis-image-to-3d' | 'trellis-text-to-3d' | 'hunyuan-image-to-3d' | 'sam3d-image-to-3d';
 export type ExportFormat = 'glb' | 'obj' | 'stl' | 'ply';
 export type TaskStatus = 'queued' | 'processing' | 'extracting' | 'completed' | 'failed';
 export type InputMode = 'single' | 'multi';
 export type MultiImageMode = 'stochastic' | 'multidiffusion';
 export type TextMode = 'generate' | 'edit';
 export type QualityPreset = 'draft' | 'standard' | 'high';
-export type EngineName = 'trellis' | 'hunyuan';
+export type EngineName = 'trellis' | 'hunyuan' | 'sam3d';
 
 // -- TRELLIS Quality Presets --------------------------------
 
@@ -21,6 +21,14 @@ export const HUNYUAN_QUALITY_PRESETS: { id: QualityPreset; label: string; desc: 
   { id: 'draft', label: 'Draft', desc: 'Fast preview', settings: { numInferenceSteps: 5 } },
   { id: 'standard', label: 'Standard', desc: 'Balanced quality', settings: { numInferenceSteps: 30 } },
   { id: 'high', label: 'High', desc: 'Best quality', settings: { numInferenceSteps: 50 } },
+];
+
+// -- SAM 3D Objects Quality Presets -------------------------
+
+export const SAM3D_QUALITY_PRESETS: { id: QualityPreset; label: string; desc: string; settings: Partial<GenerationSettings> }[] = [
+  { id: 'draft', label: 'Draft', desc: 'Fast preview', settings: { sam3dStage1Steps: 15, sam3dStage2Steps: 15 } },
+  { id: 'standard', label: 'Standard', desc: 'Balanced quality', settings: { sam3dStage1Steps: 25, sam3dStage2Steps: 25 } },
+  { id: 'high', label: 'High', desc: 'Best quality', settings: { sam3dStage1Steps: 40, sam3dStage2Steps: 40 } },
 ];
 
 // -- Model Registry ----------------------------------------
@@ -61,11 +69,11 @@ export const MODELS: ModelDef[] = [
     supportsMultiView: false,
   },
   {
-    id: 'triposg',
-    name: 'TripoSG',
-    desc: 'Tripo AI — Fast single-image generation',
+    id: 'sam3d',
+    name: 'SAM 3D Objects',
+    desc: 'Meta — Full 3D reconstruction with texture baking',
     color: '#81C784',
-    available: false,
+    available: true,
     supportsImage: true,
     supportsText: false,
     supportsEdit: false,
@@ -88,6 +96,11 @@ export interface GenerationSettings {
   guidanceScale: number;
   octreeResolution: number;
   texture: boolean;
+  // SAM 3D Objects params
+  sam3dStage1Steps: number;
+  sam3dStage2Steps: number;
+  sam3dTextureBaking: boolean;
+  sam3dVertexColor: boolean;
 }
 
 export interface ExportSettings {
@@ -137,6 +150,7 @@ export interface GalleryItem {
   preview_video_url: string | null;
   exports: ExportFile[];
   seed: number;
+  generation_time_seconds: number | null;
   created_at: string;
 }
 
@@ -178,6 +192,11 @@ export const DEFAULT_GENERATION_SETTINGS: GenerationSettings = {
   guidanceScale: 5.5,
   octreeResolution: 256,
   texture: true,
+  // SAM 3D Objects defaults
+  sam3dStage1Steps: 25,
+  sam3dStage2Steps: 25,
+  sam3dTextureBaking: true,
+  sam3dVertexColor: false,
 };
 
 export const DEFAULT_EXPORT_SETTINGS: ExportSettings = {

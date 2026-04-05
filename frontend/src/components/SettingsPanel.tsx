@@ -1,14 +1,14 @@
 import { Shuffle, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import { useState } from 'react';
 import type { GenerationSettings, ExportSettings, ExportFormat, EngineName } from '../types';
-import { QUALITY_PRESETS, HUNYUAN_QUALITY_PRESETS } from '../types';
+import { QUALITY_PRESETS, HUNYUAN_QUALITY_PRESETS, SAM3D_QUALITY_PRESETS } from '../types';
 
 interface Props {
   generation: GenerationSettings;
   exportSettings: ExportSettings;
   onGenerationChange: (s: GenerationSettings) => void;
   onExportChange: (s: ExportSettings) => void;
-  activeEngine: EngineName;
+  selectedEngines: EngineName[];
 }
 
 function Tooltip({ text }: { text: string }) {
@@ -75,20 +75,21 @@ const OCTREE_OPTIONS = [
   { value: 512, label: '512 (highest)' },
 ];
 
-export default function SettingsPanel({ generation, exportSettings, onGenerationChange, onExportChange, activeEngine }: Props) {
+export default function SettingsPanel({ generation, exportSettings, onGenerationChange, onExportChange, selectedEngines }: Props) {
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const g = generation;
   const setG = (patch: Partial<GenerationSettings>) => onGenerationChange({ ...g, ...patch });
 
-  const isTrellis = activeEngine === 'trellis';
-  const isHunyuan = activeEngine === 'hunyuan';
-  const presets = isTrellis ? QUALITY_PRESETS : HUNYUAN_QUALITY_PRESETS;
+  const hasTrellis = selectedEngines.includes('trellis');
+  const hasHunyuan = selectedEngines.includes('hunyuan');
+  const hasSam3d = selectedEngines.includes('sam3d');
+  const multiEngine = selectedEngines.length > 1;
 
-  // Detect current quality preset
-  const currentPreset = isTrellis
-    ? QUALITY_PRESETS.find((p) => p.settings.ssSteps === g.ssSteps && p.settings.slatSteps === g.slatSteps)?.id || null
-    : HUNYUAN_QUALITY_PRESETS.find((p) => p.settings.numInferenceSteps === g.numInferenceSteps)?.id || null;
+  // Detect current quality presets per engine
+  const trellisPreset = QUALITY_PRESETS.find((p) => p.settings.ssSteps === g.ssSteps && p.settings.slatSteps === g.slatSteps)?.id || null;
+  const hunyuanPreset = HUNYUAN_QUALITY_PRESETS.find((p) => p.settings.numInferenceSteps === g.numInferenceSteps)?.id || null;
+  const sam3dPreset = SAM3D_QUALITY_PRESETS.find((p) => p.settings.sam3dStage1Steps === g.sam3dStage1Steps && p.settings.sam3dStage2Steps === g.sam3dStage2Steps)?.id || null;
 
   const toggleFormat = (fmt: ExportFormat) => {
     const has = exportSettings.formats.includes(fmt);
@@ -98,35 +99,87 @@ export default function SettingsPanel({ generation, exportSettings, onGeneration
     if (next.length > 0) onExportChange({ ...exportSettings, formats: next });
   };
 
-  // Filter formats based on engine (Hunyuan doesn't produce Gaussian splats)
-  const formatOptions = isHunyuan
+  // Filter formats: hide PLY if only Hunyuan is selected (no Gaussian splats)
+  const formatOptions = hasHunyuan && !hasTrellis && !hasSam3d
     ? FORMAT_OPTIONS.filter((f) => f.value !== 'ply')
     : FORMAT_OPTIONS;
 
   return (
     <div className="space-y-4">
-      {/* Quality Preset */}
-      <div>
-        <label className="text-xs text-text-secondary block mb-2">
-          Quality Preset
-          <Tooltip text="Controls generation steps. Higher quality = slower but more detailed results." />
-        </label>
-        <div className="flex gap-1">
-          {presets.map((preset) => (
-            <button
-              key={preset.id}
-              onClick={() => setG(preset.settings)}
-              className={`flex-1 text-xs py-1.5 rounded-lg border transition-colors
-                ${currentPreset === preset.id
-                  ? 'border-accent bg-accent/10 text-accent'
-                  : 'border-border bg-bg-tertiary text-text-muted hover:border-border-hover'}`}
-              title={preset.desc}
-            >
-              {preset.label}
-            </button>
-          ))}
+      {/* Quality Presets — per engine */}
+      {hasTrellis && (
+        <div>
+          <label className="text-xs text-text-secondary block mb-2">
+            {multiEngine && <span className="text-[#4FC3F7] font-medium mr-1">TRELLIS</span>}
+            Quality Preset
+            <Tooltip text="Controls TRELLIS generation steps. Higher quality = slower but more detailed results." />
+          </label>
+          <div className="flex gap-1">
+            {QUALITY_PRESETS.map((preset) => (
+              <button
+                key={preset.id}
+                onClick={() => setG(preset.settings)}
+                className={`flex-1 text-xs py-1.5 rounded-lg border transition-colors
+                  ${trellisPreset === preset.id
+                    ? 'border-accent bg-accent/10 text-accent'
+                    : 'border-border bg-bg-tertiary text-text-muted hover:border-border-hover'}`}
+                title={preset.desc}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
+      {hasHunyuan && (
+        <div>
+          <label className="text-xs text-text-secondary block mb-2">
+            {multiEngine && <span className="text-[#CE93D8] font-medium mr-1">Hunyuan</span>}
+            Quality Preset
+            <Tooltip text="Controls Hunyuan inference steps. Higher quality = slower but more detailed results." />
+          </label>
+          <div className="flex gap-1">
+            {HUNYUAN_QUALITY_PRESETS.map((preset) => (
+              <button
+                key={preset.id}
+                onClick={() => setG(preset.settings)}
+                className={`flex-1 text-xs py-1.5 rounded-lg border transition-colors
+                  ${hunyuanPreset === preset.id
+                    ? 'border-accent bg-accent/10 text-accent'
+                    : 'border-border bg-bg-tertiary text-text-muted hover:border-border-hover'}`}
+                title={preset.desc}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {hasSam3d && (
+        <div>
+          <label className="text-xs text-text-secondary block mb-2">
+            {multiEngine && <span className="text-[#81C784] font-medium mr-1">SAM 3D</span>}
+            Quality Preset
+            <Tooltip text="Controls SAM 3D Objects inference steps per stage. Higher = slower but more detailed." />
+          </label>
+          <div className="flex gap-1">
+            {SAM3D_QUALITY_PRESETS.map((preset) => (
+              <button
+                key={preset.id}
+                onClick={() => setG(preset.settings)}
+                className={`flex-1 text-xs py-1.5 rounded-lg border transition-colors
+                  ${sam3dPreset === preset.id
+                    ? 'border-accent bg-accent/10 text-accent'
+                    : 'border-border bg-bg-tertiary text-text-muted hover:border-border-hover'}`}
+                title={preset.desc}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Seed */}
       <div>
@@ -154,7 +207,7 @@ export default function SettingsPanel({ generation, exportSettings, onGeneration
       </div>
 
       {/* Hunyuan: PBR Texture Toggle */}
-      {isHunyuan && (
+      {hasHunyuan && (
         <div className="flex items-center justify-between">
           <label className="text-xs text-text-secondary">
             PBR Textures
@@ -166,6 +219,36 @@ export default function SettingsPanel({ generation, exportSettings, onGeneration
           >
             <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${g.texture ? 'left-5' : 'left-0.5'}`} />
           </button>
+        </div>
+      )}
+
+      {/* SAM 3D Objects: Texture Baking Toggle */}
+      {hasSam3d && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-xs text-text-secondary">
+              Texture Baking
+              <Tooltip text="Bake textures onto mesh for GLB export. Disable for vertex-color only." />
+            </label>
+            <button
+              onClick={() => setG({ sam3dTextureBaking: !g.sam3dTextureBaking })}
+              className={`relative w-10 h-5 rounded-full transition-colors ${g.sam3dTextureBaking ? 'bg-accent' : 'bg-bg-tertiary border border-border'}`}
+            >
+              <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${g.sam3dTextureBaking ? 'left-5' : 'left-0.5'}`} />
+            </button>
+          </div>
+          <div className="flex items-center justify-between">
+            <label className="text-xs text-text-secondary">
+              Vertex Color
+              <Tooltip text="Use vertex colors instead of UV textures. Faster but lower quality." />
+            </label>
+            <button
+              onClick={() => setG({ sam3dVertexColor: !g.sam3dVertexColor })}
+              className={`relative w-10 h-5 rounded-full transition-colors ${g.sam3dVertexColor ? 'bg-accent' : 'bg-bg-tertiary border border-border'}`}
+            >
+              <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${g.sam3dVertexColor ? 'left-5' : 'left-0.5'}`} />
+            </button>
+          </div>
         </div>
       )}
 
@@ -206,8 +289,9 @@ export default function SettingsPanel({ generation, exportSettings, onGeneration
       {advancedOpen && (
         <div className="space-y-3 pl-2 border-l-2 border-border">
           {/* TRELLIS Advanced Settings */}
-          {isTrellis && (
+          {hasTrellis && (
             <>
+              {multiEngine && <p className="text-xs font-medium text-[#4FC3F7] mb-1">TRELLIS</p>}
               <p className="text-xs text-text-muted">Stage 1: Sparse Structure</p>
               <SliderField
                 label="Steps"
@@ -278,8 +362,9 @@ export default function SettingsPanel({ generation, exportSettings, onGeneration
           )}
 
           {/* Hunyuan Advanced Settings */}
-          {isHunyuan && (
+          {hasHunyuan && (
             <>
+              {multiEngine && <p className="text-xs font-medium text-[#CE93D8] mt-2 mb-1">Hunyuan</p>}
               <p className="text-xs text-text-muted">Shape Generation</p>
               <SliderField
                 label="Inference Steps"
@@ -316,6 +401,33 @@ export default function SettingsPanel({ generation, exportSettings, onGeneration
                   ))}
                 </select>
               </div>
+            </>
+          )}
+
+          {/* SAM 3D Objects Advanced Settings */}
+          {hasSam3d && (
+            <>
+              {multiEngine && <p className="text-xs font-medium text-[#81C784] mt-2 mb-1">SAM 3D Objects</p>}
+              <p className="text-xs text-text-muted">Stage 1: Sparse Structure</p>
+              <SliderField
+                label="Steps"
+                tooltip="Diffusion steps for coarse structure generation."
+                value={g.sam3dStage1Steps}
+                min={5}
+                max={50}
+                step={1}
+                onChange={(v) => setG({ sam3dStage1Steps: v })}
+              />
+              <p className="text-xs text-text-muted mt-3">Stage 2: Detail Generation</p>
+              <SliderField
+                label="Steps"
+                tooltip="Diffusion steps for fine detail and texture generation."
+                value={g.sam3dStage2Steps}
+                min={5}
+                max={50}
+                step={1}
+                onChange={(v) => setG({ sam3dStage2Steps: v })}
+              />
             </>
           )}
         </div>

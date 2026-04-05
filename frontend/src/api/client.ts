@@ -18,6 +18,7 @@ export async function generateFromImage(
   settings: GenerationSettings,
   exportSettings: ExportSettings,
   engine: string = 'trellis',
+  segmentedImagePath?: string,
 ): Promise<TaskResponse> {
   const form = new FormData();
   form.append('image', image);
@@ -35,6 +36,17 @@ export async function generateFromImage(
     form.append('guidance_scale', String(settings.guidanceScale));
     form.append('octree_resolution', String(settings.octreeResolution));
     form.append('texture', String(settings.texture));
+  }
+  // SAM 3D Objects params
+  if (engine === 'sam3d') {
+    form.append('sam3d_stage1_steps', String(settings.sam3dStage1Steps));
+    form.append('sam3d_stage2_steps', String(settings.sam3dStage2Steps));
+    form.append('sam3d_texture_baking', String(settings.sam3dTextureBaking));
+    form.append('sam3d_vertex_color', String(settings.sam3dVertexColor));
+  }
+  // Segmented image path (from SAM3 segmentation)
+  if (segmentedImagePath) {
+    form.append('segmented_image_path', segmentedImagePath);
   }
   form.append('formats', exportSettings.formats.join(','));
   form.append('mesh_simplify', String(exportSettings.meshSimplify));

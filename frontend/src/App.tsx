@@ -7,7 +7,8 @@ import ModelViewer from './components/ModelViewer';
 import ProgressBar from './components/ProgressBar';
 import ExportPanel from './components/ExportPanel';
 import Gallery from './components/Gallery';
-import { Sparkles, Images, Type, Pencil, Upload } from 'lucide-react';
+import SegmentationWorkspace from './components/SegmentationWorkspace';
+import { Sparkles, Images, Type, Pencil, Upload, Wand2, SkipForward } from 'lucide-react';
 import {
   generateFromImage,
   generateFromMultiImage,
@@ -67,6 +68,10 @@ export default function App() {
   const [activeResultModel, setActiveResultModel] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Segmentation state
+  const [showSegmentation, setShowSegmentation] = useState(false);
+  const [segmentedImagePath, setSegmentedImagePath] = useState<string | null>(null);
+
   // 3D viewer
   const [viewerUrl, setViewerUrl] = useState<string | null>(null);
   const [viewerFormat, setViewerFormat] = useState<string>('glb');
@@ -81,10 +86,10 @@ export default function App() {
   // For text tab, always use trellis
   const effectiveModels = activeTab === 'text' ? ['trellis'] : selectedModels;
 
-  // Derive active engine from first selected model (for settings panel)
-  const activeEngine: EngineName = activeTab === 'text'
-    ? 'trellis'
-    : (selectedModels[0] === 'hunyuan' ? 'hunyuan' : 'trellis');
+  // Derive selected engines from selected models (for settings panel)
+  const selectedEngines: EngineName[] = activeTab === 'text'
+    ? ['trellis']
+    : [...new Set(selectedModels.filter((id): id is EngineName => id === 'trellis' || id === 'hunyuan' || id === 'sam3d'))];
 
   // -- Health Check ----------------------------------------
   useEffect(() => {
@@ -219,7 +224,7 @@ export default function App() {
           if (inputMode === 'multi' && imageFiles.length >= 2) {
             return generateFromMultiImage(imageFiles, multiImageMode, genSettings, exportSettings, engine);
           } else {
-            return generateFromImage(imageFiles[0], genSettings, exportSettings, engine);
+            return generateFromImage(imageFiles[0], genSettings, exportSettings, engine, segmentedImagePath || undefined);
           }
         });
       } else if (activeTab === 'text') {
@@ -363,9 +368,14 @@ export default function App() {
 
                   <ImageUpload
                     files={imageFiles}
-                    onChange={setImageFiles}
+                    onChange={(files) => {
+                      setImageFiles(files);
+                      setSegmentedImagePath(null);
+                      setShowSegmentation(false);
+                    }}
                     multiple={inputMode === 'multi'}
                     maxFiles={4}
+                    isSegmented={!!segmentedImagePath}
                   />
 
                   {inputMode === 'multi' && imageFiles.length >= 2 && (
@@ -381,6 +391,58 @@ export default function App() {
                         <option value="stochastic">Stochastic (faster, cycles views)</option>
                         <option value="multidiffusion">Multidiffusion (slower, averages all views)</option>
                       </select>
+                    </div>
+                  )}
+
+                  {/* Segmentation hint for SAM 3D Objects */}
+                  {inputMode === 'single' && imageFiles.length === 1 && !segmentedImagePath && selectedModels.includes('sam3d') && !showSegmentation && (
+                    <div className="flex items-center gap-2 p-2 rounded-lg bg-[#81C784]/10 border border-[#81C784]/20">
+                      <Wand2 className="w-3.5 h-3.5 text-[#81C784] shrink-0" />
+                      <span className="text-xs text-[#81C784]">Segmentation recommended for SAM 3D Objects</span>
+                    </div>
+                  )}
+
+                  {/* Segmentation section — only for single image mode */}
+                  {inputMode === 'single' && imageFiles.length === 1 && !showSegmentation && !segmentedImagePath && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setShowSegmentation(true)}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border border-accent/30 bg-accent/5 text-accent text-xs font-medium hover:bg-accent/10 transition-colors"
+                      >
+                        <Wand2 className="w-3.5 h-3.5" />
+                        Segment Object
+                      </button>
+                      <button
+                        onClick={() => setSegmentedImagePath(null)}
+                        className="flex items-center gap-1 px-3 py-2 rounded-lg border border-border text-text-muted text-xs hover:bg-bg-tertiary transition-colors"
+                      >
+                        <SkipForward className="w-3.5 h-3.5" />
+                        Skip
+                      </button>
+                    </div>
+                  )}
+
+                  {showSegmentation && imageFiles.length === 1 && (
+                    <SegmentationWorkspace
+                      imageFile={imageFiles[0]}
+                      onConfirm={(path) => {
+                        setSegmentedImagePath(path);
+                        setShowSegmentation(false);
+                      }}
+                      onCancel={() => setShowSegmentation(false)}
+                    />
+                  )}
+
+                  {segmentedImagePath && (
+                    <div className="flex items-center gap-2 p-2.5 rounded-lg bg-success/10 border border-success/20">
+                      <div className="w-2 h-2 rounded-full bg-success" />
+                      <span className="text-xs text-success flex-1">Object segmented</span>
+                      <button
+                        onClick={() => { setSegmentedImagePath(null); setShowSegmentation(false); }}
+                        className="text-xs text-text-muted hover:text-text-secondary"
+                      >
+                        Clear
+                      </button>
                     </div>
                   )}
                 </>
@@ -500,7 +562,7 @@ export default function App() {
                   exportSettings={exportSettings}
                   onGenerationChange={setGenSettings}
                   onExportChange={setExportSettings}
-                  activeEngine={activeEngine}
+                  selectedEngines={selectedEngines}
                 />
               </div>
             </div>

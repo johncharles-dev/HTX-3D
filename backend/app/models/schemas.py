@@ -9,6 +9,7 @@ class ModelType(str, Enum):
     TRELLIS_IMAGE = "trellis-image-to-3d"
     TRELLIS_TEXT = "trellis-text-to-3d"
     HUNYUAN_IMAGE = "hunyuan-image-to-3d"
+    SAM3D_IMAGE = "sam3d-image-to-3d"
 
 
 class ExportFormat(str, Enum):
@@ -141,6 +142,7 @@ class GalleryItem(BaseModel):
     preview_video_url: Optional[str] = None
     exports: List[ExportFile] = []
     seed: int = 0
+    generation_time_seconds: Optional[float] = None
     created_at: str = ""
 
 

@@ -2,6 +2,14 @@ import { useEffect, useState, useCallback } from 'react';
 import { Trash2, Download, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getGallery, deleteGalleryItem } from '../api/client';
 import type { GalleryItem, ExportFile } from '../types';
+import { MODELS } from '../types';
+
+function modelLabel(modelId: string) {
+  // model id from backend: "trellis-image-to-3d", "hunyuan-image-to-3d", "sam3d-image-to-3d"
+  const engineId = modelId.split('-')[0]; // "trellis", "hunyuan", "sam3d"
+  const model = MODELS.find((m) => m.id === engineId);
+  return model ? { name: model.name, color: model.color } : { name: engineId, color: '#888' };
+}
 
 interface Props {
   onPreview: (exports: ExportFile[]) => void;
@@ -89,11 +97,27 @@ export default function Gallery({ onPreview }: Props) {
 
             {/* Info */}
             <div className="p-3">
+              {(() => {
+                const { name, color } = modelLabel(item.model);
+                return (
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <span
+                      className="text-xs font-medium px-1.5 py-0.5 rounded"
+                      style={{ backgroundColor: `${color}20`, color }}
+                    >
+                      {name}
+                    </span>
+                    <span className="text-xs text-text-muted ml-auto">
+                      {new Date(item.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                );
+              })()}
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-xs text-text-muted">Seed: {item.seed}</span>
-                <span className="text-xs text-text-muted">
-                  {new Date(item.created_at).toLocaleDateString()}
-                </span>
+                {item.generation_time_seconds && (
+                  <span className="text-xs text-text-muted">{item.generation_time_seconds}s</span>
+                )}
               </div>
               <div className="flex gap-1 flex-wrap">
                 {item.exports.map((exp) => (

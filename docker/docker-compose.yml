@@ -11,6 +11,10 @@ services:
       - ../weights:/app/weights
       # Gallery storage (generated 3D models)
       - ../gallery:/app/gallery
+      # SAM 3D Objects model weights (12GB, not in git)
+      - /data/models/sam-3d-objects/hf:/app/weights/sam3d-objects-hf:ro
+      # HuggingFace cache (SAM3 model weights, etc.)
+      - /home/cj/.cache/huggingface:/root/.cache/huggingface
     environment:
       - XFORMERS_DISABLED=1
       - ATTN_BACKEND=sdpa
@@ -18,6 +22,9 @@ services:
       - GALLERY_DIR=/app/gallery
       - TRELLIS_ENGINE_DIR=/app/engines/trellis
       - HUNYUAN_ENGINE_DIR=/app/engines/hunyuan
+      - SAM3_DIR=/app/engines/sam3
+      - SAM3_BPE_PATH=/app/engines/sam3/sam3/assets/bpe_simple_vocab_16e6.txt.gz
+      - SAM3D_OBJECTS_DIR=/app/engines/sam3d_objects
       - CORS_ORIGINS=http://localhost:5173,http://localhost:8000
       - PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
     deploy:

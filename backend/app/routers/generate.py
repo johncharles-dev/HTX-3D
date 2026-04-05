@@ -40,6 +40,8 @@ def _save_upload(upload: UploadFile, task_id: str, index: int = 0) -> str:
 
 def _model_id_for_engine(engine: str, task_type: str) -> str:
     """Map engine name + task type to a ModelType value."""
+    if engine == "sam3d":
+        return "sam3d-image-to-3d"
     if engine == "hunyuan":
         return "hunyuan-image-to-3d"
     if task_type == "text":
@@ -52,7 +54,7 @@ def _model_id_for_engine(engine: str, task_type: str) -> str:
 @router.post("/generate/image", response_model=TaskResponse)
 async def generate_from_image(
     image: UploadFile = File(..., description="Input image (PNG/JPG, ideally with transparent background)"),
-    engine: str = Form("trellis", description="Engine to use: trellis or hunyuan"),
+    engine: str = Form("trellis", description="Engine to use: trellis, hunyuan, or sam3d"),
     seed: int = Form(42),
     randomize_seed: bool = Form(True),
     # TRELLIS params
@@ -65,6 +67,13 @@ async def generate_from_image(
     guidance_scale: Optional[float] = Form(None),
     octree_resolution: Optional[int] = Form(None),
     texture: Optional[bool] = Form(None),
+    # SAM 3D Objects params
+    sam3d_stage1_steps: Optional[int] = Form(None),
+    sam3d_stage2_steps: Optional[int] = Form(None),
+    sam3d_texture_baking: Optional[bool] = Form(None),
+    sam3d_vertex_color: Optional[bool] = Form(None),
+    # Segmented image (from SAM3 segmentation workflow)
+    segmented_image_path: Optional[str] = Form(None, description="Path to RGBA image from segmentation"),
     # Export params
     formats: str = Form("glb", description="Comma-separated export formats: glb,obj,stl,ply"),
     mesh_simplify: float = Form(0.95),
@@ -76,9 +85,12 @@ async def generate_from_image(
     Upload an image and configure generation parameters.
     Returns a task ID that can be polled for progress via WebSocket or GET.
     """
-    # Save upload
-    temp_id = os.urandom(6).hex()
-    image_path = _save_upload(image, temp_id)
+    # Use segmented image if provided, otherwise save upload
+    if segmented_image_path and os.path.exists(segmented_image_path):
+        image_path = segmented_image_path
+    else:
+        temp_id = os.urandom(6).hex()
+        image_path = _save_upload(image, temp_id)
 
     format_list = [f.strip() for f in formats.split(",") if f.strip()]
 
@@ -105,6 +117,15 @@ async def generate_from_image(
         params["octree_resolution"] = octree_resolution
     if texture is not None:
         params["texture"] = texture
+    # Add SAM 3D Objects params only if provided
+    if sam3d_stage1_steps is not None:
+        params["sam3d_stage1_steps"] = sam3d_stage1_steps
+    if sam3d_stage2_steps is not None:
+        params["sam3d_stage2_steps"] = sam3d_stage2_steps
+    if sam3d_texture_baking is not None:
+        params["sam3d_texture_baking"] = sam3d_texture_baking
+    if sam3d_vertex_color is not None:
+        params["sam3d_vertex_color"] = sam3d_vertex_color
 
     task_id = task_manager.submit_task("image", params)
 
@@ -199,8 +220,8 @@ async def generate_from_text(
     task_manager=Depends(get_task_manager),
 ):
     """Generate a 3D model from a text description."""
-    if engine == "hunyuan":
-        raise HTTPException(400, "Hunyuan3D does not support text-to-3D. Use image-to-3D instead.")
+    if engine in ("hunyuan", "sam3d"):
+        raise HTTPException(400, f"{engine} does not support text-to-3D. Use image-to-3D instead.")
 
     format_list = [f.strip() for f in formats.split(",") if f.strip()]
 

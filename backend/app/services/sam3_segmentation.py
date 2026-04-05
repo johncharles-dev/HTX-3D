@@ -1,0 +1,310 @@
+"""SAM3 segmentation service for interactive object masking.
+
+Manages GPU lifecycle, session state, and segmentation modes (text/box/point).
+SAM3 masks are used as input for 3D generation engines (TRELLIS, Hunyuan, SAM 3D Objects).
+
+All inference calls must be wrapped in torch.autocast("cuda", dtype=torch.bfloat16)
+because SAM3 model weights are BFloat16 but some layers expect Float32 inputs.
+"""
+
+import asyncio
+import gc
+import logging
+import os
+import uuid
+import time
+from pathlib import Path
+from typing import Optional
+
+import numpy as np
+import torch
+from PIL import Image
+
+from ..config import SAM3_DIR, SAM3_BPE_PATH, TEMP_DIR
+
+logger = logging.getLogger(__name__)
+
+# GPU lock to prevent concurrent SAM3 + generation engine usage
+gpu_lock = asyncio.Lock()
+
+# Enable tf32 for faster computation on Ampere+ GPUs
+torch.backends.cuda.matmul.allow_tf32 = True
+torch.backends.cudnn.allow_tf32 = True
+
+
+class SAM3Service:
+    """Manages SAM3 model lifecycle and segmentation sessions."""
+
+    def __init__(self):
+        self._model = None
+        self._processor = None
+        self._loaded = False
+        self._sessions: dict[str, dict] = {}
+
+    @property
+    def loaded(self) -> bool:
+        return self._loaded
+
+    def load(self, device: str = "cuda"):
+        """Load SAM3 model onto GPU."""
+        if self._loaded:
+            return
+
+        import sys
+        if SAM3_DIR not in sys.path:
+            sys.path.insert(0, SAM3_DIR)
+
+        from sam3.model_builder import build_sam3_image_model
+        from sam3.model.sam3_image_processor import Sam3Processor
+
+        logger.info("Loading SAM3 model...")
+        start = time.time()
+
+        with torch.autocast("cuda", dtype=torch.bfloat16):
+            self._model = build_sam3_image_model(
+                bpe_path=SAM3_BPE_PATH,
+                device=device,
+                eval_mode=True,
+                load_from_HF=True,
+            )
+        self._processor = Sam3Processor(
+            model=self._model,
+            resolution=1008,
+            device=device,
+            confidence_threshold=0.5,
+        )
+        self._loaded = True
+        logger.info(f"SAM3 loaded in {time.time() - start:.1f}s")
+
+    def unload(self):
+        """Free SAM3 from GPU memory."""
+        if not self._loaded:
+            return
+
+        logger.info("Unloading SAM3...")
+        self._sessions.clear()
+        del self._processor
+        del self._model
+        self._processor = None
+        self._model = None
+        self._loaded = False
+        gc.collect()
+        torch.cuda.empty_cache()
+        logger.info("SAM3 unloaded")
+
+    def start_session(self, image_path: str) -> dict:
+        """Start a segmentation session with an image.
+
+        Returns dict with session_id, width, height.
+        """
+        if not self._loaded:
+            self.load()
+
+        img = Image.open(image_path).convert("RGB")
+        img_array = np.array(img)
+
+        session_id = uuid.uuid4().hex[:12]
+
+        # Set image in processor (caches backbone features)
+        # Pass PIL Image (not numpy array) so set_image gets correct width/height
+        with torch.autocast("cuda", dtype=torch.bfloat16):
+            state = self._processor.set_image(img)
+
+        self._sessions[session_id] = {
+            "image_path": image_path,
+            "image": img,
+            "image_array": img_array,
+            "state": state,
+            "masks": None,
+            "scores": None,
+            "boxes": None,
+            "width": img.width,
+            "height": img.height,
+        }
+
+        logger.info(f"Segmentation session {session_id} started ({img.width}x{img.height})")
+        return {
+            "session_id": session_id,
+            "width": img.width,
+            "height": img.height,
+        }
+
+    def _get_session(self, session_id: str) -> dict:
+        session = self._sessions.get(session_id)
+        if not session:
+            raise ValueError(f"Session '{session_id}' not found")
+        return session
+
+    def _resize_masks_to_image(self, masks, session: dict):
+        """Resize masks to match original image dimensions if needed."""
+        if masks is None or masks.shape[0] == 0:
+            return masks
+        h_img, w_img = session["image_array"].shape[:2]
+        _, _, h_mask, w_mask = masks.shape
+        if h_mask != h_img or w_mask != w_img:
+            logger.info(f"Resizing masks from {h_mask}x{w_mask} to {h_img}x{w_img}")
+            masks = torch.nn.functional.interpolate(
+                masks.float(), size=(h_img, w_img), mode="nearest"
+            ).bool()
+        return masks
+
+    def segment_text(self, session_id: str, prompt: str) -> dict:
+        """Segment using a text prompt."""
+        session = self._get_session(session_id)
+        state = session["state"]
+
+        # Reset prompts and run text segmentation
+        self._processor.reset_all_prompts(state)
+        with torch.autocast("cuda", dtype=torch.bfloat16):
+            state = self._processor.set_text_prompt(prompt=prompt, state=state)
+
+        masks = self._resize_masks_to_image(state.get("masks"), session)
+        scores = state.get("scores")  # [N] float tensor
+        boxes = state.get("boxes")  # [N, 4] pixel coords
+
+        session["masks"] = masks
+        session["scores"] = scores
+        session["boxes"] = boxes
+        session["state"] = state
+
+        return self._build_mask_response(session_id, session)
+
+    def segment_box(self, session_id: str, box: list[float], label: bool = True) -> dict:
+        """Segment using a bounding box prompt.
+
+        box: [center_x, center_y, width, height] normalized 0-1
+        """
+        session = self._get_session(session_id)
+        state = session["state"]
+
+        with torch.autocast("cuda", dtype=torch.bfloat16):
+            state = self._processor.add_geometric_prompt(
+                box=box,
+                label=label,
+                state=state,
+            )
+
+        masks = self._resize_masks_to_image(state.get("masks"), session)
+        scores = state.get("scores")
+        boxes = state.get("boxes")
+
+        session["masks"] = masks
+        session["scores"] = scores
+        session["boxes"] = boxes
+        session["state"] = state
+
+        return self._build_mask_response(session_id, session)
+
+    def segment_point(self, session_id: str, x: float, y: float, label: bool = True) -> dict:
+        """Segment using a point prompt (converted to small box)."""
+        # SAM3 processor only exposes box prompts, so we create a small box around the point
+        box_size = 0.02  # 2% of image
+        box = [x, y, box_size, box_size]
+        return self.segment_box(session_id, box, label)
+
+    def reset_prompts(self, session_id: str) -> dict:
+        """Reset all prompts for a session."""
+        session = self._get_session(session_id)
+        state = session["state"]
+        self._processor.reset_all_prompts(state)
+        # Re-set the image to get fresh state
+        with torch.autocast("cuda", dtype=torch.bfloat16):
+            state = self._processor.set_image(session["image"])
+        session["state"] = state
+        session["masks"] = None
+        session["scores"] = None
+        session["boxes"] = None
+        return {"session_id": session_id, "message": "Prompts reset"}
+
+    def confirm_mask(self, session_id: str, mask_index: int = 0) -> str:
+        """Apply selected mask to image and save as RGBA PNG.
+
+        Returns path to the RGBA image.
+        """
+        session = self._get_session(session_id)
+        masks = session.get("masks")
+        if masks is None or masks.shape[0] == 0:
+            raise ValueError("No masks available. Run segmentation first.")
+        if mask_index >= masks.shape[0]:
+            raise ValueError(f"Mask index {mask_index} out of range (have {masks.shape[0]})")
+
+        # Extract single mask: [1, H, W] -> [H, W] numpy bool
+        mask = masks[mask_index, 0].cpu().numpy()
+
+        # Create RGBA image
+        img_array = session["image_array"]
+        alpha = (mask * 255).astype(np.uint8)
+        rgba = np.concatenate([img_array, alpha[..., None]], axis=-1)
+
+        # Save to temp directory
+        output_dir = os.path.join(TEMP_DIR, "segmented", session_id)
+        os.makedirs(output_dir, exist_ok=True)
+        output_path = os.path.join(output_dir, "segmented.png")
+        Image.fromarray(rgba).save(output_path)
+
+        logger.info(f"Session {session_id}: saved segmented RGBA to {output_path}")
+        return output_path
+
+    def create_overlay(self, session_id: str) -> str:
+        """Create a color-coded overlay image of all masks.
+
+        Returns path to the overlay PNG.
+        """
+        session = self._get_session(session_id)
+        masks = session.get("masks")
+        if masks is None or masks.shape[0] == 0:
+            raise ValueError("No masks available")
+
+        img_array = session["image_array"].copy().astype(np.float32)
+        # Color palette for masks
+        colors = [
+            [255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 255, 0],
+            [255, 0, 255], [0, 255, 255], [255, 128, 0], [128, 0, 255],
+        ]
+
+        for i in range(min(masks.shape[0], len(colors))):
+            mask_np = masks[i, 0].cpu().numpy()
+            color = np.array(colors[i % len(colors)], dtype=np.float32)
+            # Blend: 60% original + 40% color
+            img_array[mask_np] = img_array[mask_np] * 0.6 + color * 0.4
+
+        overlay = Image.fromarray(img_array.astype(np.uint8))
+        output_dir = os.path.join(TEMP_DIR, "segmented", session_id)
+        os.makedirs(output_dir, exist_ok=True)
+        overlay_path = os.path.join(output_dir, "overlay.png")
+        overlay.save(overlay_path)
+        return overlay_path
+
+    def _build_mask_response(self, session_id: str, session: dict) -> dict:
+        """Build response dict from mask results."""
+        masks = session.get("masks")
+        scores = session.get("scores")
+        boxes = session.get("boxes")
+
+        if masks is None or masks.shape[0] == 0:
+            overlay_path = ""
+            mask_results = []
+        else:
+            overlay_path = self.create_overlay(session_id)
+            mask_results = []
+            for i in range(masks.shape[0]):
+                mask_np = masks[i, 0].cpu().numpy()
+                box = boxes[i].cpu().tolist() if boxes is not None else [0, 0, 0, 0]
+                mask_results.append({
+                    "index": i,
+                    "score": float(scores[i]) if scores is not None else 0.0,
+                    "bbox": box,
+                    "area_pixels": int(mask_np.sum()),
+                })
+
+        return {
+            "session_id": session_id,
+            "masks": mask_results,
+            "overlay_path": overlay_path,
+        }
+
+    def cleanup_session(self, session_id: str):
+        """Remove a session from memory."""
+        if session_id in self._sessions:
+            del self._sessions[session_id]
+            logger.info(f"Session {session_id} cleaned up")

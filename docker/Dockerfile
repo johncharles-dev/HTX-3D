@@ -82,6 +82,12 @@ COPY backend/engines/trellis/ ./engines/trellis/
 # Copy Hunyuan3D engine source
 COPY backend/engines/hunyuan/ ./engines/hunyuan/
 
+# Copy SAM3 segmentation engine source
+COPY backend/engines/sam3/ ./engines/sam3/
+
+# Copy SAM 3D Objects engine source
+COPY backend/engines/sam3d_objects/ ./engines/sam3d_objects/
+
 # Build CUDA extensions from source (cloned from GitHub)
 # These MUST be compiled with the correct TORCH_CUDA_ARCH_LIST for Blackwell support.
 # PTX fallback produces garbage results on newer GPUs (telltale sign: 66 billion GB OOM).
@@ -118,6 +124,31 @@ RUN pip install --no-cache-dir pybind11 \
        mesh_inpaint_processor.cpp \
        -o mesh_inpaint_processor$(python -c "import sysconfig; print(sysconfig.get_config_var('EXT_SUFFIX'))")
 
+# 8. SAM3 segmentation dependencies
+RUN pip install --no-cache-dir \
+    "ftfy==6.1.1" \
+    "iopath>=0.1.10" \
+    "seaborn" \
+    "pycocotools" \
+    "psutil"
+
+# 9. SAM 3D Objects dependencies (pytorch3d + hydra + runtime deps)
+RUN pip install --no-cache-dir \
+    "hydra-core==1.3.2" \
+    "moge @ git+https://github.com/microsoft/MoGe.git" \
+    "gsplat==1.5.0" \
+    loguru optree astor lightning
+RUN pip install --no-cache-dir \
+    "pytorch3d @ git+https://github.com/facebookresearch/pytorch3d.git"
+
+# 10. Pin versions back after SAM3D deps may have upgraded them
+# - huggingface-hub <1.0 required by TRELLIS transformers
+# - utils3d pinned to TRELLIS-compatible commit (MoGe upgrades to 1.3 which breaks TRELLIS)
+RUN pip install --no-cache-dir \
+    "huggingface_hub>=0.23,<1.0" \
+    "transformers>=4.35.0,<4.50" \
+    "utils3d @ git+https://github.com/EasternJournalist/utils3d.git@9a4eb15e4021b67b12c460c7057d642626897ec8"
+
 # Cleanup build artifacts
 RUN rm -rf /tmp/extensions
 
@@ -132,6 +163,9 @@ ENV XFORMERS_DISABLED=1
 ENV ATTN_BACKEND=sdpa
 ENV TRELLIS_ENGINE_DIR=/app/engines/trellis
 ENV HUNYUAN_ENGINE_DIR=/app/engines/hunyuan
+ENV SAM3_DIR=/app/engines/sam3
+ENV SAM3_BPE_PATH=/app/engines/sam3/sam3/assets/bpe_simple_vocab_16e6.txt.gz
+ENV SAM3D_OBJECTS_DIR=/app/engines/sam3d_objects
 ENV WEIGHTS_DIR=/app/weights
 ENV GALLERY_DIR=/app/gallery
 

@@ -22,6 +22,18 @@ HUNYUAN_ENGINE_DIR = os.environ.get(
     "HUNYUAN_ENGINE_DIR",
     str(BASE_DIR / "engines" / "hunyuan"),
 )
+SAM3D_OBJECTS_DIR = os.environ.get(
+    "SAM3D_OBJECTS_DIR",
+    str(BASE_DIR / "engines" / "sam3d_objects"),
+)
+SAM3_DIR = os.environ.get(
+    "SAM3_DIR",
+    str(BASE_DIR / "engines" / "sam3"),
+)
+SAM3_BPE_PATH = os.environ.get(
+    "SAM3_BPE_PATH",
+    os.path.join(SAM3_DIR, "sam3", "assets", "bpe_simple_vocab_16e6.txt.gz"),
+)
 
 # GPU / Hardware
 def detect_gpu():
