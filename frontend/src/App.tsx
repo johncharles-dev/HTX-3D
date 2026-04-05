@@ -28,6 +28,7 @@ import type {
   ModelResult,
   GenerationSettings,
   ExportSettings,
+  EngineName,
 } from './types';
 import {
   MODELS,
@@ -38,7 +39,7 @@ import {
 type Tab = 'image' | 'text' | 'gallery';
 
 export default function App() {
-  // ── State ─────────────────────────────────────────
+  // -- State -----------------------------------------------
   const [activeTab, setActiveTab] = useState<Tab>('image');
   const [health, setHealth] = useState<HealthStatus | null>(null);
 
@@ -71,7 +72,7 @@ export default function App() {
   const [viewerFormat, setViewerFormat] = useState<string>('glb');
   const [galleryExports, setGalleryExports] = useState<ExportFile[]>([]);
 
-  // ── Derived ───────────────────────────────────────
+  // -- Derived ---------------------------------------------
   const activeModelResult = modelResults.find((mr) => mr.modelId === activeResultModel);
   const activeResult = activeModelResult?.result || null;
   const activeProgress = activeModelResult?.progress || null;
@@ -80,16 +81,28 @@ export default function App() {
   // For text tab, always use trellis
   const effectiveModels = activeTab === 'text' ? ['trellis'] : selectedModels;
 
-  // ── Health Check ──────────────────────────────────
+  // Derive active engine from first selected model (for settings panel)
+  const activeEngine: EngineName = activeTab === 'text'
+    ? 'trellis'
+    : (selectedModels[0] === 'hunyuan' ? 'hunyuan' : 'trellis');
+
+  // -- Health Check ----------------------------------------
   useEffect(() => {
-    getHealth().then(setHealth).catch(() => {});
+    getHealth().then((h) => {
+      setHealth(h);
+      // Auto-select first registered engine if current selection is unavailable
+      if (h.engines_registered && !h.engines_registered.includes(selectedModels[0])) {
+        const first = h.engines_registered[0];
+        if (first) setSelectedModels([first]);
+      }
+    }).catch(() => {});
     const interval = setInterval(() => {
       getHealth().then(setHealth).catch(() => {});
     }, 30000);
     return () => clearInterval(interval);
   }, []);
 
-  // ── Model Toggle ──────────────────────────────────
+  // -- Model Toggle ----------------------------------------
   const toggleModel = (modelId: string) => {
     setSelectedModels((prev) =>
       prev.includes(modelId)
@@ -98,12 +111,16 @@ export default function App() {
     );
   };
 
-  // ── Sequential Multi-Model Generation ─────────────
+  // -- Sequential Multi-Model Generation -------------------
   const runModelsSequentially = async (
     submitFn: (modelId: string) => Promise<{ task_id: string; status: TaskStatus }>,
   ) => {
-    // Only run available models
-    const toRun = effectiveModels.filter((id) => MODELS.find((m) => m.id === id)?.available);
+    // Only run available and registered models
+    const registered = health?.engines_registered ?? [];
+    const toRun = effectiveModels.filter((id) => {
+      const model = MODELS.find((m) => m.id === id);
+      return model?.available && (registered.length === 0 || registered.includes(id));
+    });
     if (toRun.length === 0) {
       throw new Error('No available models selected');
     }
@@ -184,7 +201,7 @@ export default function App() {
     setIsGenerating(false);
   };
 
-  // ── Generate Handler ──────────────────────────────
+  // -- Generate Handler ------------------------------------
   const handleGenerate = async () => {
     setError(null);
     setGalleryExports([]);
@@ -197,11 +214,12 @@ export default function App() {
           throw new Error('Please upload an image');
         }
 
-        await runModelsSequentially(async (_modelId) => {
+        await runModelsSequentially(async (modelId) => {
+          const engine = modelId as EngineName;
           if (inputMode === 'multi' && imageFiles.length >= 2) {
-            return generateFromMultiImage(imageFiles, multiImageMode, genSettings, exportSettings);
+            return generateFromMultiImage(imageFiles, multiImageMode, genSettings, exportSettings, engine);
           } else {
-            return generateFromImage(imageFiles[0], genSettings, exportSettings);
+            return generateFromImage(imageFiles[0], genSettings, exportSettings, engine);
           }
         });
       } else if (activeTab === 'text') {
@@ -234,7 +252,7 @@ export default function App() {
     }
   };
 
-  // ── Auto-select viewer when results change ────────
+  // -- Auto-select viewer when results change --------------
   useEffect(() => {
     if (!activeModelResult?.result) return;
     const res = activeModelResult.result;
@@ -248,7 +266,7 @@ export default function App() {
     }
   }, [activeModelResult?.result]);
 
-  // ── Switch viewer when active result model changes ─
+  // -- Switch viewer when active result model changes ------
   const handleSelectResultModel = (modelId: string) => {
     setActiveResultModel(modelId);
     const mr = modelResults.find((r) => r.modelId === modelId);
@@ -264,7 +282,7 @@ export default function App() {
     }
   };
 
-  // ── Gallery Preview ───────────────────────────────
+  // -- Gallery Preview -------------------------------------
   const handleGalleryPreview = (exports: ExportFile[]) => {
     setGalleryExports(exports);
     setModelResults([]);
@@ -280,11 +298,11 @@ export default function App() {
     setActiveTab('image');
   };
 
-  // ── Computed ──────────────────────────────────────
+  // -- Computed --------------------------------------------
   const hasResults = modelResults.length > 0;
   const displayExports = activeResult?.exports || galleryExports;
 
-  // ── Render ────────────────────────────────────────
+  // -- Render ----------------------------------------------
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       <Header activeTab={activeTab} onTabChange={setActiveTab} health={health} />
@@ -295,7 +313,7 @@ export default function App() {
         </main>
       ) : (
         <main className="flex-1 flex overflow-hidden">
-          {/* ── Left Panel: Input + Settings ──────────── */}
+          {/* -- Left Panel: Input + Settings ---------------- */}
           <aside className="w-80 border-r border-border bg-bg-secondary flex flex-col overflow-y-auto">
             <div className="p-4 space-y-5 flex-1">
 
@@ -306,6 +324,7 @@ export default function App() {
                     activeTab={activeTab}
                     selectedModels={selectedModels}
                     onToggle={toggleModel}
+                    registeredEngines={health?.engines_registered}
                   />
                   <div className="border-t border-border" />
                 </>
@@ -481,6 +500,7 @@ export default function App() {
                   exportSettings={exportSettings}
                   onGenerationChange={setGenSettings}
                   onExportChange={setExportSettings}
+                  activeEngine={activeEngine}
                 />
               </div>
             </div>
@@ -522,7 +542,7 @@ export default function App() {
             </div>
           </aside>
 
-          {/* ── Center: 3D Viewer ──────────────────── */}
+          {/* -- Center: 3D Viewer -------------------------- */}
           <section className="flex-1 flex flex-col min-w-0">
             {/* Result Tabs — always show when we have results */}
             {hasResults && (
@@ -613,7 +633,7 @@ export default function App() {
 
           </section>
 
-          {/* ── Right Panel: Downloads ─────────────── */}
+          {/* -- Right Panel: Downloads --------------------- */}
           {displayExports.length > 0 && (
             <aside className="w-64 border-l border-border bg-bg-secondary p-4 overflow-y-auto">
               <ExportPanel

@@ -1,0 +1,75 @@
+======================================================================
+HTX-3D EVALUATION REPORT
+GPU: NVIDIA RTX 5090 (32GB, Blackwell, compute 12.0)
+Rendering: nvdiffrast (front-view, 512x512)
+Image Metrics: input image vs rendered 3D model output
+======================================================================
+
+Image: epl-1-min.jpg
+------------------------------------------------------------
+Metric                            TRELLIS         Hunyuan
+------------------------------------------------------------
+Generation Time (s)                   9.1            67.3
+SSIM ↑                             0.2495          0.2343
+PSNR (dB) ↑                          7.17            6.65
+LPIPS ↓                            0.7283          0.7168
+CLIP Score ↑                        0.375          0.3736
+Vertices                             9934           29875
+Faces                               11956           40000
+Watertight                          False           False
+Surface Area                        1.714          6.3619
+File Size (MB)                       1.54            6.62
+Degenerate Faces                        2               0
+
+Image: hunter.png
+------------------------------------------------------------
+Metric                            TRELLIS         Hunyuan
+------------------------------------------------------------
+Generation Time (s)                  11.4            83.6
+SSIM ↑                             0.2275          0.2302
+PSNR (dB) ↑                          8.93             8.6
+LPIPS ↓                            0.7742          0.8098
+CLIP Score ↑                       0.6046          0.6218
+Vertices                            20971           30221
+Faces                               24621           40000
+Watertight                          False           False
+Surface Area                       2.9227         10.6889
+File Size (MB)                       1.95            6.43
+Degenerate Faces                        4               0
+
+Image: scdf-s-seventh-generation-ambulance.jpg
+------------------------------------------------------------
+Metric                            TRELLIS         Hunyuan
+------------------------------------------------------------
+Generation Time (s)                   8.9            65.6
+SSIM ↑                             0.2725          0.2611
+PSNR (dB) ↑                          6.03            5.77
+LPIPS ↓                            0.7253          0.7288
+CLIP Score ↑                       0.4996          0.4652
+Vertices                             8237           25353
+Faces                               10527           40000
+Watertight                          False           False
+Surface Area                        1.686          6.2087
+File Size (MB)                       1.53            5.94
+Degenerate Faces                        0               1
+
+======================================================================
+AVERAGE METRICS ACROSS ALL IMAGES
+======================================================================
+Metric                            TRELLIS         Hunyuan       Winner
+----------------------------------------------------------------------
+Generation Time (s)                   9.8         72.1667      TRELLIS
+SSIM ↑                             0.2498          0.2419      TRELLIS
+PSNR (dB) ↑                        7.3767          7.0067      TRELLIS
+LPIPS ↓                            0.7426          0.7518      TRELLIS
+CLIP Score ↑                       0.4931          0.4869      TRELLIS
+Vertices                       13047.3333         28483.0             
+Faces                          15701.3333         40000.0             
+File Size (MB)                     1.6733            6.33             
+
+Notes:
+  ↑ = higher is better, ↓ = lower is better
+  SSIM: Structural Similarity Index (0-1)
+  PSNR: Peak Signal-to-Noise Ratio in dB
+  LPIPS: Learned Perceptual Image Patch Similarity (AlexNet)
+  CLIP: Cosine similarity of CLIP ViT-B/32 image embeddings

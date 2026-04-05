@@ -13,10 +13,14 @@ TEMP_DIR = os.environ.get("TEMP_DIR", "/tmp/htx-3d")
 for d in [WEIGHTS_DIR, GALLERY_DIR, TEMP_DIR]:
     os.makedirs(d, exist_ok=True)
 
-# Engine path (Trellis source)
+# Engine paths
 TRELLIS_ENGINE_DIR = os.environ.get(
     "TRELLIS_ENGINE_DIR",
     str(BASE_DIR / "engines" / "trellis"),
+)
+HUNYUAN_ENGINE_DIR = os.environ.get(
+    "HUNYUAN_ENGINE_DIR",
+    str(BASE_DIR / "engines" / "hunyuan"),
 )
 
 # GPU / Hardware

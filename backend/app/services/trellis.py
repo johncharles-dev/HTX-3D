@@ -38,7 +38,7 @@ class TrellisEngine(BaseEngine):
         self._device = "cuda"
         self._active_pipeline = None  # tracks which pipeline is on GPU
 
-    # ── Lifecycle ──────────────────────────────────────
+    # -- Lifecycle -------------------------------------------
 
     def load(self, weights_dir: str, device: str = "cuda") -> None:
         self._device = device
@@ -138,20 +138,22 @@ class TrellisEngine(BaseEngine):
             torch.cuda.empty_cache()
         logger.info("TRELLIS engine unloaded")
 
-    # ── Generation ─────────────────────────────────────
+    # -- Generation ------------------------------------------
 
     def generate_from_image(
         self,
         image_path: str,
         seed: int,
-        ss_steps: int,
-        ss_guidance: float,
-        slat_steps: int,
-        slat_guidance: float,
         progress_callback: Optional[Callable[[str, float], None]] = None,
+        **engine_params,
     ) -> dict:
         if not self.image_pipeline:
             raise RuntimeError("Image pipeline not loaded")
+
+        ss_steps = engine_params.get("ss_steps", 12)
+        ss_guidance = engine_params.get("ss_guidance", 7.5)
+        slat_steps = engine_params.get("slat_steps", 12)
+        slat_guidance = engine_params.get("slat_guidance", 3.0)
 
         self._activate("image")
 
@@ -194,14 +196,16 @@ class TrellisEngine(BaseEngine):
         image_paths: list[str],
         seed: int,
         mode: str,
-        ss_steps: int,
-        ss_guidance: float,
-        slat_steps: int,
-        slat_guidance: float,
         progress_callback: Optional[Callable[[str, float], None]] = None,
+        **engine_params,
     ) -> dict:
         if not self.image_pipeline:
             raise RuntimeError("Image pipeline not loaded")
+
+        ss_steps = engine_params.get("ss_steps", 12)
+        ss_guidance = engine_params.get("ss_guidance", 7.5)
+        slat_steps = engine_params.get("slat_steps", 12)
+        slat_guidance = engine_params.get("slat_guidance", 3.0)
 
         self._activate("image")
 
@@ -244,14 +248,16 @@ class TrellisEngine(BaseEngine):
         self,
         prompt: str,
         seed: int,
-        ss_steps: int,
-        ss_guidance: float,
-        slat_steps: int,
-        slat_guidance: float,
         progress_callback: Optional[Callable[[str, float], None]] = None,
+        **engine_params,
     ) -> dict:
         if not self.text_pipeline:
             raise RuntimeError("Text pipeline not loaded. Download TRELLIS-text-large weights first.")
+
+        ss_steps = engine_params.get("ss_steps", 12)
+        ss_guidance = engine_params.get("ss_guidance", 7.5)
+        slat_steps = engine_params.get("slat_steps", 12)
+        slat_guidance = engine_params.get("slat_guidance", 3.0)
 
         self._activate("text")
 
@@ -283,7 +289,7 @@ class TrellisEngine(BaseEngine):
             "mesh": outputs["mesh"][0],
         }
 
-    # ── Text-Guided Editing (Variant) ──────────────────
+    # -- Text-Guided Editing (Variant) -----------------------
 
     def edit_with_text(
         self,
@@ -349,19 +355,21 @@ class TrellisEngine(BaseEngine):
             "mesh": outputs["mesh"][0],
         }
 
-    # ── Export ──────────────────────────────────────────
+    # -- Export -----------------------------------------------
 
     def export_mesh(
         self,
         generation_data: dict,
         output_dir: str,
         formats: list[str],
-        simplify: float = 0.95,
-        texture_size: int = 1024,
-        fill_holes: bool = True,
-        fill_holes_max_size: float = 0.04,
         progress_callback: Optional[Callable[[str, float], None]] = None,
+        **engine_params,
     ) -> dict[str, Path]:
+        simplify = engine_params.get("simplify", 0.95)
+        texture_size = engine_params.get("texture_size", 1024)
+        fill_holes = engine_params.get("fill_holes", True)
+        fill_holes_max_size = engine_params.get("fill_holes_max_size", 0.04)
+
         _add_trellis_to_path(self.engine_dir)
         from trellis.utils import postprocessing_utils
 
@@ -436,7 +444,7 @@ class TrellisEngine(BaseEngine):
 
         return results
 
-    # ── Preview ────────────────────────────────────────
+    # -- Preview ---------------------------------------------
 
     def render_preview(
         self,

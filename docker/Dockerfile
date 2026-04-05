@@ -1,4 +1,4 @@
-## ─── Stage 1: Build Frontend ─────────────────────────
+## --- Stage 1: Build Frontend -----------------------------
 FROM node:20-slim AS frontend-build
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
@@ -6,7 +6,7 @@ RUN npm ci
 COPY frontend/ ./
 RUN npm run build
 
-## ─── Stage 2: Backend + Runtime ─────────────────────
+## --- Stage 2: Backend + Runtime --------------------------
 FROM nvidia/cuda:12.8.0-devel-ubuntu24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -17,7 +17,7 @@ ENV PYTHONDONTWRITEBYTECODE=1
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 python3-venv python3-dev python3-pip \
     git wget curl \
-    libgl1 libglib2.0-0 libsm6 libxext6 libxrender1 \
+    libgl1 libglib2.0-0 libsm6 libxext6 libxrender1 libopengl0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Ensure 'python' command works
@@ -57,6 +57,20 @@ RUN pip install --no-cache-dir \
     "transformers>=4.35.0,<4.50" \
     "utils3d @ git+https://github.com/EasternJournalist/utils3d.git@9a4eb15e4021b67b12c460c7057d642626897ec8"
 
+# Install Hunyuan3D engine runtime dependencies
+RUN pip install --no-cache-dir \
+    diffusers==0.30.0 \
+    omegaconf \
+    pymeshlab \
+    pygltflib \
+    cupy-cuda12x \
+    realesrgan \
+    basicsr \
+    timm \
+    torchdiffeq \
+    einops \
+    pytorch-lightning
+
 # Install CUDA extensions with Blackwell support
 ENV TORCH_CUDA_ARCH_LIST="8.0;8.6;8.9;10.0;12.0"
 ENV CUDA_HOME=/usr/local/cuda
@@ -64,6 +78,9 @@ ENV PATH="${CUDA_HOME}/bin:${PATH}"
 
 # Copy TRELLIS engine source
 COPY backend/engines/trellis/ ./engines/trellis/
+
+# Copy Hunyuan3D engine source
+COPY backend/engines/hunyuan/ ./engines/hunyuan/
 
 # Build CUDA extensions from source (cloned from GitHub)
 # These MUST be compiled with the correct TORCH_CUDA_ARCH_LIST for Blackwell support.
@@ -87,6 +104,20 @@ RUN pip install --no-cache-dir spconv-cu126==2.3.8
 # 5. kaolin (cu126 wheel -- no cu128 wheel exists)
 RUN pip install --no-cache-dir kaolin==0.18.0 -f https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.7.0_cu126.html
 
+# 6. Hunyuan custom rasterizer (build from source for Blackwell)
+RUN cd /app/engines/hunyuan/hy3dpaint/custom_rasterizer \
+    && pip install --no-build-isolation .
+
+# 7. Rebuild mesh_inpaint_processor for Python 3.12 (source ships with 3.11 .so)
+RUN pip install --no-cache-dir pybind11 \
+    && cd /app/engines/hunyuan/hy3dpaint/DifferentiableRenderer \
+    && rm -f mesh_inpaint_processor*.so \
+    && python -c "import pybind11; print(pybind11.get_cmake_dir())" \
+    && c++ -O3 -Wall -shared -std=c++17 -fPIC \
+       $(python -m pybind11 --includes) \
+       mesh_inpaint_processor.cpp \
+       -o mesh_inpaint_processor$(python -c "import sysconfig; print(sysconfig.get_config_var('EXT_SUFFIX'))")
+
 # Cleanup build artifacts
 RUN rm -rf /tmp/extensions
 
@@ -100,6 +131,7 @@ COPY --from=frontend-build /app/frontend/dist/ ./frontend/dist/
 ENV XFORMERS_DISABLED=1
 ENV ATTN_BACKEND=sdpa
 ENV TRELLIS_ENGINE_DIR=/app/engines/trellis
+ENV HUNYUAN_ENGINE_DIR=/app/engines/hunyuan
 ENV WEIGHTS_DIR=/app/weights
 ENV GALLERY_DIR=/app/gallery
 

@@ -8,6 +8,7 @@ from enum import Enum
 class ModelType(str, Enum):
     TRELLIS_IMAGE = "trellis-image-to-3d"
     TRELLIS_TEXT = "trellis-text-to-3d"
+    HUNYUAN_IMAGE = "hunyuan-image-to-3d"
 
 
 class ExportFormat(str, Enum):
@@ -44,6 +45,12 @@ class GenerationSettings(BaseModel):
     # Stage 2: Structured latent
     slat_steps: int = Field(default=12, ge=1, le=50, description="Structured latent sampling steps")
     slat_guidance: float = Field(default=3.0, ge=0.0, le=10.0, description="Structured latent guidance strength")
+
+    # Hunyuan-specific (optional, ignored by TRELLIS)
+    num_inference_steps: Optional[int] = Field(default=None, ge=1, le=100, description="Hunyuan inference steps")
+    guidance_scale: Optional[float] = Field(default=None, ge=0.0, le=20.0, description="Hunyuan guidance scale")
+    octree_resolution: Optional[int] = Field(default=None, description="Hunyuan octree resolution (128/256/384/512)")
+    texture: Optional[bool] = Field(default=None, description="Enable PBR texture generation (Hunyuan)")
 
 
 class ExportSettings(BaseModel):
@@ -151,4 +158,6 @@ class HealthResponse(BaseModel):
     status: str
     gpu: dict
     models_loaded: List[str]
+    engines_registered: List[str] = []
+    active_engine: Optional[str] = None
     queue_size: int

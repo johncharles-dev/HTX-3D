@@ -3,7 +3,7 @@
 import os
 import shutil
 import logging
-from typing import Annotated
+from typing import Annotated, Optional
 
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from pydantic import ValidationError
@@ -38,17 +38,34 @@ def _save_upload(upload: UploadFile, task_id: str, index: int = 0) -> str:
     return path
 
 
-# ── Image-to-3D ───────────────────────────────────────
+def _model_id_for_engine(engine: str, task_type: str) -> str:
+    """Map engine name + task type to a ModelType value."""
+    if engine == "hunyuan":
+        return "hunyuan-image-to-3d"
+    if task_type == "text":
+        return "trellis-text-to-3d"
+    return "trellis-image-to-3d"
+
+
+# -- Image-to-3D -------------------------------------------
 
 @router.post("/generate/image", response_model=TaskResponse)
 async def generate_from_image(
     image: UploadFile = File(..., description="Input image (PNG/JPG, ideally with transparent background)"),
+    engine: str = Form("trellis", description="Engine to use: trellis or hunyuan"),
     seed: int = Form(42),
     randomize_seed: bool = Form(True),
+    # TRELLIS params
     ss_steps: int = Form(12),
     ss_guidance: float = Form(7.5),
     slat_steps: int = Form(12),
     slat_guidance: float = Form(3.0),
+    # Hunyuan params
+    num_inference_steps: Optional[int] = Form(None),
+    guidance_scale: Optional[float] = Form(None),
+    octree_resolution: Optional[int] = Form(None),
+    texture: Optional[bool] = Form(None),
+    # Export params
     formats: str = Form("glb", description="Comma-separated export formats: glb,obj,stl,ply"),
     mesh_simplify: float = Form(0.95),
     texture_size: int = Form(1024),
@@ -65,8 +82,9 @@ async def generate_from_image(
 
     format_list = [f.strip() for f in formats.split(",") if f.strip()]
 
-    task_id = task_manager.submit_task("image", {
-        "model": "trellis-image-to-3d",
+    params = {
+        "model": _model_id_for_engine(engine, "image"),
+        "engine": engine,
         "image_path": image_path,
         "seed": seed,
         "randomize_seed": randomize_seed,
@@ -77,7 +95,18 @@ async def generate_from_image(
         "formats": format_list,
         "mesh_simplify": mesh_simplify,
         "texture_size": texture_size,
-    })
+    }
+    # Add Hunyuan params only if provided
+    if num_inference_steps is not None:
+        params["num_inference_steps"] = num_inference_steps
+    if guidance_scale is not None:
+        params["guidance_scale"] = guidance_scale
+    if octree_resolution is not None:
+        params["octree_resolution"] = octree_resolution
+    if texture is not None:
+        params["texture"] = texture
+
+    task_id = task_manager.submit_task("image", params)
 
     return TaskResponse(
         task_id=task_id,
@@ -86,18 +115,26 @@ async def generate_from_image(
     )
 
 
-# ── Multi-Image-to-3D ─────────────────────────────────
+# -- Multi-Image-to-3D ------------------------------------
 
 @router.post("/generate/multi-image", response_model=TaskResponse)
 async def generate_from_multi_image(
     images: list[UploadFile] = File(..., description="2-4 images of the same object from different views"),
+    engine: str = Form("trellis", description="Engine to use: trellis or hunyuan"),
     seed: int = Form(42),
     randomize_seed: bool = Form(True),
     mode: str = Form("stochastic", description="Multi-image fusion: stochastic or multidiffusion"),
+    # TRELLIS params
     ss_steps: int = Form(12),
     ss_guidance: float = Form(7.5),
     slat_steps: int = Form(12),
     slat_guidance: float = Form(3.0),
+    # Hunyuan params
+    num_inference_steps: Optional[int] = Form(None),
+    guidance_scale: Optional[float] = Form(None),
+    octree_resolution: Optional[int] = Form(None),
+    texture: Optional[bool] = Form(None),
+    # Export params
     formats: str = Form("glb"),
     mesh_simplify: float = Form(0.95),
     texture_size: int = Form(1024),
@@ -111,8 +148,9 @@ async def generate_from_multi_image(
     image_paths = [_save_upload(img, temp_id, i) for i, img in enumerate(images)]
     format_list = [f.strip() for f in formats.split(",") if f.strip()]
 
-    task_id = task_manager.submit_task("multi_image", {
-        "model": "trellis-image-to-3d",
+    params = {
+        "model": _model_id_for_engine(engine, "image"),
+        "engine": engine,
         "image_paths": image_paths,
         "seed": seed,
         "randomize_seed": randomize_seed,
@@ -124,7 +162,17 @@ async def generate_from_multi_image(
         "formats": format_list,
         "mesh_simplify": mesh_simplify,
         "texture_size": texture_size,
-    })
+    }
+    if num_inference_steps is not None:
+        params["num_inference_steps"] = num_inference_steps
+    if guidance_scale is not None:
+        params["guidance_scale"] = guidance_scale
+    if octree_resolution is not None:
+        params["octree_resolution"] = octree_resolution
+    if texture is not None:
+        params["texture"] = texture
+
+    task_id = task_manager.submit_task("multi_image", params)
 
     return TaskResponse(
         task_id=task_id,
@@ -133,11 +181,12 @@ async def generate_from_multi_image(
     )
 
 
-# ── Text-to-3D ────────────────────────────────────────
+# -- Text-to-3D -------------------------------------------
 
 @router.post("/generate/text", response_model=TaskResponse)
 async def generate_from_text(
     prompt: str = Form(..., description="Text description of the 3D object to generate"),
+    engine: str = Form("trellis", description="Engine to use (only trellis supports text)"),
     seed: int = Form(42),
     randomize_seed: bool = Form(True),
     ss_steps: int = Form(12),
@@ -150,10 +199,14 @@ async def generate_from_text(
     task_manager=Depends(get_task_manager),
 ):
     """Generate a 3D model from a text description."""
+    if engine == "hunyuan":
+        raise HTTPException(400, "Hunyuan3D does not support text-to-3D. Use image-to-3D instead.")
+
     format_list = [f.strip() for f in formats.split(",") if f.strip()]
 
     task_id = task_manager.submit_task("text", {
         "model": "trellis-text-to-3d",
+        "engine": "trellis",
         "prompt": prompt,
         "seed": seed,
         "randomize_seed": randomize_seed,
@@ -173,7 +226,7 @@ async def generate_from_text(
     )
 
 
-# ── Text-Guided Edit (Variant) ─────────────────────────
+# -- Text-Guided Edit (Variant) ---------------------------
 
 @router.post("/generate/edit", response_model=TaskResponse)
 async def edit_with_text(
@@ -207,6 +260,7 @@ async def edit_with_text(
 
     task_id = task_manager.submit_task("edit", {
         "model": "trellis-text-to-3d",
+        "engine": "trellis",
         "prompt": prompt,
         "seed": seed,
         "randomize_seed": randomize_seed,
@@ -226,7 +280,7 @@ async def edit_with_text(
     )
 
 
-# ── Task Status ────────────────────────────────────────
+# -- Task Status -------------------------------------------
 
 @router.get("/task/{task_id}", response_model=GenerationResult)
 async def get_task_status(task_id: str, task_manager=Depends(get_task_manager)):

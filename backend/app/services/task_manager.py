@@ -34,14 +34,21 @@ class TaskManager:
 
     def __init__(self):
         self.queue: asyncio.Queue = asyncio.Queue()
-        self.tasks: dict[str, dict] = {}  # task_id → task state
+        self.tasks: dict[str, dict] = {}  # task_id -> task state
         self.engines: dict[str, BaseEngine] = {}
+        self._active_engine: Optional[str] = None  # name of currently loaded engine
         self._worker_task: Optional[asyncio.Task] = None
-        self._progress_subscribers: dict[str, list[asyncio.Queue]] = {}  # task_id → subscriber queues
+        self._progress_subscribers: dict[str, list[asyncio.Queue]] = {}  # task_id -> subscriber queues
         self._load_gallery_index()
 
     def register_engine(self, engine: BaseEngine):
         self.engines[engine.name] = engine
+        if engine.loaded:
+            self._active_engine = engine.name
+
+    @property
+    def active_engine(self) -> Optional[str]:
+        return self._active_engine
 
     async def start(self):
         self._worker_task = asyncio.create_task(self._worker_loop())
@@ -51,7 +58,34 @@ class TaskManager:
         if self._worker_task:
             self._worker_task.cancel()
 
-    # ── Task Submission ────────────────────────────────
+    # -- Engine Switching ------------------------------------
+
+    def _ensure_engine_loaded(self, engine_name: str) -> BaseEngine:
+        """Ensure the requested engine is loaded. Unload current if different."""
+        engine = self.engines.get(engine_name)
+        if not engine:
+            raise RuntimeError(f"Engine '{engine_name}' not registered")
+
+        if self._active_engine == engine_name and engine.loaded:
+            return engine
+
+        # Unload current engine if a different one is active
+        if self._active_engine and self._active_engine != engine_name:
+            current = self.engines.get(self._active_engine)
+            if current and current.loaded:
+                logger.info(f"Unloading engine '{self._active_engine}' to switch to '{engine_name}'")
+                current.unload()
+
+        # Load requested engine
+        if not engine.loaded:
+            from ..config import WEIGHTS_DIR
+            logger.info(f"Loading engine '{engine_name}'...")
+            engine.load(WEIGHTS_DIR)
+
+        self._active_engine = engine_name
+        return engine
+
+    # -- Task Submission ------------------------------------
 
     def submit_task(self, task_type: str, params: dict) -> str:
         task_id = uuid.uuid4().hex[:12]
@@ -78,7 +112,7 @@ class TaskManager:
     def queue_size(self) -> int:
         return self.queue.qsize()
 
-    # ── Progress Streaming ─────────────────────────────
+    # -- Progress Streaming ---------------------------------
 
     def subscribe_progress(self, task_id: str) -> asyncio.Queue:
         q = asyncio.Queue()
@@ -104,7 +138,7 @@ class TaskManager:
             except asyncio.QueueFull:
                 pass
 
-    # ── Worker Loop ────────────────────────────────────
+    # -- Worker Loop ----------------------------------------
 
     async def _worker_loop(self):
         while True:
@@ -145,9 +179,9 @@ class TaskManager:
         def progress_cb(stage: str, progress: float):
             self._broadcast_progress(task_id, stage, progress)
 
-        engine = self.engines.get("trellis")
-        if not engine or not engine.loaded:
-            raise RuntimeError("Trellis engine not loaded")
+        # Determine which engine to use
+        engine_name = params.get("engine", "trellis")
+        engine = self._ensure_engine_loaded(engine_name)
 
         # Resolve seed
         seed = params.get("seed", 42)
@@ -160,39 +194,39 @@ class TaskManager:
 
         start_time = time.time()
 
-        # ── Generate ───────────────────────────────────
+        # Build engine_params from task params (engine extracts what it needs)
+        engine_params = {k: v for k, v in params.items()
+                         if k not in ("image_path", "image_paths", "prompt", "seed",
+                                      "randomize_seed", "model", "engine", "formats",
+                                      "mesh_simplify", "texture_size", "fill_holes",
+                                      "fill_holes_max_size", "mode", "base_task_id",
+                                      "mesh_file_path")}
+
+        # -- Generate ----------------------------------------
         if task_type == "image":
             gen_data = engine.generate_from_image(
                 image_path=params["image_path"],
                 seed=seed,
-                ss_steps=params.get("ss_steps", 12),
-                ss_guidance=params.get("ss_guidance", 7.5),
-                slat_steps=params.get("slat_steps", 12),
-                slat_guidance=params.get("slat_guidance", 3.0),
                 progress_callback=progress_cb,
+                **engine_params,
             )
         elif task_type == "multi_image":
             gen_data = engine.generate_from_images(
                 image_paths=params["image_paths"],
                 seed=seed,
                 mode=params.get("mode", "stochastic"),
-                ss_steps=params.get("ss_steps", 12),
-                ss_guidance=params.get("ss_guidance", 7.5),
-                slat_steps=params.get("slat_steps", 12),
-                slat_guidance=params.get("slat_guidance", 3.0),
                 progress_callback=progress_cb,
+                **engine_params,
             )
         elif task_type == "text":
             gen_data = engine.generate_from_text(
                 prompt=params["prompt"],
                 seed=seed,
-                ss_steps=params.get("ss_steps", 12),
-                ss_guidance=params.get("ss_guidance", 7.5),
-                slat_steps=params.get("slat_steps", 12),
-                slat_guidance=params.get("slat_guidance", 3.0),
                 progress_callback=progress_cb,
+                **engine_params,
             )
         elif task_type == "edit":
+            # Edit is TRELLIS-specific — call directly
             gen_data = engine.edit_with_text(
                 prompt=params["prompt"],
                 seed=seed,
@@ -208,32 +242,35 @@ class TaskManager:
         else:
             raise ValueError(f"Unknown task type: {task_type}")
 
-        # ── Export ─────────────────────────────────────
+        # -- Export ------------------------------------------
         task["status"] = TaskStatus.EXTRACTING
         progress_cb("Extracting mesh", 0.7)
 
         formats = params.get("formats", ["glb"])
+        export_params = {
+            "simplify": params.get("mesh_simplify", 0.95),
+            "texture_size": params.get("texture_size", 1024),
+            "fill_holes": params.get("fill_holes", True),
+            "fill_holes_max_size": params.get("fill_holes_max_size", 0.04),
+        }
         export_paths = engine.export_mesh(
             generation_data=gen_data,
             output_dir=output_dir,
             formats=formats,
-            simplify=params.get("mesh_simplify", 0.95),
-            texture_size=params.get("texture_size", 1024),
-            fill_holes=params.get("fill_holes", True),
-            fill_holes_max_size=params.get("fill_holes_max_size", 0.04),
             progress_callback=progress_cb,
+            **export_params,
         )
 
-        # ── Render preview video ───────────────────────
+        # -- Render preview video ----------------------------
         progress_cb("Rendering preview", 0.95)
         video_path = os.path.join(output_dir, "preview.mp4")
         try:
             engine.render_preview(gen_data, video_path, resolution=512, num_frames=120)
-        except Exception as e:
-            logger.warning(f"Preview render failed: {e}")
+        except (NotImplementedError, Exception) as e:
+            logger.warning(f"Preview render skipped: {e}")
             video_path = None
 
-        # ── Save thumbnail ─────────────────────────────
+        # -- Save thumbnail ----------------------------------
         thumb_path = None
         if "image_path" in params:
             thumb_path = os.path.join(output_dir, "thumbnail.png")
@@ -244,7 +281,7 @@ class TaskManager:
 
         elapsed = time.time() - start_time
 
-        # ── Build result ───────────────────────────────
+        # -- Build result ------------------------------------
         exports = []
         for fmt, path in export_paths.items():
             exports.append({
@@ -262,7 +299,7 @@ class TaskManager:
             "generation_time_seconds": round(elapsed, 1),
         }
 
-    # ── Gallery ────────────────────────────────────────
+    # -- Gallery --------------------------------------------
 
     def _gallery_index_path(self) -> str:
         return os.path.join(GALLERY_DIR, "index.json")

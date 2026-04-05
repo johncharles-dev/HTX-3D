@@ -10,9 +10,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
-from .config import CORS_ORIGINS, TRELLIS_ENGINE_DIR, WEIGHTS_DIR, GALLERY_DIR, detect_gpu
+from .config import CORS_ORIGINS, TRELLIS_ENGINE_DIR, HUNYUAN_ENGINE_DIR, WEIGHTS_DIR, GALLERY_DIR, detect_gpu
 from .routers import generate, gallery
 from .services.trellis import TrellisEngine
+from .services.hunyuan import HunyuanEngine
 from .services.task_manager import TaskManager
 from .dependencies import set_task_manager, get_task_manager
 
@@ -22,21 +23,26 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Startup: load engine and start worker. Shutdown: cleanup."""
+    """Startup: load engines and start worker. Shutdown: cleanup."""
     gpu = detect_gpu()
     logger.info(f"GPU: {gpu}")
 
     # Initialize task manager
     tm = TaskManager()
 
-    # Load Trellis engine
-    engine = TrellisEngine(TRELLIS_ENGINE_DIR)
+    # Load Trellis engine (loaded at startup)
+    trellis = TrellisEngine(TRELLIS_ENGINE_DIR)
     try:
-        engine.load(WEIGHTS_DIR)
-        tm.register_engine(engine)
+        trellis.load(WEIGHTS_DIR)
+        tm.register_engine(trellis)
     except Exception as e:
         logger.error(f"Failed to load Trellis engine: {e}")
-        logger.info("Backend running without GPU engine (API-only mode)")
+        logger.info("Backend running without Trellis engine")
+
+    # Register Hunyuan engine (not loaded until first use — lazy loading)
+    hunyuan = HunyuanEngine(HUNYUAN_ENGINE_DIR)
+    tm.register_engine(hunyuan)
+    logger.info("Hunyuan3D engine registered (will load on first use)")
 
     set_task_manager(tm)
     await tm.start()
@@ -44,13 +50,16 @@ async def lifespan(app: FastAPI):
     yield
 
     await tm.stop()
-    engine.unload()
+    if trellis.loaded:
+        trellis.unload()
+    if hunyuan.loaded:
+        hunyuan.unload()
 
 
 app = FastAPI(
     title="HTX 3D Generation Tool",
-    description="Image-to-3D and Text-to-3D generation API powered by TRELLIS",
-    version="0.1.0",
+    description="Image-to-3D and Text-to-3D generation API powered by TRELLIS and Hunyuan3D",
+    version="0.2.0",
     lifespan=lifespan,
 )
 
@@ -68,7 +77,7 @@ app.include_router(generate.router)
 app.include_router(gallery.router)
 
 
-# ── WebSocket for Progress ─────────────────────────────
+# -- WebSocket for Progress --------------------------------
 
 @app.websocket("/ws/progress/{task_id}")
 async def ws_progress(websocket: WebSocket, task_id: str):
@@ -89,7 +98,7 @@ async def ws_progress(websocket: WebSocket, task_id: str):
         tm.unsubscribe_progress(task_id, sub_queue)
 
 
-# ── Health Check ───────────────────────────────────────
+# -- Health Check ------------------------------------------
 
 @app.get("/api/health")
 async def health():
@@ -99,11 +108,13 @@ async def health():
         "status": "ok",
         "gpu": gpu,
         "models_loaded": [name for name, eng in tm.engines.items() if eng.loaded],
+        "engines_registered": list(tm.engines.keys()),
+        "active_engine": tm.active_engine,
         "queue_size": tm.queue_size,
     }
 
 
-# ── Serve Frontend (production) ────────────────────────
+# -- Serve Frontend (production) ---------------------------
 
 # Walk up from this file to find frontend/dist (works in both source tree and Docker)
 _here = Path(__file__).resolve().parent

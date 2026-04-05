@@ -7,9 +7,10 @@ interface Props {
   activeTab: Tab;
   selectedModels: string[];
   onToggle: (modelId: string) => void;
+  registeredEngines?: string[];
 }
 
-export default function ModelSelector({ activeTab, selectedModels, onToggle }: Props) {
+export default function ModelSelector({ activeTab, selectedModels, onToggle, registeredEngines }: Props) {
   // Filter models by what the current tab supports
   const available = MODELS.filter((m) =>
     activeTab === 'image' ? m.supportsImage : m.supportsText,
@@ -22,14 +23,20 @@ export default function ModelSelector({ activeTab, selectedModels, onToggle }: P
         <span className="text-text-muted ml-1">(runs sequentially)</span>
       </label>
       <div className="space-y-2">
-        {available.map((model) => (
-          <ModelCard
-            key={model.id}
-            model={model}
-            selected={selectedModels.includes(model.id)}
-            onToggle={() => model.available && onToggle(model.id)}
-          />
-        ))}
+        {available.map((model) => {
+          // If server reported registered engines, use that to determine availability
+          const isAvailable = registeredEngines
+            ? registeredEngines.includes(model.id) && model.available
+            : model.available;
+          return (
+            <ModelCard
+              key={model.id}
+              model={{ ...model, available: isAvailable }}
+              selected={selectedModels.includes(model.id)}
+              onToggle={() => isAvailable && onToggle(model.id)}
+            />
+          );
+        })}
       </div>
     </div>
   );

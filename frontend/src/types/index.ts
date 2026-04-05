@@ -1,10 +1,13 @@
-export type ModelType = 'trellis-image-to-3d' | 'trellis-text-to-3d';
+export type ModelType = 'trellis-image-to-3d' | 'trellis-text-to-3d' | 'hunyuan-image-to-3d';
 export type ExportFormat = 'glb' | 'obj' | 'stl' | 'ply';
 export type TaskStatus = 'queued' | 'processing' | 'extracting' | 'completed' | 'failed';
 export type InputMode = 'single' | 'multi';
 export type MultiImageMode = 'stochastic' | 'multidiffusion';
 export type TextMode = 'generate' | 'edit';
 export type QualityPreset = 'draft' | 'standard' | 'high';
+export type EngineName = 'trellis' | 'hunyuan';
+
+// -- TRELLIS Quality Presets --------------------------------
 
 export const QUALITY_PRESETS: { id: QualityPreset; label: string; desc: string; settings: Partial<GenerationSettings> }[] = [
   { id: 'draft', label: 'Draft', desc: 'Fast preview', settings: { ssSteps: 8, slatSteps: 8 } },
@@ -12,7 +15,15 @@ export const QUALITY_PRESETS: { id: QualityPreset; label: string; desc: string; 
   { id: 'high', label: 'High', desc: 'Best quality', settings: { ssSteps: 20, slatSteps: 20 } },
 ];
 
-// ── Model Registry ────────────────────────────────────
+// -- Hunyuan Quality Presets --------------------------------
+
+export const HUNYUAN_QUALITY_PRESETS: { id: QualityPreset; label: string; desc: string; settings: Partial<GenerationSettings> }[] = [
+  { id: 'draft', label: 'Draft', desc: 'Fast preview', settings: { numInferenceSteps: 5 } },
+  { id: 'standard', label: 'Standard', desc: 'Balanced quality', settings: { numInferenceSteps: 30 } },
+  { id: 'high', label: 'High', desc: 'Best quality', settings: { numInferenceSteps: 50 } },
+];
+
+// -- Model Registry ----------------------------------------
 
 export interface ModelDef {
   id: string;
@@ -43,11 +54,11 @@ export const MODELS: ModelDef[] = [
     name: 'Hunyuan3D 2.1',
     desc: 'Tencent — PBR material generation',
     color: '#CE93D8',
-    available: false,
+    available: true,
     supportsImage: true,
-    supportsText: true,
+    supportsText: false,
     supportsEdit: false,
-    supportsMultiView: true,
+    supportsMultiView: false,
   },
   {
     id: 'triposg',
@@ -62,15 +73,21 @@ export const MODELS: ModelDef[] = [
   },
 ];
 
-// ── Data Types ────────────────────────────────────────
+// -- Data Types --------------------------------------------
 
 export interface GenerationSettings {
   seed: number;
   randomizeSeed: boolean;
+  // TRELLIS params
   ssSteps: number;
   ssGuidance: number;
   slatSteps: number;
   slatGuidance: number;
+  // Hunyuan params
+  numInferenceSteps: number;
+  guidanceScale: number;
+  octreeResolution: number;
+  texture: boolean;
 }
 
 export interface ExportSettings {
@@ -133,6 +150,8 @@ export interface HealthStatus {
     is_blackwell: boolean;
   };
   models_loaded: string[];
+  engines_registered: string[];
+  active_engine: string | null;
   queue_size: number;
 }
 
@@ -149,10 +168,16 @@ export interface ModelResult {
 export const DEFAULT_GENERATION_SETTINGS: GenerationSettings = {
   seed: 42,
   randomizeSeed: true,
+  // TRELLIS defaults
   ssSteps: 12,
   ssGuidance: 7.5,
   slatSteps: 12,
   slatGuidance: 3.0,
+  // Hunyuan defaults
+  numInferenceSteps: 30,
+  guidanceScale: 5.5,
+  octreeResolution: 256,
+  texture: true,
 };
 
 export const DEFAULT_EXPORT_SETTINGS: ExportSettings = {

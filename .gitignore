@@ -27,8 +27,22 @@ docker/.env
 .DS_Store
 Thumbs.db
 
+# Binary / large artifacts
+*.pth
+*.npz
+*.so
+*.glb
+*.ply
+
+# Engine demo assets & training data
+backend/engines/hunyuan/hy3dpaint/ckpt/
+backend/engines/hunyuan/hy3dpaint/assets/
+backend/engines/hunyuan/hy3dshape/tools/mini_trainset/
+
 # Temp
 /tmp/
 **/tmp/
 *.log
+temp.*
+mr_combined.png
 

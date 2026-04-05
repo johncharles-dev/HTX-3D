@@ -1,0 +1,158 @@
+[
+  {
+    "image": "epl-1-min.jpg",
+    "engine": "trellis",
+    "task_id": "a877a5d5d53b",
+    "generation_time_seconds": 9.1,
+    "image_metrics": {
+      "ssim": 0.2495,
+      "psnr": 7.17,
+      "lpips": 0.7283,
+      "clip_score": 0.375
+    },
+    "mesh_metrics": {
+      "vertices": 9934,
+      "faces": 11956,
+      "watertight": false,
+      "surface_area": 1.714,
+      "volume": null,
+      "bbox_x": 0.9998,
+      "bbox_y": 0.4066,
+      "bbox_z": 0.366,
+      "euler_number": 442,
+      "file_size_mb": 1.54,
+      "degenerate_faces": 2,
+      "mean_face_area": 0.00014336
+    }
+  },
+  {
+    "image": "hunter.png",
+    "engine": "trellis",
+    "task_id": "afd081544334",
+    "generation_time_seconds": 11.4,
+    "image_metrics": {
+      "ssim": 0.2275,
+      "psnr": 8.93,
+      "lpips": 0.7742,
+      "clip_score": 0.6046
+    },
+    "mesh_metrics": {
+      "vertices": 20971,
+      "faces": 24621,
+      "watertight": false,
+      "surface_area": 2.9227,
+      "volume": null,
+      "bbox_x": 0.4924,
+      "bbox_y": 0.4786,
+      "bbox_z": 0.9965,
+      "euler_number": 980,
+      "file_size_mb": 1.95,
+      "degenerate_faces": 4,
+      "mean_face_area": 0.00011871
+    }
+  },
+  {
+    "image": "scdf-s-seventh-generation-ambulance.jpg",
+    "engine": "trellis",
+    "task_id": "4af6471da85a",
+    "generation_time_seconds": 8.9,
+    "image_metrics": {
+      "ssim": 0.2725,
+      "psnr": 6.03,
+      "lpips": 0.7253,
+      "clip_score": 0.4996
+    },
+    "mesh_metrics": {
+      "vertices": 8237,
+      "faces": 10527,
+      "watertight": false,
+      "surface_area": 1.686,
+      "volume": null,
+      "bbox_x": 0.4127,
+      "bbox_y": 0.4781,
+      "bbox_z": 1.0002,
+      "euler_number": 296,
+      "file_size_mb": 1.53,
+      "degenerate_faces": 0,
+      "mean_face_area": 0.00016016
+    }
+  },
+  {
+    "image": "epl-1-min.jpg",
+    "engine": "hunyuan",
+    "task_id": "b36b00d2a24e",
+    "generation_time_seconds": 67.3,
+    "image_metrics": {
+      "ssim": 0.2343,
+      "psnr": 6.65,
+      "lpips": 0.7168,
+      "clip_score": 0.3736
+    },
+    "mesh_metrics": {
+      "vertices": 29875,
+      "faces": 40000,
+      "watertight": false,
+      "surface_area": 6.3619,
+      "volume": null,
+      "bbox_x": 0.6819,
+      "bbox_y": 0.811,
+      "bbox_z": 1.9887,
+      "euler_number": 789,
+      "file_size_mb": 6.62,
+      "degenerate_faces": 0,
+      "mean_face_area": 0.00015905
+    }
+  },
+  {
+    "image": "hunter.png",
+    "engine": "hunyuan",
+    "task_id": "8a7ade9da1bf",
+    "generation_time_seconds": 83.6,
+    "image_metrics": {
+      "ssim": 0.2302,
+      "psnr": 8.6,
+      "lpips": 0.8098,
+      "clip_score": 0.6218
+    },
+    "mesh_metrics": {
+      "vertices": 30221,
+      "faces": 40000,
+      "watertight": false,
+      "surface_area": 10.6889,
+      "volume": null,
+      "bbox_x": 1.3746,
+      "bbox_y": 0.7024,
+      "bbox_z": 1.9854,
+      "euler_number": 911,
+      "file_size_mb": 6.43,
+      "degenerate_faces": 0,
+      "mean_face_area": 0.00026722
+    }
+  },
+  {
+    "image": "scdf-s-seventh-generation-ambulance.jpg",
+    "engine": "hunyuan",
+    "task_id": "d14bc4702f92",
+    "generation_time_seconds": 65.6,
+    "image_metrics": {
+      "ssim": 0.2611,
+      "psnr": 5.77,
+      "lpips": 0.7288,
+      "clip_score": 0.4652
+    },
+    "mesh_metrics": {
+      "vertices": 25353,
+      "faces": 40000,
+      "watertight": false,
+      "surface_area": 6.2087,
+      "volume": null,
+      "bbox_x": 0.8267,
+      "bbox_y": 0.943,
+      "bbox_z": 1.9807,
+      "euler_number": 266,
+      "file_size_mb": 5.94,
+      "degenerate_faces": 1,
+      "mean_face_area": 0.00015522
+    }
+  }
+]

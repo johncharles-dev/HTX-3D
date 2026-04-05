@@ -10,6 +10,9 @@ class BaseEngine(ABC):
 
     This allows the system to support multiple model backends
     (Trellis, Hunyuan, TripoSG, etc.) through a uniform API.
+
+    Engine-specific parameters are passed via **engine_params.
+    Each engine extracts the params it needs and ignores the rest.
     """
 
     name: str = "base"
@@ -30,15 +33,12 @@ class BaseEngine(ABC):
         self,
         image_path: str,
         seed: int,
-        ss_steps: int,
-        ss_guidance: float,
-        slat_steps: int,
-        slat_guidance: float,
         progress_callback: Optional[Callable[[str, float], None]] = None,
+        **engine_params,
     ) -> dict:
         """Generate 3D from a single image.
 
-        Returns dict with 'gaussian' and 'mesh' objects (engine-specific types).
+        Returns dict with engine-specific generation data.
         """
         ...
 
@@ -48,11 +48,8 @@ class BaseEngine(ABC):
         image_paths: list[str],
         seed: int,
         mode: str,
-        ss_steps: int,
-        ss_guidance: float,
-        slat_steps: int,
-        slat_guidance: float,
         progress_callback: Optional[Callable[[str, float], None]] = None,
+        **engine_params,
     ) -> dict:
         """Generate 3D from multiple images of the same object."""
         ...
@@ -62,11 +59,8 @@ class BaseEngine(ABC):
         self,
         prompt: str,
         seed: int,
-        ss_steps: int,
-        ss_guidance: float,
-        slat_steps: int,
-        slat_guidance: float,
         progress_callback: Optional[Callable[[str, float], None]] = None,
+        **engine_params,
     ) -> dict:
         """Generate 3D from a text prompt."""
         ...
@@ -77,15 +71,12 @@ class BaseEngine(ABC):
         generation_data: dict,
         output_dir: str,
         formats: list[str],
-        simplify: float,
-        texture_size: int,
-        fill_holes: bool,
-        fill_holes_max_size: float,
         progress_callback: Optional[Callable[[str, float], None]] = None,
+        **engine_params,
     ) -> dict[str, Path]:
         """Export generation result to mesh files.
 
-        Returns dict mapping format name → output file path.
+        Returns dict mapping format name -> output file path.
         """
         ...
 

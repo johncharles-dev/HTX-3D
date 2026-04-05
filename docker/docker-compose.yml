@@ -16,7 +16,10 @@ services:
       - ATTN_BACKEND=sdpa
       - WEIGHTS_DIR=/app/weights
       - GALLERY_DIR=/app/gallery
+      - TRELLIS_ENGINE_DIR=/app/engines/trellis
+      - HUNYUAN_ENGINE_DIR=/app/engines/hunyuan
       - CORS_ORIGINS=http://localhost:5173,http://localhost:8000
+      - PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
     deploy:
       resources:
         reservations:
