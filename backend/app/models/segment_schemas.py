@@ -39,6 +39,13 @@ class PointSegmentRequest(BaseModel):
     label: bool = Field(default=True, description="True=positive, False=negative")
 
 
+class PointsSegmentRequest(BaseModel):
+    """Segment using accumulated point prompts."""
+    session_id: str
+    points: List[List[float]] = Field(..., description="List of [x, y] normalized 0-1")
+    labels: List[int] = Field(..., description="List of 1 (add) or 0 (remove)")
+
+
 class MaskResult(BaseModel):
     """A single segmentation mask result."""
     index: int

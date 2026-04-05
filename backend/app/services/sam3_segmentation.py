@@ -5,6 +5,10 @@ SAM3 masks are used as input for 3D generation engines (TRELLIS, Hunyuan, SAM 3D
 
 All inference calls must be wrapped in torch.autocast("cuda", dtype=torch.bfloat16)
 because SAM3 model weights are BFloat16 but some layers expect Float32 inputs.
+
+Point prompts use the SAM1-style interactive mask decoder (inst_interactive_predictor)
+for proper foreground/background click-to-refine behavior. The backbone features are
+shared from the processor's set_image() — no separate backbone needed.
 """
 
 import asyncio
@@ -38,6 +42,7 @@ class SAM3Service:
     def __init__(self):
         self._model = None
         self._processor = None
+        self._predictor = None  # SAM1-style interactive predictor
         self._loaded = False
         self._sessions: dict[str, dict] = {}
 
@@ -46,7 +51,7 @@ class SAM3Service:
         return self._loaded
 
     def load(self, device: str = "cuda"):
-        """Load SAM3 model onto GPU."""
+        """Load SAM3 model onto GPU with interactive predictor enabled."""
         if self._loaded:
             return
 
@@ -57,7 +62,7 @@ class SAM3Service:
         from sam3.model_builder import build_sam3_image_model
         from sam3.model.sam3_image_processor import Sam3Processor
 
-        logger.info("Loading SAM3 model...")
+        logger.info("Loading SAM3 model with interactive predictor...")
         start = time.time()
 
         with torch.autocast("cuda", dtype=torch.bfloat16):
@@ -66,6 +71,7 @@ class SAM3Service:
                 device=device,
                 eval_mode=True,
                 load_from_HF=True,
+                enable_inst_interactivity=True,
             )
         self._processor = Sam3Processor(
             model=self._model,
@@ -73,8 +79,9 @@ class SAM3Service:
             device=device,
             confidence_threshold=0.5,
         )
+        self._predictor = self._model.inst_interactive_predictor
         self._loaded = True
-        logger.info(f"SAM3 loaded in {time.time() - start:.1f}s")
+        logger.info(f"SAM3 loaded in {time.time() - start:.1f}s (interactive predictor: {self._predictor is not None})")
 
     def unload(self):
         """Free SAM3 from GPU memory."""
@@ -84,13 +91,56 @@ class SAM3Service:
         logger.info("Unloading SAM3...")
         self._sessions.clear()
         del self._processor
+        del self._predictor
         del self._model
         self._processor = None
+        self._predictor = None
         self._model = None
         self._loaded = False
         gc.collect()
         torch.cuda.empty_cache()
         logger.info("SAM3 unloaded")
+
+    def _setup_predictor_from_state(self, state: dict, session: dict):
+        """Inject shared backbone features into the interactive predictor.
+
+        The processor's set_image() already computed backbone features including
+        sam2_backbone_out with conv_s0/conv_s1 applied. We reuse those features
+        instead of calling predictor.set_image() which would need its own backbone.
+        """
+        if self._predictor is None:
+            return
+
+        sam2_out = state.get("backbone_out", {}).get("sam2_backbone_out")
+        if sam2_out is None:
+            logger.warning("No sam2_backbone_out in state — predictor not initialized")
+            return
+
+        # Reset predictor state
+        self._predictor.reset_predictor()
+        self._predictor._orig_hw = [(session["height"], session["width"])]
+
+        # Extract features via _prepare_backbone_features (same as predictor.set_image does)
+        tracker = self._predictor.model
+        _, vision_feats, _, _ = tracker._prepare_backbone_features(sam2_out)
+
+        # Add no_mem_embed (same as predictor.set_image line 109)
+        vision_feats[-1] = vision_feats[-1] + tracker.no_mem_embed
+
+        # Reshape to feature dict (same as predictor.set_image lines 111-115)
+        feats = [
+            feat.permute(1, 2, 0).view(1, -1, *feat_size)
+            for feat, feat_size in zip(
+                vision_feats[::-1],
+                self._predictor._bb_feat_sizes[::-1],
+            )
+        ][::-1]
+
+        self._predictor._features = {
+            "image_embed": feats[-1],
+            "high_res_feats": feats[:-1],
+        }
+        self._predictor._is_image_set = True
 
     def start_session(self, image_path: str) -> dict:
         """Start a segmentation session with an image.
@@ -121,6 +171,9 @@ class SAM3Service:
             "width": img.width,
             "height": img.height,
         }
+
+        # Setup interactive predictor from shared backbone features
+        self._setup_predictor_from_state(state, self._sessions[session_id])
 
         logger.info(f"Segmentation session {session_id} started ({img.width}x{img.height})")
         return {
@@ -173,6 +226,7 @@ class SAM3Service:
         """Segment using a bounding box prompt.
 
         box: [center_x, center_y, width, height] normalized 0-1
+        Boxes accumulate in the backend state via add_geometric_prompt.
         """
         session = self._get_session(session_id)
         state = session["state"]
@@ -195,12 +249,58 @@ class SAM3Service:
 
         return self._build_mask_response(session_id, session)
 
+    def segment_points(self, session_id: str, points: list[list[float]], labels: list[int]) -> dict:
+        """Segment using accumulated point prompts via SAM interactive predictor.
+
+        points: list of [x, y] normalized 0-1
+        labels: list of 1 (foreground/add) or 0 (background/remove)
+
+        Uses the SAM1-style interactive mask decoder for proper click-to-refine.
+        First call uses multimask_output=True (3 masks). Subsequent calls feed
+        the best previous mask as mask_input for refinement (multimask_output=False).
+        """
+        session = self._get_session(session_id)
+
+        if self._predictor is None or not self._predictor._is_image_set:
+            raise RuntimeError("Interactive predictor not ready")
+
+        w, h = session["width"], session["height"]
+
+        # Convert normalized coords to pixel coords (X, Y format)
+        point_coords = np.array([[pt[0] * w, pt[1] * h] for pt in points], dtype=np.float32)
+        point_labels = np.array(labels, dtype=np.int32)
+
+        # First click: multimask (3 options). Subsequent: single refined mask using previous best.
+        prev_logits = session.get("_low_res_logits")
+        use_multimask = len(points) == 1 and prev_logits is None
+
+        with torch.autocast("cuda", dtype=torch.bfloat16):
+            masks_np, scores_np, low_res_logits = self._predictor.predict(
+                point_coords=point_coords,
+                point_labels=point_labels,
+                mask_input=prev_logits,
+                multimask_output=use_multimask,
+                normalize_coords=False,
+            )
+
+        # Store best mask logits for next refinement
+        best_idx = int(np.argmax(scores_np))
+        session["_low_res_logits"] = low_res_logits[best_idx:best_idx+1]
+
+        # masks_np: CxHxW, scores_np: C
+        masks = torch.from_numpy(masks_np).unsqueeze(1).bool()  # [C, 1, H, W]
+        scores = torch.from_numpy(scores_np)
+
+        session["masks"] = masks
+        session["scores"] = scores
+        session["boxes"] = None
+
+        return self._build_mask_response(session_id, session)
+
     def segment_point(self, session_id: str, x: float, y: float, label: bool = True) -> dict:
-        """Segment using a point prompt (converted to small box)."""
-        # SAM3 processor only exposes box prompts, so we create a small box around the point
-        box_size = 0.02  # 2% of image
-        box = [x, y, box_size, box_size]
-        return self.segment_box(session_id, box, label)
+        """Segment using a single point (convenience wrapper)."""
+        lbl = 1 if label else 0
+        return self.segment_points(session_id, [[x, y]], [lbl])
 
     def reset_prompts(self, session_id: str) -> dict:
         """Reset all prompts for a session."""
@@ -214,6 +314,9 @@ class SAM3Service:
         session["masks"] = None
         session["scores"] = None
         session["boxes"] = None
+        session["_low_res_logits"] = None
+        # Re-setup interactive predictor
+        self._setup_predictor_from_state(state, session)
         return {"session_id": session_id, "message": "Prompts reset"}
 
     def confirm_mask(self, session_id: str, mask_index: int = 0) -> str:
@@ -256,17 +359,23 @@ class SAM3Service:
             raise ValueError("No masks available")
 
         img_array = session["image_array"].copy().astype(np.float32)
-        # Color palette for masks
-        colors = [
-            [255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 255, 0],
-            [255, 0, 255], [0, 255, 255], [255, 128, 0], [128, 0, 255],
-        ]
+        scores = session.get("scores")
 
-        for i in range(min(masks.shape[0], len(colors))):
+        # Color: best mask in solid blue, others in faint outline
+        best_idx = 0
+        if scores is not None and len(scores) > 0:
+            best_idx = int(scores.argmax()) if hasattr(scores, 'argmax') else 0
+
+        for i in range(masks.shape[0]):
             mask_np = masks[i, 0].cpu().numpy()
-            color = np.array(colors[i % len(colors)], dtype=np.float32)
-            # Blend: 60% original + 40% color
-            img_array[mask_np] = img_array[mask_np] * 0.6 + color * 0.4
+            if i == best_idx:
+                # Best mask: prominent blue overlay
+                color = np.array([60, 120, 255], dtype=np.float32)
+                img_array[mask_np] = img_array[mask_np] * 0.45 + color * 0.55
+            else:
+                # Other masks: faint outline only
+                color = np.array([255, 180, 0], dtype=np.float32)
+                img_array[mask_np] = img_array[mask_np] * 0.8 + color * 0.2
 
         overlay = Image.fromarray(img_array.astype(np.uint8))
         output_dir = os.path.join(TEMP_DIR, "segmented", session_id)

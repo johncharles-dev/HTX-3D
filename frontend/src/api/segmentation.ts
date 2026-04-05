@@ -50,11 +50,21 @@ export async function segmentPoint(
   });
 }
 
-export async function resetSegmentation(sessionId: string): Promise<void> {
-  await request('/reset', {
+export async function segmentPoints(
+  sessionId: string,
+  points: number[][],
+  labels: number[],
+): Promise<SegmentResponse> {
+  return request<SegmentResponse>('/points', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ session_id: sessionId }),
+    body: JSON.stringify({ session_id: sessionId, points, labels }),
+  });
+}
+
+export async function resetSegmentation(sessionId: string): Promise<void> {
+  await request(`/reset?session_id=${sessionId}`, {
+    method: 'POST',
   });
 }
 

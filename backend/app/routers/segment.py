@@ -22,6 +22,7 @@ from ..models.segment_schemas import (
     TextSegmentRequest,
     BoxSegmentRequest,
     PointSegmentRequest,
+    PointsSegmentRequest,
     SegmentResponse,
     MaskResult,
     ConfirmSegmentRequest,
@@ -116,6 +117,29 @@ async def segment_point(
     """Segment objects at a point location."""
     try:
         result = sam3.segment_point(req.session_id, req.x, req.y, req.label)
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+    except Exception as e:
+        raise HTTPException(500, f"Segmentation failed: {e}")
+
+    return SegmentResponse(
+        session_id=result["session_id"],
+        masks=[MaskResult(**m) for m in result["masks"]],
+        overlay_url=f"/api/segment/overlay/{result['session_id']}" if result.get("overlay_path") else "",
+        message=f"Found {len(result['masks'])} mask(s)",
+    )
+
+
+@router.post("/points", response_model=SegmentResponse)
+async def segment_points(
+    req: PointsSegmentRequest,
+    sam3=Depends(get_sam3_service),
+):
+    """Segment using accumulated point prompts (SAM interactive predictor)."""
+    if len(req.points) != len(req.labels):
+        raise HTTPException(400, "points and labels must have the same length")
+    try:
+        result = sam3.segment_points(req.session_id, req.points, req.labels)
     except ValueError as e:
         raise HTTPException(404, str(e))
     except Exception as e:
