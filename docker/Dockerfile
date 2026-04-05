@@ -149,6 +149,12 @@ RUN pip install --no-cache-dir \
     "transformers>=4.35.0,<4.50" \
     "utils3d @ git+https://github.com/EasternJournalist/utils3d.git@9a4eb15e4021b67b12c460c7057d642626897ec8"
 
+# 11. Install utils3d.pt compatibility shim (MoGe needs utils3d.pt, TRELLIS needs utils3d.torch v0.0.2)
+COPY backend/engines/sam3d_objects/utils3d_pt_shim.py /tmp/utils3d_pt_shim.py
+RUN UTILS3D_DIR=$(python -c "import utils3d; import os; print(os.path.dirname(utils3d.__file__))") \
+    && cp /tmp/utils3d_pt_shim.py "$UTILS3D_DIR/pt.py" \
+    && python -c "import utils3d.pt; print('utils3d.pt shim installed')"
+
 # Cleanup build artifacts
 RUN rm -rf /tmp/extensions
 

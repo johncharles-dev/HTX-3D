@@ -200,7 +200,7 @@ class TaskManager:
                                       "randomize_seed", "model", "engine", "formats",
                                       "mesh_simplify", "texture_size", "fill_holes",
                                       "fill_holes_max_size", "mode", "base_task_id",
-                                      "mesh_file_path")}
+                                      "mesh_file_path", "original_image_path")}
 
         # -- Generate ----------------------------------------
         if task_type == "image":
@@ -270,12 +270,13 @@ class TaskManager:
             logger.warning(f"Preview render skipped: {e}")
             video_path = None
 
-        # -- Save thumbnail ----------------------------------
+        # -- Save thumbnail (use original image, not segmented) --
         thumb_path = None
-        if "image_path" in params:
+        thumb_source = params.get("original_image_path") or params.get("image_path")
+        if thumb_source:
             thumb_path = os.path.join(output_dir, "thumbnail.png")
             from PIL import Image
-            img = Image.open(params["image_path"])
+            img = Image.open(thumb_source).convert("RGB")
             img.thumbnail((256, 256))
             img.save(thumb_path)
 

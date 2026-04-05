@@ -85,12 +85,15 @@ async def generate_from_image(
     Upload an image and configure generation parameters.
     Returns a task ID that can be polled for progress via WebSocket or GET.
     """
-    # Use segmented image if provided, otherwise save upload
+    # Always save the original upload (for thumbnail)
+    temp_id = os.urandom(6).hex()
+    original_image_path = _save_upload(image, temp_id)
+
+    # Use segmented image for generation if provided
     if segmented_image_path and os.path.exists(segmented_image_path):
         image_path = segmented_image_path
     else:
-        temp_id = os.urandom(6).hex()
-        image_path = _save_upload(image, temp_id)
+        image_path = original_image_path
 
     format_list = [f.strip() for f in formats.split(",") if f.strip()]
 
@@ -98,6 +101,7 @@ async def generate_from_image(
         "model": _model_id_for_engine(engine, "image"),
         "engine": engine,
         "image_path": image_path,
+        "original_image_path": original_image_path,
         "seed": seed,
         "randomize_seed": randomize_seed,
         "ss_steps": ss_steps,

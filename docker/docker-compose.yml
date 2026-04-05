@@ -15,6 +15,12 @@ services:
       - /data/models/sam-3d-objects/hf:/app/weights/sam3d-objects-hf:ro
       # HuggingFace cache (SAM3 model weights, etc.)
       - /home/cj/.cache/huggingface:/root/.cache/huggingface
+      # Torch hub cache (DINOv2 weights — 1.1GB, avoid re-downloading)
+      - /home/cj/.cache/torch:/root/.cache/torch
+      # Hunyuan3D model cache
+      - /home/cj/.cache/hy3dgen:/root/.cache/hy3dgen
+      # rembg model cache
+      - /home/cj/.u2net:/root/.u2net
     environment:
       - XFORMERS_DISABLED=1
       - ATTN_BACKEND=sdpa
