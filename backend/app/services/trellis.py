@@ -160,10 +160,40 @@ class TrellisEngine(BaseEngine):
         if progress_callback:
             progress_callback("Loading image", 0.0)
 
-        image = Image.open(image_path)
+        image = Image.open(image_path).convert("RGBA")
 
         if progress_callback:
             progress_callback("Preprocessing image", 0.05)
+
+        # If image has SAM3 segmentation mask, crop the original image to the
+        # object bounding box and let TRELLIS's internal rembg handle it.
+        # TRELLIS was trained with rembg-style alpha — SAM3 binary masks produce
+        # wrong depth estimation (elongated shapes).
+        alpha = np.array(image)[:, :, 3]
+        has_sam_alpha = not np.all(alpha == 255)
+        if has_sam_alpha:
+            original_path = engine_params.get("original_image_path")
+            if original_path and os.path.exists(original_path):
+                original = Image.open(original_path).convert("RGB")
+                if original.size != image.size:
+                    original = original.resize(image.size, Image.Resampling.LANCZOS)
+
+                mask = alpha > 0
+                rows = np.any(mask, axis=1)
+                cols = np.any(mask, axis=0)
+                y_min, y_max = np.where(rows)[0][[0, -1]]
+                x_min, x_max = np.where(cols)[0][[0, -1]]
+
+                h, w = mask.shape
+                pad_h = int((y_max - y_min) * 0.1)
+                pad_w = int((x_max - x_min) * 0.1)
+                y_min = max(0, y_min - pad_h)
+                y_max = min(h, y_max + pad_h)
+                x_min = max(0, x_min - pad_w)
+                x_max = min(w, x_max + pad_w)
+
+                image = original.crop((x_min, y_min, x_max, y_max))
+                logger.info(f"Cropped original to SAM3 bbox + padding, letting TRELLIS rembg handle it")
 
         if progress_callback:
             progress_callback("Sampling sparse structure", 0.10)

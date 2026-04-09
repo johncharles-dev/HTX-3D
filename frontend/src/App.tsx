@@ -8,7 +8,7 @@ import ProgressBar from './components/ProgressBar';
 import ExportPanel from './components/ExportPanel';
 import Gallery from './components/Gallery';
 import SegmentationWorkspace from './components/SegmentationWorkspace';
-import { Sparkles, Images, Type, Pencil, Upload, Wand2, SkipForward } from 'lucide-react';
+import { Sparkles, Images, Type, Pencil, Upload, Wand2, Check } from 'lucide-react';
 import {
   generateFromImage,
   generateFromMultiImage,
@@ -71,6 +71,8 @@ export default function App() {
   // Segmentation state
   const [showSegmentation, setShowSegmentation] = useState(false);
   const [segmentedImagePath, setSegmentedImagePath] = useState<string | null>(null);
+  // Per-engine: which engines should use the segmented image (sam3d always true)
+  const [useSegForEngine, setUseSegForEngine] = useState<Record<string, boolean>>({});
 
   // 3D viewer
   const [viewerUrl, setViewerUrl] = useState<string | null>(null);
@@ -224,7 +226,10 @@ export default function App() {
           if (inputMode === 'multi' && imageFiles.length >= 2) {
             return generateFromMultiImage(imageFiles, multiImageMode, genSettings, exportSettings, engine);
           } else {
-            return generateFromImage(imageFiles[0], genSettings, exportSettings, engine, segmentedImagePath || undefined);
+            // Per-engine: sam3d always uses segmentation, others check their toggle
+            const engineUsesSeg = engine === 'sam3d' || (useSegForEngine[engine] !== false);
+            const segPath = segmentedImagePath && engineUsesSeg ? segmentedImagePath : undefined;
+            return generateFromImage(imageFiles[0], genSettings, exportSettings, engine, segPath);
           }
         });
       } else if (activeTab === 'text') {
@@ -384,6 +389,7 @@ export default function App() {
                       setImageFiles(files);
                       setSegmentedImagePath(null);
                       setShowSegmentation(false);
+                      setUseSegForEngine({});
                     }}
                     multiple={inputMode === 'multi'}
                     maxFiles={4}
@@ -406,44 +412,80 @@ export default function App() {
                     </div>
                   )}
 
-                  {/* Segmentation hint for SAM 3D Objects */}
-                  {inputMode === 'single' && imageFiles.length === 1 && !segmentedImagePath && selectedModels.includes('sam3d') && !showSegmentation && (
-                    <div className="flex items-center gap-2 p-2 rounded-lg bg-[#81C784]/10 border border-[#81C784]/20">
-                      <Wand2 className="w-3.5 h-3.5 text-[#81C784] shrink-0" />
-                      <span className="text-xs text-[#81C784]">Segmentation recommended for SAM 3D Objects</span>
-                    </div>
-                  )}
-
-                  {/* Segmentation buttons — only for single image mode */}
-                  {inputMode === 'single' && imageFiles.length === 1 && !segmentedImagePath && (
-                    <div className="flex gap-2">
+                  {/* Segmentation — before segmenting */}
+                  {inputMode === 'single' && imageFiles.length === 1 && !segmentedImagePath && !showSegmentation && (
+                    <div className="space-y-2">
+                      {selectedModels.includes('sam3d') && (
+                        <div className="flex items-center gap-2 p-2 rounded-lg bg-[#81C784]/10 border border-[#81C784]/20">
+                          <Wand2 className="w-3.5 h-3.5 text-[#81C784] shrink-0" />
+                          <span className="text-xs text-[#81C784]">Segmentation required for SAM 3D Objects</span>
+                        </div>
+                      )}
                       <button
                         onClick={() => setShowSegmentation(true)}
-                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border border-accent/30 bg-accent/5 text-accent text-xs font-medium hover:bg-accent/10 transition-colors"
+                        className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-accent/30 bg-accent/5 text-accent text-xs font-medium hover:bg-accent/10 transition-colors"
                       >
                         <Wand2 className="w-3.5 h-3.5" />
                         Segment Object
                       </button>
-                      <button
-                        onClick={() => setSegmentedImagePath(null)}
-                        className="flex items-center gap-1 px-3 py-2 rounded-lg border border-border text-text-muted text-xs hover:bg-bg-tertiary transition-colors"
-                      >
-                        <SkipForward className="w-3.5 h-3.5" />
-                        Skip
-                      </button>
+                      {!selectedModels.includes('sam3d') && (
+                        <p className="text-[10px] text-text-muted">
+                          Optional — selected engines have built-in background removal
+                        </p>
+                      )}
                     </div>
                   )}
 
+                  {/* Segmentation — after segmenting: per-engine toggles */}
                   {segmentedImagePath && (
-                    <div className="flex items-center gap-2 p-2.5 rounded-lg bg-success/10 border border-success/20">
-                      <div className="w-2 h-2 rounded-full bg-success" />
-                      <span className="text-xs text-success flex-1">Object segmented</span>
-                      <button
-                        onClick={() => { setSegmentedImagePath(null); setShowSegmentation(false); }}
-                        className="text-xs text-text-muted hover:text-text-secondary"
-                      >
-                        Clear
-                      </button>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 p-2.5 rounded-lg bg-success/10 border border-success/20">
+                        <div className="w-2 h-2 rounded-full bg-success" />
+                        <span className="text-xs text-success flex-1">Object segmented</span>
+                        <button
+                          onClick={() => { setSegmentedImagePath(null); setShowSegmentation(false); setUseSegForEngine({}); }}
+                          className="text-xs text-text-muted hover:text-text-secondary"
+                        >
+                          Clear
+                        </button>
+                      </div>
+
+                      {/* Per-engine segmentation usage toggles */}
+                      {selectedModels.length > 1 && selectedModels.some(m => m === 'trellis' || m === 'hunyuan') && (
+                        <div className="p-2.5 rounded-lg bg-bg-tertiary border border-border space-y-1.5">
+                          <p className="text-[10px] text-text-muted font-medium">Use segmentation for:</p>
+                          {selectedModels.map(modelId => {
+                            const model = MODELS.find(m => m.id === modelId);
+                            if (!model) return null;
+                            const isSam3d = modelId === 'sam3d';
+                            const isOn = isSam3d || (useSegForEngine[modelId] !== false);
+                            return (
+                              <button
+                                key={modelId}
+                                onClick={() => !isSam3d && setUseSegForEngine(prev => ({ ...prev, [modelId]: !isOn }))}
+                                className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors ${
+                                  isSam3d ? 'cursor-default' : 'cursor-pointer hover:bg-bg-primary/50'
+                                }`}
+                              >
+                                <div
+                                  className={`w-3.5 h-3.5 rounded flex items-center justify-center shrink-0 transition-colors ${
+                                    isSam3d ? 'opacity-60' : ''
+                                  }`}
+                                  style={{
+                                    border: `1.5px solid ${isOn ? model.color : 'rgba(255,255,255,0.15)'}`,
+                                    backgroundColor: isOn ? `${model.color}33` : 'transparent',
+                                  }}
+                                >
+                                  {isOn && <Check className="w-2.5 h-2.5" style={{ color: model.color }} />}
+                                </div>
+                                <span style={{ color: isOn ? model.color : undefined }}>{model.name}</span>
+                                {isSam3d && <span className="text-[10px] text-text-muted ml-auto">required</span>}
+                                {!isSam3d && !isOn && <span className="text-[10px] text-text-muted ml-auto">uses built-in rembg</span>}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   )}
                 </>

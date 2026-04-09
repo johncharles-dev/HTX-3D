@@ -163,12 +163,49 @@ class HunyuanEngine(BaseEngine):
         if progress_callback:
             progress_callback("Loading image", 0.0)
 
+        import numpy as np
         image = Image.open(image_path).convert("RGBA")
 
         if progress_callback:
             progress_callback("Removing background", 0.05)
 
-        image = self.rembg(image)
+        # Check if the image has a SAM3 segmentation mask.
+        # Hunyuan was trained with rembg-style alpha (soft edges, gradual falloff).
+        # SAM3 binary masks produce wrong depth estimation. Instead, use SAM3 mask
+        # to crop the original image to the target object, then let rembg process
+        # the crop — giving Hunyuan exactly the input distribution it was trained on.
+        alpha = np.array(image)[:, :, 3]
+        has_alpha = not np.all(alpha == 255)
+        if has_alpha:
+            original_path = engine_params.get("original_image_path")
+            if original_path and os.path.exists(original_path):
+                original = Image.open(original_path).convert("RGB")
+                if original.size != image.size:
+                    original = original.resize(image.size, Image.Resampling.LANCZOS)
+
+                # Find SAM3 mask bounding box and crop original image with padding
+                mask = alpha > 0
+                rows = np.any(mask, axis=1)
+                cols = np.any(mask, axis=0)
+                y_min, y_max = np.where(rows)[0][[0, -1]]
+                x_min, x_max = np.where(cols)[0][[0, -1]]
+
+                # Add 10% padding around the object for scene context
+                h, w = mask.shape
+                pad_h = int((y_max - y_min) * 0.1)
+                pad_w = int((x_max - x_min) * 0.1)
+                y_min = max(0, y_min - pad_h)
+                y_max = min(h, y_max + pad_h)
+                x_min = max(0, x_min - pad_w)
+                x_max = min(w, x_max + pad_w)
+
+                cropped = original.crop((x_min, y_min, x_max, y_max))
+                logger.info(f"Cropped original to SAM3 bbox ({x_min},{y_min},{x_max},{y_max}) + 10% padding, running rembg")
+                image = self.rembg(cropped)
+            else:
+                logger.info("Image has alpha but no original — using as-is, skipping rembg")
+        else:
+            image = self.rembg(image)
 
         if progress_callback:
             progress_callback("Generating 3D shape", 0.10)

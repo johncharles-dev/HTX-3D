@@ -200,7 +200,9 @@ class TaskManager:
                                       "randomize_seed", "model", "engine", "formats",
                                       "mesh_simplify", "texture_size", "fill_holes",
                                       "fill_holes_max_size", "mode", "base_task_id",
-                                      "mesh_file_path", "original_image_path")}
+                                      "mesh_file_path")}
+        # original_image_path is now passed through to engines (Hunyuan uses it
+        # to get full RGB when a SAM3 segmented image is the primary input)
 
         # -- Generate ----------------------------------------
         if task_type == "image":
