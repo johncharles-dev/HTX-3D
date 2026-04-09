@@ -87,7 +87,9 @@ export default function SegmentationWorkspace({ imageFile, onConfirm, onCancel }
     setLoading(true);
     setError(null);
     try {
-      await resetSegmentation(sessionId);
+      // Don't reset — segment_text() handles its own state internally
+      // and stores text mask logits for subsequent point refinement.
+      // Clear points so clicks after text start fresh as refinement.
       setPoints([]);
       const result = await segmentText(sessionId, textPrompt);
       setMasks(result.masks);
@@ -115,8 +117,20 @@ export default function SegmentationWorkspace({ imageFile, onConfirm, onCancel }
     setLoading(true);
     setError(null);
     try {
-      await resetSegmentation(sessionId);
-      if (newPoints.length === 0) { setMasks([]); setOverlayUrl(null); setLoading(false); return; }
+      if (newPoints.length === 0) {
+        // No points left — if we had a text prompt, re-run it to restore text mask
+        if (textPrompt.trim()) {
+          const result = await segmentText(sessionId, textPrompt);
+          setMasks(result.masks);
+          setOverlayUrl(result.overlay_url ? result.overlay_url + `?t=${Date.now()}` : null);
+          setSelectedMask(0);
+        } else {
+          setMasks([]); setOverlayUrl(null);
+        }
+        setLoading(false);
+        return;
+      }
+      // Re-send remaining points — backend uses all points fresh each call
       const result = await segmentPoints(sessionId, newPoints.map(p => [p.x, p.y]), newPoints.map(p => p.label));
       setMasks(result.masks);
       setOverlayUrl(result.overlay_url ? result.overlay_url + `?t=${Date.now()}` : null);
@@ -240,7 +254,7 @@ export default function SegmentationWorkspace({ imageFile, onConfirm, onCancel }
             {!loading && masks.length === 0 && points.length === 0 && sessionId && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <span className="text-sm text-white/70 bg-black/50 px-4 py-2 rounded-lg">
-                  Click on the object to segment, or type a prompt below
+                  Click on the object, or type a prompt below — then refine with clicks
                 </span>
               </div>
             )}

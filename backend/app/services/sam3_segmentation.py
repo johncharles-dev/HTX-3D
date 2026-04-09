@@ -202,7 +202,13 @@ class SAM3Service:
         return masks
 
     def segment_text(self, session_id: str, prompt: str) -> dict:
-        """Segment using a text prompt."""
+        """Segment using a text prompt.
+
+        After text segmentation, the best mask's logits are downsampled and stored
+        as '_text_mask_logits' in the session. When segment_points() is called next,
+        these logits serve as the initial mask_input prior — allowing point clicks
+        to refine the text-selected region instead of starting from scratch.
+        """
         session = self._get_session(session_id)
         state = session["state"]
 
@@ -219,6 +225,24 @@ class SAM3Service:
         session["scores"] = scores
         session["boxes"] = boxes
         session["state"] = state
+
+        # Store downsampled text mask logits for text→point refinement bridge.
+        # When the user clicks points after a text search, these logits are passed
+        # as mask_input to the interactive predictor so points refine the text result.
+        session["_text_mask_logits"] = None
+        session["_low_res_logits"] = None  # Clear any previous point logits
+        masks_logits = state.get("masks_logits")
+        if masks_logits is not None and len(masks_logits) > 0 and scores is not None:
+            best_idx = int(scores.argmax())
+            mask_input_size = self._predictor.model.sam_prompt_encoder.mask_input_size
+            low_res = torch.nn.functional.interpolate(
+                masks_logits[best_idx:best_idx+1].float(),
+                size=mask_input_size,
+                mode="bilinear",
+                align_corners=False,
+            )
+            session["_text_mask_logits"] = low_res[0].cpu().numpy()  # (1, H, W)
+            logger.info(f"Session {session_id}: stored text mask logits {session['_text_mask_logits'].shape} for point refinement")
 
         return self._build_mask_response(session_id, session)
 
@@ -255,41 +279,67 @@ class SAM3Service:
         points: list of [x, y] normalized 0-1
         labels: list of 1 (foreground/add) or 0 (background/remove)
 
-        Uses the SAM1-style interactive mask decoder for proper click-to-refine.
-        First call uses multimask_output=True (3 masks). Subsequent calls feed
-        the best previous mask as mask_input for refinement (multimask_output=False).
+        Aligned with the proven sam3 interactive_ui.py approach:
+        - Always uses multimask_output=True (3 mask candidates), picks best by IoU
+        - Each call sends ALL accumulated points fresh (no logit chaining between clicks)
+        - If text mask logits exist from a prior segment_text() call, they are passed as
+          mask_input prior — this enables the text→point refinement workflow where
+          users first find an object by text, then refine edges with clicks
+        - Uses normalize_coords=True so the model handles coordinate scaling internally
         """
         session = self._get_session(session_id)
+        state = session["state"]
 
-        if self._predictor is None or not self._predictor._is_image_set:
-            raise RuntimeError("Interactive predictor not ready")
+        if self._predictor is None:
+            raise RuntimeError("Interactive predictor not available")
+
+        # Re-setup predictor features from shared backbone state each call,
+        # matching predict_inst() which sets up features fresh per call
+        self._setup_predictor_from_state(state, session)
 
         w, h = session["width"], session["height"]
 
-        # Convert normalized coords to pixel coords (X, Y format)
+        # Convert normalized 0-1 coords from frontend to pixel coords,
+        # matching the sam3 interactive_ui.py which passes raw pixel coords
+        # with normalize_coords=True (model normalizes internally)
         point_coords = np.array([[pt[0] * w, pt[1] * h] for pt in points], dtype=np.float32)
         point_labels = np.array(labels, dtype=np.int32)
 
-        # First click: multimask (3 options). Subsequent: single refined mask using previous best.
+        # Mask input priority: previous point logits > text logits > none.
+        # Logit chaining feeds the previous best mask back as a hint, producing
+        # tighter edges on subsequent clicks. Text logits serve as initial prior
+        # when refining a text-selected region with points.
+        mask_input = None
         prev_logits = session.get("_low_res_logits")
-        use_multimask = len(points) == 1 and prev_logits is None
+        text_logits = session.get("_text_mask_logits")
+        if prev_logits is not None:
+            mask_input = prev_logits
+        elif text_logits is not None:
+            mask_input = text_logits
+
+        # First click without prior: multimask=True (3 candidates).
+        # Subsequent clicks with logit prior: multimask=False (single refined mask).
+        use_multimask = mask_input is None
 
         with torch.autocast("cuda", dtype=torch.bfloat16):
             masks_np, scores_np, low_res_logits = self._predictor.predict(
                 point_coords=point_coords,
                 point_labels=point_labels,
-                mask_input=prev_logits,
+                mask_input=mask_input,
                 multimask_output=use_multimask,
-                normalize_coords=False,
+                normalize_coords=True,
             )
 
-        # Store best mask logits for next refinement
+        # Store best mask logits for next refinement (logit chaining)
         best_idx = int(np.argmax(scores_np))
         session["_low_res_logits"] = low_res_logits[best_idx:best_idx+1]
 
-        # masks_np: CxHxW, scores_np: C
-        masks = torch.from_numpy(masks_np).unsqueeze(1).bool()  # [C, 1, H, W]
-        scores = torch.from_numpy(scores_np)
+        # Store only the single best mask
+        best_mask = masks_np[best_idx:best_idx+1]  # 1xHxW
+        best_score = scores_np[best_idx:best_idx+1]  # 1
+
+        masks = torch.from_numpy(best_mask).unsqueeze(1).bool()  # [1, 1, H, W]
+        scores = torch.from_numpy(best_score)
 
         session["masks"] = masks
         session["scores"] = scores
@@ -315,6 +365,7 @@ class SAM3Service:
         session["scores"] = None
         session["boxes"] = None
         session["_low_res_logits"] = None
+        session["_text_mask_logits"] = None
         # Re-setup interactive predictor
         self._setup_predictor_from_state(state, session)
         return {"session_id": session_id, "message": "Prompts reset"}
@@ -334,9 +385,18 @@ class SAM3Service:
         # Extract single mask: [1, H, W] -> [H, W] numpy bool
         mask = masks[mask_index, 0].cpu().numpy()
 
-        # Create RGBA image
+        # Create RGBA image with soft alpha edges.
+        # SAM3 produces hard binary masks (0 or 255), but TRELLIS and Hunyuan
+        # work better with soft edges like rembg produces. Apply a small gaussian
+        # blur to the mask edges to create a gradual alpha transition.
+        from scipy.ndimage import gaussian_filter
         img_array = session["image_array"]
-        alpha = (mask * 255).astype(np.uint8)
+        alpha_float = mask.astype(np.float32)
+        alpha_soft = gaussian_filter(alpha_float, sigma=2)
+        # Keep the interior fully opaque — only soften the boundary
+        alpha_soft = np.clip(alpha_soft, 0.0, 1.0)
+        alpha_soft = np.where(mask, np.maximum(alpha_soft, 0.9), alpha_soft)
+        alpha = (alpha_soft * 255).astype(np.uint8)
         rgba = np.concatenate([img_array, alpha[..., None]], axis=-1)
 
         # Save to temp directory
@@ -366,16 +426,10 @@ class SAM3Service:
         if scores is not None and len(scores) > 0:
             best_idx = int(scores.argmax()) if hasattr(scores, 'argmax') else 0
 
-        for i in range(masks.shape[0]):
-            mask_np = masks[i, 0].cpu().numpy()
-            if i == best_idx:
-                # Best mask: prominent blue overlay
-                color = np.array([60, 120, 255], dtype=np.float32)
-                img_array[mask_np] = img_array[mask_np] * 0.45 + color * 0.55
-            else:
-                # Other masks: faint outline only
-                color = np.array([255, 180, 0], dtype=np.float32)
-                img_array[mask_np] = img_array[mask_np] * 0.8 + color * 0.2
+        # Only show the best mask (matching sam3 interactive_ui.py behavior)
+        mask_np = masks[best_idx, 0].cpu().numpy()
+        color = np.array([60, 120, 255], dtype=np.float32)
+        img_array[mask_np] = img_array[mask_np] * 0.45 + color * 0.55
 
         overlay = Image.fromarray(img_array.astype(np.uint8))
         output_dir = os.path.join(TEMP_DIR, "segmented", session_id)
