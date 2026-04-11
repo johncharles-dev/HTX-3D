@@ -353,17 +353,22 @@ class TaskManager:
             video_path = None
 
         # -- Save thumbnail and input image for re-texture ------
-        thumb_path = None
-        thumb_source = params.get("original_image_path") or params.get("image_path")
-        if thumb_source:
-            thumb_path = os.path.join(output_dir, "thumbnail.png")
-            from PIL import Image
-            img = Image.open(thumb_source).convert("RGB")
-            img.thumbnail((256, 256))
-            img.save(thumb_path)
-            # Save full-res input image for potential re-texturing
-            input_save_path = os.path.join(output_dir, "input_image.png")
-            Image.open(thumb_source).convert("RGB").save(input_save_path)
+        thumb_path = os.path.join(output_dir, "thumbnail.png")
+        if os.path.exists(thumb_path):
+            # Engine already copied a thumbnail (quick_adjust, retexture)
+            pass
+        else:
+            thumb_source = params.get("original_image_path") or params.get("image_path")
+            if thumb_source:
+                from PIL import Image
+                img = Image.open(thumb_source).convert("RGB")
+                img.thumbnail((256, 256))
+                img.save(thumb_path)
+                # Save full-res input image for potential re-texturing
+                input_save_path = os.path.join(output_dir, "input_image.png")
+                Image.open(thumb_source).convert("RGB").save(input_save_path)
+            else:
+                thumb_path = None
 
         elapsed = time.time() - start_time
 
@@ -407,9 +412,10 @@ class TaskManager:
         if task["status"] != TaskStatus.COMPLETED or not task.get("result"):
             return
         result = task["result"]
+        task_type = task["type"]
         entry = {
             "task_id": task["id"],
-            "type": task["type"],
+            "type": task_type,
             "model": task["params"].get("model", "trellis-image-to-3d"),
             "seed": result.get("seed", 0),
             "exports": result.get("exports", []),
@@ -418,6 +424,9 @@ class TaskManager:
             "generation_time_seconds": result.get("generation_time_seconds"),
             "created_at": task.get("created_at", ""),
         }
+        # Add source info for edited/retexture/quick_adjust tasks
+        if task_type in ("retexture", "quick_adjust"):
+            entry["source_model"] = "hunyuan-image-to-3d"
         self._gallery_index.insert(0, entry)  # newest first
         self._save_gallery_index()
 

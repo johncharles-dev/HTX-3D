@@ -243,7 +243,7 @@ async def retexture_model(
     """Re-run only the texture pipeline on an existing shape with new material settings."""
     format_list = [f.strip() for f in formats.split(",") if f.strip()]
     params = {
-        "model": "hunyuan-image-to-3d",
+        "model": "edited",
         "engine": "hunyuan",
         "base_task_id": base_task_id,
         "roughness_offset": roughness_offset,
@@ -269,7 +269,7 @@ async def quick_adjust_materials(
 ):
     """Adjust material textures without re-running diffusion. Instant, no GPU needed."""
     params = {
-        "model": "hunyuan-image-to-3d",
+        "model": "edited",
         "engine": "hunyuan",
         "base_task_id": base_task_id,
         "roughness_offset": roughness_offset,
