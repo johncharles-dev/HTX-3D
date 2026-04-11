@@ -172,6 +172,7 @@ export interface GalleryItem {
   seed: number;
   generation_time_seconds: number | null;
   created_at: string;
+  source_model?: string | null;
 }
 
 export interface HealthStatus {

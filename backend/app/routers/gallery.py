@@ -43,6 +43,7 @@ async def list_gallery(
             seed=raw.get("seed", 0),
             generation_time_seconds=raw.get("generation_time_seconds"),
             created_at=raw.get("created_at", ""),
+            source_model=raw.get("source_model"),
         ))
 
     return GalleryResponse(items=items, total=total, page=page, per_page=per_page)
@@ -59,13 +60,18 @@ async def delete_gallery_item(task_id: str, task_manager=Depends(get_task_manage
 async def save_edited_model(
     file: UploadFile = File(...),
     label: Optional[str] = Form("Edited"),
+    source_model: Optional[str] = Form(None),
+    seed: Optional[int] = Form(0),
     task_manager=Depends(get_task_manager),
 ):
     """Save an edited GLB model to the gallery."""
     data = await file.read()
     if len(data) < 12:
         raise HTTPException(400, "Invalid GLB file")
-    entry = task_manager.save_edited_to_gallery(data, label=label or "Edited")
+    entry = task_manager.save_edited_to_gallery(
+        data, label=label or "Edited",
+        source_model=source_model, seed=seed or 0,
+    )
     task_id = entry["task_id"]
     exports = [ExportFile(
         format=exp["format"],
@@ -80,7 +86,8 @@ async def save_edited_model(
             task_id=task_id,
             model="edited",
             exports=exports,
-            seed=0,
+            seed=entry.get("seed", 0),
+            generation_time_seconds=None,
             created_at=entry.get("created_at", ""),
         ),
     }

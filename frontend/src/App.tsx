@@ -25,6 +25,7 @@ import {
 import type {
   HealthStatus,
   ExportFile,
+  GalleryItem,
   ProgressUpdate,
   TaskStatus,
   InputMode,
@@ -91,6 +92,9 @@ export default function App() {
   const [gallerySubTab, setGallerySubTab] = useState<'generated' | 'edited'>('generated');
   const [savedStatus, setSavedStatus] = useState<string | null>(null);
   const [galleryRefreshKey, setGalleryRefreshKey] = useState(0);
+  // Track source info for edited models (persists across generation → edit flows)
+  const [sourceModel, setSourceModel] = useState<string | null>(null);
+  const [sourceSeed, setSourceSeed] = useState<number | null>(null);
 
   // -- Derived ---------------------------------------------
   const activeModelResult = modelResults.find((mr) => mr.modelId === activeResultModel);
@@ -281,6 +285,8 @@ export default function App() {
     const res = activeModelResult.result;
     setEditedGlbUrl(null);
     setCleanupUndoUrl(null);
+    setSourceModel(res.model);
+    setSourceSeed(res.seed);
     const glb = res.exports.find((e) => e.format === 'glb');
     if (glb) {
       setViewerUrl(glb.url);
@@ -324,12 +330,16 @@ export default function App() {
   };
 
   // -- Gallery Preview -------------------------------------
-  const handleGalleryPreview = (exports: ExportFile[]) => {
+  const handleGalleryPreview = (exports: ExportFile[], item?: GalleryItem) => {
     setGalleryExports(exports);
     setModelResults([]);
     setActiveResultModel(null);
     setEditedGlbUrl(null);
     setCleanupUndoUrl(null);
+    if (item) {
+      setSourceModel(item.model);
+      setSourceSeed(item.seed);
+    }
     const glb = exports.find((e) => e.format === 'glb');
     if (glb) {
       setViewerUrl(glb.url);
@@ -902,7 +912,7 @@ export default function App() {
                         onClick={async () => {
                           setSavedStatus('Uploading...');
                           try {
-                            await saveEditedToGallery(editedGlbUrl, 'Edited');
+                            await saveEditedToGallery(editedGlbUrl, 'Edited', sourceModel, sourceSeed);
                             setSavedStatus('Saved!');
                             setGalleryRefreshKey((k) => k + 1);
                             setTimeout(() => setSavedStatus(null), 2000);

@@ -13,7 +13,7 @@ function modelLabel(modelId: string) {
 }
 
 interface Props {
-  onPreview: (exports: ExportFile[]) => void;
+  onPreview: (exports: ExportFile[], item: GalleryItem) => void;
   /** 'generated' shows non-edited models, 'edited' shows only edited */
   filter?: 'generated' | 'edited';
   /** Increment to force a re-fetch (e.g. after saving an edited model) */
@@ -95,7 +95,7 @@ export default function Gallery({ onPreview, filter = 'generated', refreshKey = 
               {/* Hover overlay */}
               <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                 <button
-                  onClick={() => onPreview(item.exports)}
+                  onClick={() => onPreview(item.exports, item)}
                   className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
                   title="Preview"
                 >
@@ -130,11 +130,20 @@ export default function Gallery({ onPreview, filter = 'generated', refreshKey = 
                 );
               })()}
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs text-text-muted">Seed: {item.seed}</span>
+                <span className="text-xs text-text-muted">
+                  {item.seed ? `Seed: ${item.seed}` : ''}
+                </span>
                 {item.generation_time_seconds && (
                   <span className="text-xs text-text-muted">{item.generation_time_seconds}s</span>
                 )}
               </div>
+              {item.source_model && (
+                <div className="mb-1.5">
+                  <span className="text-xs text-text-muted">
+                    from {modelLabel(item.source_model).name}
+                  </span>
+                </div>
+              )}
               <div className="flex gap-1 flex-wrap">
                 {item.exports.map((exp) => (
                   <a

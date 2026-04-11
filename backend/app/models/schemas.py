@@ -146,6 +146,7 @@ class GalleryItem(BaseModel):
     seed: int = 0
     generation_time_seconds: Optional[float] = None
     created_at: str = ""
+    source_model: Optional[str] = None  # for edited models: which engine produced the original
 
 
 class GalleryResponse(BaseModel):

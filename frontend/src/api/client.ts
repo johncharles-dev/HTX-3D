@@ -159,12 +159,19 @@ export async function deleteGalleryItem(taskId: string): Promise<void> {
   await request(`/gallery/${taskId}`, { method: 'DELETE' });
 }
 
-export async function saveEditedToGallery(blobUrl: string, label = 'Edited'): Promise<GalleryItem> {
+export async function saveEditedToGallery(
+  blobUrl: string,
+  label = 'Edited',
+  sourceModel?: string | null,
+  sourceSeed?: number | null,
+): Promise<GalleryItem> {
   const res = await fetch(blobUrl);
   const blob = await res.blob();
   const form = new FormData();
   form.append('file', blob, 'edited_model.glb');
   form.append('label', label);
+  if (sourceModel) form.append('source_model', sourceModel);
+  if (sourceSeed != null) form.append('seed', String(sourceSeed));
   const resp = await fetch(`${API_BASE}/gallery/edited`, { method: 'POST', body: form });
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({ detail: resp.statusText }));
