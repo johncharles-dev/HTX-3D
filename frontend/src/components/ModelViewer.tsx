@@ -5,14 +5,14 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
 import { PLYLoader } from 'three/examples/jsm/loaders/PLYLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
-import { AlertTriangle, Box, Circle, Grid3x3, Dot, Eraser, Undo2, Redo2, Check, X, Minus, Plus } from 'lucide-react';
+import { AlertTriangle, Box, Circle, Grid3x3, Dot, Eraser, Undo2, Redo2, Check, X, Minus, Plus, Triangle } from 'lucide-react';
 import * as THREE from 'three';
 import type { ExportFile, ViewerSettings } from '../types';
 import { DEFAULT_VIEWER_SETTINGS } from '../types';
 import { EditableModel } from './MeshEraser';
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
 
-type ViewMode = 'textured' | 'solid' | 'wireframe' | 'pointcloud';
+type ViewMode = 'textured' | 'mesh' | 'solid' | 'wireframe' | 'pointcloud';
 
 const BG_COLOR = '#1a1d27';
 
@@ -95,6 +95,17 @@ function GLBWireframe({ url }: { url: string }) {
   return <Center><primitive object={scene} /></Center>;
 }
 
+function GLBMesh({ url }: { url: string }) {
+  const gltf = useLoader(GLTFLoader, url);
+  const scene = useMemo(() => {
+    const mat = new THREE.MeshStandardMaterial({ color: '#b0b0b0', flatShading: true, roughness: 0.7, metalness: 0.0 });
+    const cloned = gltf.scene.clone();
+    cloned.traverse((child) => { if (child instanceof THREE.Mesh) child.material = mat; });
+    return cloned;
+  }, [gltf]);
+  return <Center><primitive object={scene} /></Center>;
+}
+
 function STLModel({ url }: { url: string }) {
   const geometry = useLoader(STLLoader, url);
   return <Center><mesh geometry={geometry}><meshStandardMaterial color="#a0a0a0" /></mesh></Center>;
@@ -123,6 +134,7 @@ interface Props {
 
 const VIEW_MODES: { id: ViewMode; label: string; icon: typeof Box }[] = [
   { id: 'textured', label: 'Textured', icon: Box },
+  { id: 'mesh', label: 'Mesh', icon: Triangle },
   { id: 'solid', label: 'Solid', icon: Circle },
   { id: 'wireframe', label: 'Wireframe', icon: Grid3x3 },
   { id: 'pointcloud', label: 'Point Cloud', icon: Dot },
@@ -212,6 +224,10 @@ export default function ModelViewer({ url, format = 'glb', autoRotate = true, ex
     if (viewMode === 'textured') {
       const ModelComponent = { glb: GLBModel, stl: STLModel, ply: PLYModel, obj: OBJModel }[format] || GLBModel;
       return { component: ModelComponent, modelUrl: url };
+    }
+    if (viewMode === 'mesh') {
+      const glbExport = exports.find((e) => e.format === 'glb');
+      return { component: GLBMesh, modelUrl: glbExport?.url || url };
     }
     if (viewMode === 'solid') {
       const glbExport = exports.find((e) => e.format === 'glb');
@@ -317,6 +333,7 @@ export default function ModelViewer({ url, format = 'glb', autoRotate = true, ex
             {!eraserActive && VIEW_MODES.map(({ id, label, icon: Icon }) => {
               const disabled =
                 (id === 'pointcloud' && !hasPly) ||
+                (id === 'mesh' && !hasGlb && format !== 'glb') ||
                 (id === 'solid' && !hasGlb && format !== 'glb') ||
                 (id === 'wireframe' && !hasGlb && format !== 'glb');
               return (
