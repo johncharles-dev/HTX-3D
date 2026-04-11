@@ -10,7 +10,7 @@ import SceneSettings from './components/SceneSettings';
 import Gallery from './components/Gallery';
 import SegmentationWorkspace from './components/SegmentationWorkspace';
 import { removeFloatersFromBlob } from './components/MeshEraser';
-import { Sparkles, Images, Type, Pencil, Upload, Wand2, Check, Square, Trash2, Save, Paintbrush } from 'lucide-react';
+import { Sparkles, Images, Type, Pencil, Upload, Wand2, Check, Square, Trash2, Save, Paintbrush, X } from 'lucide-react';
 import {
   generateFromImage,
   generateFromMultiImage,
@@ -98,6 +98,8 @@ export default function App() {
   const [sourceSeed, setSourceSeed] = useState<number | null>(null);
   const [sourceTaskId, setSourceTaskId] = useState<string | null>(null);
   const [retextureStatus, setRetextureStatus] = useState<string | null>(null);
+  const [retextureTaskId, setRetextureTaskId] = useState<string | null>(null);
+  const [retexturePollRef] = useState<{ current: ReturnType<typeof setInterval> | null }>({ current: null });
 
   // -- Derived ---------------------------------------------
   const activeModelResult = modelResults.find((mr) => mr.modelId === activeResultModel);
@@ -949,60 +951,115 @@ export default function App() {
                     <p className="text-[10px] text-text-muted">
                       Re-run texture pipeline on this shape with current material settings. Skips shape generation.
                     </p>
-                    <button
-                      onClick={async () => {
-                        setRetextureStatus('Queuing...');
-                        try {
-                          const resp = await retextureModel(
-                            sourceTaskId,
-                            genSettings.roughnessOffset,
-                            genSettings.metallicScale,
-                          );
-                          setRetextureStatus(`Queued: ${resp.task_id}`);
-                          // Poll for result like normal generation
-                          const poll = setInterval(async () => {
-                            try {
-                              const status = await getTaskStatus(resp.task_id);
-                              if (status.status === 'completed' && status.exports?.length > 0) {
-                                clearInterval(poll);
-                                const glb = status.exports.find((e) => e.format === 'glb');
-                                if (glb) {
-                                  setViewerUrl(glb.url);
-                                  setViewerFormat('glb');
-                                  setSourceTaskId(status.task_id);
-                                }
-                                setGalleryRefreshKey((k) => k + 1);
-                                setRetextureStatus('Done!');
+                    <div className="flex gap-1.5">
+                      <button
+                        onClick={async () => {
+                          setRetextureStatus('Queuing...');
+                          try {
+                            const resp = await retextureModel(
+                              sourceTaskId,
+                              genSettings.roughnessOffset,
+                              genSettings.metallicScale,
+                            );
+                            setRetextureTaskId(resp.task_id);
+                            setRetextureStatus('Starting...');
+                            // Connect via WebSocket for live progress
+                            const ws = connectProgress(resp.task_id, (data) => {
+                              if (data.status === 'completed') {
+                                // Fetch final result
+                                getTaskStatus(resp.task_id).then((result) => {
+                                  const glb = result.exports?.find((e: ExportFile) => e.format === 'glb');
+                                  if (glb) {
+                                    setViewerUrl(glb.url);
+                                    setViewerFormat('glb');
+                                    setSourceTaskId(result.task_id);
+                                  }
+                                  setGalleryRefreshKey((k) => k + 1);
+                                  setRetextureStatus('Done!');
+                                  setRetextureTaskId(null);
+                                  setTimeout(() => setRetextureStatus(null), 2000);
+                                });
+                              } else if (data.status === 'failed' || data.status === 'cancelled') {
+                                setRetextureStatus(data.status === 'cancelled' ? 'Cancelled' : 'Failed');
+                                setRetextureTaskId(null);
                                 setTimeout(() => setRetextureStatus(null), 2000);
-                              } else if (status.status === 'failed') {
-                                clearInterval(poll);
-                                setRetextureStatus('Failed');
-                                setTimeout(() => setRetextureStatus(null), 3000);
                               } else {
-                                setRetextureStatus(status.status === 'processing' ? 'Texturing...' : status.status);
+                                const pct = Math.round((data.progress || 0) * 100);
+                                setRetextureStatus(data.stage || data.message || `Texturing... ${pct}%`);
                               }
-                            } catch {
-                              clearInterval(poll);
-                              setRetextureStatus('Error');
-                              setTimeout(() => setRetextureStatus(null), 3000);
+                            }, () => {
+                              // WebSocket closed — fall back to polling
+                              if (retexturePollRef.current) return;
+                              retexturePollRef.current = setInterval(async () => {
+                                try {
+                                  const status = await getTaskStatus(resp.task_id);
+                                  if (status.status === 'completed' && status.exports?.length > 0) {
+                                    clearInterval(retexturePollRef.current!);
+                                    retexturePollRef.current = null;
+                                    const glb = status.exports.find((e) => e.format === 'glb');
+                                    if (glb) {
+                                      setViewerUrl(glb.url);
+                                      setViewerFormat('glb');
+                                      setSourceTaskId(status.task_id);
+                                    }
+                                    setGalleryRefreshKey((k) => k + 1);
+                                    setRetextureStatus('Done!');
+                                    setRetextureTaskId(null);
+                                    setTimeout(() => setRetextureStatus(null), 2000);
+                                  } else if (status.status === 'failed' || status.status === 'cancelled') {
+                                    clearInterval(retexturePollRef.current!);
+                                    retexturePollRef.current = null;
+                                    setRetextureStatus(status.status === 'cancelled' ? 'Cancelled' : 'Failed');
+                                    setRetextureTaskId(null);
+                                    setTimeout(() => setRetextureStatus(null), 2000);
+                                  }
+                                } catch {
+                                  clearInterval(retexturePollRef.current!);
+                                  retexturePollRef.current = null;
+                                }
+                              }, 2000);
+                            });
+                          } catch (err) {
+                            console.error('Re-texture failed:', err);
+                            setRetextureStatus('Failed to queue');
+                            setTimeout(() => setRetextureStatus(null), 3000);
+                          }
+                        }}
+                        disabled={retextureTaskId !== null}
+                        className={`flex-1 text-xs px-3 py-2 rounded-lg border transition-colors flex items-center gap-1.5 ${
+                          retextureTaskId
+                            ? 'border-accent/20 bg-accent/5 text-accent/70 cursor-wait'
+                            : retextureStatus
+                              ? 'border-border bg-bg-tertiary text-text-muted'
+                              : 'border-accent/30 bg-accent/10 hover:bg-accent/20 text-accent'
+                        }`}
+                      >
+                        <Paintbrush className={`w-3.5 h-3.5 ${retextureTaskId ? 'animate-pulse' : ''}`} />
+                        {retextureStatus || 'Re-texture'}
+                      </button>
+                      {retextureTaskId && (
+                        <button
+                          onClick={async () => {
+                            try {
+                              await cancelTask(retextureTaskId);
+                              if (retexturePollRef.current) {
+                                clearInterval(retexturePollRef.current);
+                                retexturePollRef.current = null;
+                              }
+                              setRetextureStatus('Cancelled');
+                              setRetextureTaskId(null);
+                              setTimeout(() => setRetextureStatus(null), 2000);
+                            } catch (err) {
+                              console.error('Cancel failed:', err);
                             }
-                          }, 2000);
-                        } catch (err) {
-                          console.error('Re-texture failed:', err);
-                          setRetextureStatus('Failed to queue');
-                          setTimeout(() => setRetextureStatus(null), 3000);
-                        }
-                      }}
-                      disabled={retextureStatus !== null}
-                      className={`w-full text-xs px-3 py-2 rounded-lg border transition-colors flex items-center gap-1.5 ${
-                        retextureStatus
-                          ? 'border-border bg-bg-tertiary text-text-muted cursor-wait'
-                          : 'border-accent/30 bg-accent/10 hover:bg-accent/20 text-accent'
-                      }`}
-                    >
-                      <Paintbrush className="w-3.5 h-3.5" />
-                      {retextureStatus || 'Re-texture with current settings'}
-                    </button>
+                          }}
+                          className="px-2 py-2 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors"
+                          title="Cancel re-texture"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </>
               )}
