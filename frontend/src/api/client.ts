@@ -40,6 +40,12 @@ export async function generateFromImage(
     if (settings.targetFaceCount > 0) {
       form.append('target_face_count', String(settings.targetFaceCount));
     }
+    if (settings.roughnessOffset !== 0.0) {
+      form.append('roughness_offset', String(settings.roughnessOffset));
+    }
+    if (settings.metallicScale !== 1.0) {
+      form.append('metallic_scale', String(settings.metallicScale));
+    }
   }
   // SAM 3D Objects params
   if (engine === 'sam3d') {
@@ -86,6 +92,12 @@ export async function generateFromMultiImage(
     form.append('remove_floaters', String(settings.removeFloaters));
     if (settings.targetFaceCount > 0) {
       form.append('target_face_count', String(settings.targetFaceCount));
+    }
+    if (settings.roughnessOffset !== 0.0) {
+      form.append('roughness_offset', String(settings.roughnessOffset));
+    }
+    if (settings.metallicScale !== 1.0) {
+      form.append('metallic_scale', String(settings.metallicScale));
     }
   }
   form.append('formats', exportSettings.formats.join(','));

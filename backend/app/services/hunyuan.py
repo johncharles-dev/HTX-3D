@@ -227,6 +227,8 @@ class HunyuanEngine(BaseEngine):
             "image": image,
             "image_path": image_path,
             "texture_enabled": texture,
+            "roughness_offset": engine_params.get("roughness_offset", 0.0),
+            "metallic_scale": engine_params.get("metallic_scale", 1.0),
         }
 
     def generate_from_images(
@@ -300,6 +302,14 @@ class HunyuanEngine(BaseEngine):
                     save_glb=False,
                 )
                 logger.info(f"Texture generation took {time.time() - start_time:.1f}s")
+
+                # Apply roughness/metallic adjustments if specified
+                roughness_offset = generation_data.get("roughness_offset", 0.0) or 0.0
+                metallic_scale = generation_data.get("metallic_scale", 1.0) or 1.0
+                if roughness_offset != 0.0 or metallic_scale != 1.0:
+                    if progress_callback:
+                        progress_callback("Adjusting materials", 0.83)
+                    self._apply_mr_adjustments(output_obj_path, roughness_offset, metallic_scale)
 
                 if progress_callback:
                     progress_callback("Converting to GLB", 0.85)
@@ -377,6 +387,27 @@ class HunyuanEngine(BaseEngine):
             progress_callback("Export complete", 1.0)
 
         return results
+
+    @staticmethod
+    def _apply_mr_adjustments(output_obj_path: str, roughness_offset: float, metallic_scale: float):
+        """Adjust metallic/roughness texture JPGs after paint pipeline."""
+        import numpy as np
+        from PIL import Image
+
+        metallic_path = output_obj_path.replace(".obj", "_metallic.jpg")
+        roughness_path = output_obj_path.replace(".obj", "_roughness.jpg")
+
+        if os.path.exists(metallic_path) and metallic_scale != 1.0:
+            img = np.array(Image.open(metallic_path)).astype(np.float32)
+            img = np.clip(img * metallic_scale, 0, 255).astype(np.uint8)
+            Image.fromarray(img).save(metallic_path, quality=95)
+            logger.info(f"Metallic texture adjusted (scale={metallic_scale:.2f})")
+
+        if os.path.exists(roughness_path) and roughness_offset != 0.0:
+            img = np.array(Image.open(roughness_path)).astype(np.float32)
+            img = np.clip(img + roughness_offset * 255, 0, 255).astype(np.uint8)
+            Image.fromarray(img).save(roughness_path, quality=95)
+            logger.info(f"Roughness texture adjusted (offset={roughness_offset:+.2f})")
 
     @staticmethod
     def _remove_floaters(output_dir: str, min_ratio: float = 0.05):

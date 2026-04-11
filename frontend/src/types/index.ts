@@ -98,12 +98,33 @@ export interface GenerationSettings {
   texture: boolean;
   targetFaceCount: number;  // 0 = no decimation, else target face count
   removeFloaters: boolean;  // remove disconnected mesh components
+  roughnessOffset: number;  // -1.0 to 1.0, added to roughness texture
+  metallicScale: number;    // 0.0 to 2.0, multiplied with metallic texture
   // SAM 3D Objects params
   sam3dStage1Steps: number;
   sam3dStage2Steps: number;
   sam3dTextureBaking: boolean;
   sam3dVertexColor: boolean;
 }
+
+export interface MaterialPreset {
+  id: string;
+  label: string;
+  desc: string;
+  roughnessOffset: number;
+  metallicScale: number;
+}
+
+export const MATERIAL_PRESETS: MaterialPreset[] = [
+  { id: 'default',  label: 'Default',     desc: 'AI-generated values',      roughnessOffset: 0.0,   metallicScale: 1.0  },
+  { id: 'vehicle',  label: 'Vehicle',     desc: 'Matte paint over metal',   roughnessOffset: 0.3,   metallicScale: 0.3  },
+  { id: 'plastic',  label: 'Plastic',     desc: 'Smooth, non-metallic',     roughnessOffset: 0.1,   metallicScale: 0.0  },
+  { id: 'metal',    label: 'Bare Metal',  desc: 'Shiny metallic surface',   roughnessOffset: -0.3,  metallicScale: 1.8  },
+  { id: 'clay',     label: 'Clay/Matte',  desc: 'Diffuse, no reflections',  roughnessOffset: 0.5,   metallicScale: 0.0  },
+  { id: 'glass',    label: 'Glass',       desc: 'Very smooth, subtle',      roughnessOffset: -0.5,  metallicScale: 0.3  },
+  { id: 'rubber',   label: 'Rubber',      desc: 'Soft matte finish',        roughnessOffset: 0.5,   metallicScale: 0.05 },
+  { id: 'building', label: 'Building',    desc: 'Concrete/plaster',         roughnessOffset: 0.45,  metallicScale: 0.08 },
+];
 
 export interface ViewerSettings {
   lightPositionX: number;  // -1 to 1 (left/right)
@@ -215,6 +236,8 @@ export const DEFAULT_GENERATION_SETTINGS: GenerationSettings = {
   texture: true,
   targetFaceCount: 0,
   removeFloaters: true,
+  roughnessOffset: 0.0,
+  metallicScale: 1.0,
   // SAM 3D Objects defaults
   sam3dStage1Steps: 25,
   sam3dStage2Steps: 25,

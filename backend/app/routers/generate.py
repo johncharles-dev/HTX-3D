@@ -69,6 +69,8 @@ async def generate_from_image(
     texture: Optional[bool] = Form(None),
     target_face_count: Optional[int] = Form(None, description="Target face count for mesh decimation (0 or None = no limit)"),
     remove_floaters: Optional[bool] = Form(None, description="Remove disconnected mesh components, keep largest"),
+    roughness_offset: Optional[float] = Form(None, description="Roughness offset (-1 to 1)"),
+    metallic_scale: Optional[float] = Form(None, description="Metallic scale (0 to 2)"),
     # SAM 3D Objects params
     sam3d_stage1_steps: Optional[int] = Form(None),
     sam3d_stage2_steps: Optional[int] = Form(None),
@@ -127,6 +129,10 @@ async def generate_from_image(
         params["target_face_count"] = target_face_count
     if remove_floaters is not None:
         params["remove_floaters"] = remove_floaters
+    if roughness_offset is not None:
+        params["roughness_offset"] = roughness_offset
+    if metallic_scale is not None:
+        params["metallic_scale"] = metallic_scale
     # Add SAM 3D Objects params only if provided
     if sam3d_stage1_steps is not None:
         params["sam3d_stage1_steps"] = sam3d_stage1_steps
@@ -167,6 +173,8 @@ async def generate_from_multi_image(
     texture: Optional[bool] = Form(None),
     target_face_count: Optional[int] = Form(None, description="Target face count for mesh decimation"),
     remove_floaters: Optional[bool] = Form(None, description="Remove disconnected mesh components"),
+    roughness_offset: Optional[float] = Form(None),
+    metallic_scale: Optional[float] = Form(None),
     # Export params
     formats: str = Form("glb"),
     mesh_simplify: float = Form(0.95),
@@ -208,6 +216,10 @@ async def generate_from_multi_image(
         params["target_face_count"] = target_face_count
     if remove_floaters is not None:
         params["remove_floaters"] = remove_floaters
+    if roughness_offset is not None:
+        params["roughness_offset"] = roughness_offset
+    if metallic_scale is not None:
+        params["metallic_scale"] = metallic_scale
 
     task_id = task_manager.submit_task("multi_image", params)
 

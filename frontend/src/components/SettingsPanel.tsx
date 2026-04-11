@@ -1,7 +1,7 @@
 import { Shuffle, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import { useState } from 'react';
 import type { GenerationSettings, ExportSettings, ExportFormat, EngineName } from '../types';
-import { QUALITY_PRESETS, HUNYUAN_QUALITY_PRESETS, SAM3D_QUALITY_PRESETS } from '../types';
+import { QUALITY_PRESETS, HUNYUAN_QUALITY_PRESETS, SAM3D_QUALITY_PRESETS, MATERIAL_PRESETS } from '../types';
 
 interface Props {
   generation: GenerationSettings;
@@ -227,6 +227,63 @@ export default function SettingsPanel({ generation, exportSettings, onGeneration
           >
             <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${g.texture ? 'left-5' : 'left-0.5'}`} />
           </button>
+        </div>
+      )}
+
+      {/* Hunyuan: Material Presets & Controls */}
+      {hasHunyuan && g.texture && (
+        <div className="space-y-2">
+          <label className="text-xs text-text-secondary">
+            Material
+            <Tooltip text="Adjust roughness and metallic properties of the generated PBR texture." />
+          </label>
+          {/* Preset buttons */}
+          <div className="flex flex-wrap gap-1">
+            {MATERIAL_PRESETS.map((p) => {
+              const active = g.roughnessOffset === p.roughnessOffset && g.metallicScale === p.metallicScale;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => setG({ roughnessOffset: p.roughnessOffset, metallicScale: p.metallicScale })}
+                  className={`text-[10px] px-2 py-1 rounded-md border transition-colors ${
+                    active
+                      ? 'border-accent bg-accent/15 text-accent'
+                      : 'border-border text-text-muted hover:border-border-hover'
+                  }`}
+                  title={p.desc}
+                >
+                  {p.label}
+                </button>
+              );
+            })}
+          </div>
+          {/* Fine-tune sliders */}
+          <div className="space-y-1.5">
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-text-muted">Roughness {g.roughnessOffset >= 0 ? '+' : ''}{g.roughnessOffset.toFixed(2)}</span>
+                <span className="text-[9px] text-text-muted/60">glossy ... matte</span>
+              </div>
+              <input
+                type="range" min="-1" max="1" step="0.05"
+                value={g.roughnessOffset}
+                onChange={(e) => setG({ roughnessOffset: parseFloat(e.target.value) })}
+                className="w-full h-1 accent-accent"
+              />
+            </div>
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-text-muted">Metallic {g.metallicScale.toFixed(2)}x</span>
+                <span className="text-[9px] text-text-muted/60">plastic ... metal</span>
+              </div>
+              <input
+                type="range" min="0" max="2" step="0.05"
+                value={g.metallicScale}
+                onChange={(e) => setG({ metallicScale: parseFloat(e.target.value) })}
+                className="w-full h-1 accent-accent"
+              />
+            </div>
+          </div>
         </div>
       )}
 
