@@ -116,14 +116,14 @@ export interface MaterialPreset {
 }
 
 export const MATERIAL_PRESETS: MaterialPreset[] = [
-  { id: 'default',  label: 'Default',     desc: 'AI-generated values',      roughnessOffset: 0.0,   metallicScale: 1.0  },
-  { id: 'vehicle',  label: 'Vehicle',     desc: 'Matte paint over metal',   roughnessOffset: 0.3,   metallicScale: 0.3  },
-  { id: 'plastic',  label: 'Plastic',     desc: 'Smooth, non-metallic',     roughnessOffset: 0.1,   metallicScale: 0.0  },
-  { id: 'metal',    label: 'Bare Metal',  desc: 'Shiny metallic surface',   roughnessOffset: -0.3,  metallicScale: 1.8  },
-  { id: 'clay',     label: 'Clay/Matte',  desc: 'Diffuse, no reflections',  roughnessOffset: 0.5,   metallicScale: 0.0  },
-  { id: 'glass',    label: 'Glass',       desc: 'Very smooth, subtle',      roughnessOffset: -0.5,  metallicScale: 0.3  },
-  { id: 'rubber',   label: 'Rubber',      desc: 'Soft matte finish',        roughnessOffset: 0.5,   metallicScale: 0.05 },
-  { id: 'building', label: 'Building',    desc: 'Concrete/plaster',         roughnessOffset: 0.45,  metallicScale: 0.08 },
+  { id: 'default',  label: 'Default',     desc: 'AI-generated values',       roughnessOffset: 0.0,   metallicScale: 1.0  },
+  { id: 'glossy',   label: 'Glossy',      desc: 'Shiny smooth surface',      roughnessOffset: -0.8,  metallicScale: 1.0  },
+  { id: 'matte',    label: 'Matte',       desc: 'Flat diffuse finish',       roughnessOffset: 0.8,   metallicScale: 0.0  },
+  { id: 'metal',    label: 'Metal',       desc: 'Polished metallic',         roughnessOffset: -0.7,  metallicScale: 2.0  },
+  { id: 'plastic',  label: 'Plastic',     desc: 'Smooth non-metallic',       roughnessOffset: -0.4,  metallicScale: 0.0  },
+  { id: 'clay',     label: 'Clay',        desc: 'Rough, fully matte',        roughnessOffset: 1.0,   metallicScale: 0.0  },
+  { id: 'glass',    label: 'Glass',       desc: 'Mirror-smooth, subtle',     roughnessOffset: -1.0,  metallicScale: 0.4  },
+  { id: 'rubber',   label: 'Rubber',      desc: 'Soft matte, no metal',      roughnessOffset: 0.6,   metallicScale: 0.0  },
 ];
 
 export interface ViewerSettings {

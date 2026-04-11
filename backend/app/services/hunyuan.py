@@ -537,7 +537,14 @@ class HunyuanEngine(BaseEngine):
 
     @staticmethod
     def _apply_mr_adjustments(output_obj_path: str, roughness_offset: float, metallic_scale: float):
-        """Adjust metallic/roughness texture JPGs after paint pipeline."""
+        """Adjust metallic/roughness texture JPGs.
+
+        Uses a blend-to-target approach for visible results:
+        - roughness_offset: -1.0 (fully glossy/smooth) to +1.0 (fully matte/rough).
+          Blends the texture toward 0 (glossy) or 255 (matte).
+        - metallic_scale: 0.0 (fully non-metallic) to 2.0 (fully metallic).
+          Values <1 blend toward 0 (dielectric), >1 blend toward 255 (metal).
+        """
         import numpy as np
         from PIL import Image
 
@@ -546,13 +553,26 @@ class HunyuanEngine(BaseEngine):
 
         if os.path.exists(metallic_path) and metallic_scale != 1.0:
             img = np.array(Image.open(metallic_path)).astype(np.float32)
-            img = np.clip(img * metallic_scale, 0, 255).astype(np.uint8)
+            if metallic_scale < 1.0:
+                # Blend toward 0 (non-metallic): scale=0 → fully black
+                img = img * metallic_scale
+            else:
+                # Blend toward 255 (fully metallic): scale=2 → fully white
+                blend = (metallic_scale - 1.0)  # 0..1 range
+                img = img + (255.0 - img) * blend
+            img = np.clip(img, 0, 255).astype(np.uint8)
             Image.fromarray(img).save(metallic_path, quality=95)
             logger.info(f"Metallic texture adjusted (scale={metallic_scale:.2f})")
 
         if os.path.exists(roughness_path) and roughness_offset != 0.0:
             img = np.array(Image.open(roughness_path)).astype(np.float32)
-            img = np.clip(img + roughness_offset * 255, 0, 255).astype(np.uint8)
+            if roughness_offset > 0:
+                # Blend toward 255 (fully rough/matte)
+                img = img + (255.0 - img) * roughness_offset
+            else:
+                # Blend toward 0 (fully smooth/glossy)
+                img = img * (1.0 + roughness_offset)
+            img = np.clip(img, 0, 255).astype(np.uint8)
             Image.fromarray(img).save(roughness_path, quality=95)
             logger.info(f"Roughness texture adjusted (offset={roughness_offset:+.2f})")
 
