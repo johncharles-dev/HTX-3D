@@ -31,12 +31,16 @@ export default function Gallery({ onPreview, filter = 'generated', refreshKey = 
 
   const load = useCallback(async () => {
     try {
-      const data = await getGallery(page, perPage);
-      const filtered = filter === 'edited'
+      // Fetch enough items to fill a page after filtering.
+      // The backend doesn't support filter param, so we fetch more and filter client-side.
+      const pageSize = 500; // fetch all for client-side filtering + pagination
+      const data = await getGallery(1, pageSize);
+      const allFiltered = filter === 'edited'
         ? data.items.filter((item) => item.model === ('edited' as any))
         : data.items.filter((item) => item.model !== ('edited' as any));
-      setItems(filtered);
-      setTotal(filter ? filtered.length : data.total);
+      const start = (page - 1) * perPage;
+      setItems(allFiltered.slice(start, start + perPage));
+      setTotal(allFiltered.length);
     } catch {
       // API not available
     }
