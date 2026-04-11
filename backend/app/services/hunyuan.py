@@ -388,6 +388,89 @@ class HunyuanEngine(BaseEngine):
 
         return results
 
+    def retexture_mesh(
+        self,
+        generation_data: dict,
+        output_dir: str,
+        formats: list[str],
+        progress_callback: Optional[Callable[[str, float], None]] = None,
+        **engine_params,
+    ) -> dict[str, Path]:
+        """Re-run only the paint/texture pipeline on an existing shape mesh."""
+        self._add_to_path()
+
+        mesh_path = generation_data["mesh_path"]
+        input_image_path = generation_data["input_image_path"]
+        roughness_offset = generation_data.get("roughness_offset", 0.0) or 0.0
+        metallic_scale = generation_data.get("metallic_scale", 1.0) or 1.0
+        os.makedirs(output_dir, exist_ok=True)
+        results = {}
+
+        # Copy shape mesh to new output dir
+        initial_path = os.path.join(output_dir, "model_initial.glb")
+        shutil.copy2(mesh_path, initial_path)
+
+        # Copy input image for future re-textures of this result
+        input_save = os.path.join(output_dir, "input_image.png")
+        shutil.copy2(input_image_path, input_save)
+
+        try:
+            if progress_callback:
+                progress_callback("Loading texture pipeline", 0.10)
+
+            self._offload_shape_pipeline()
+            self._load_texture_pipeline()
+
+            if progress_callback:
+                progress_callback("Generating PBR textures", 0.20)
+
+            from PIL import Image
+            image = Image.open(input_image_path).convert("RGB")
+            output_obj_path = os.path.join(output_dir, "textured.obj")
+            start_time = time.time()
+            self.paint_pipeline(
+                mesh_path=initial_path,
+                image_path=image,
+                output_mesh_path=output_obj_path,
+                save_glb=False,
+            )
+            logger.info(f"Re-texture took {time.time() - start_time:.1f}s")
+
+            # Apply material adjustments
+            if roughness_offset != 0.0 or metallic_scale != 1.0:
+                if progress_callback:
+                    progress_callback("Adjusting materials", 0.80)
+                self._apply_mr_adjustments(output_obj_path, roughness_offset, metallic_scale)
+
+            if progress_callback:
+                progress_callback("Converting to GLB", 0.85)
+
+            from hy3dpaint.convert_utils import create_glb_with_pbr_materials
+            glb_path = os.path.join(output_dir, "model.glb")
+            textures = {
+                "albedo": output_obj_path.replace(".obj", ".jpg"),
+                "metallic": output_obj_path.replace(".obj", "_metallic.jpg"),
+                "roughness": output_obj_path.replace(".obj", "_roughness.jpg"),
+            }
+            create_glb_with_pbr_materials(output_obj_path, textures, glb_path)
+
+            if "glb" in formats:
+                results["glb"] = Path(glb_path)
+
+        except Exception as e:
+            logger.error(f"Re-texture failed: {e}")
+            if "glb" in formats:
+                fallback_path = os.path.join(output_dir, "model.glb")
+                shutil.copy2(initial_path, fallback_path)
+                results["glb"] = Path(fallback_path)
+        finally:
+            try:
+                self._restore_shape_pipeline()
+            except Exception as e:
+                logger.error(f"Failed to restore shape pipeline: {e}")
+
+        return results
+
     @staticmethod
     def _apply_mr_adjustments(output_obj_path: str, roughness_offset: float, metallic_scale: float):
         """Adjust metallic/roughness texture JPGs after paint pipeline."""

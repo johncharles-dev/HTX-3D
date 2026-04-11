@@ -230,6 +230,34 @@ async def generate_from_multi_image(
     )
 
 
+# -- Re-texture -------------------------------------------
+
+@router.post("/generate/retexture", response_model=TaskResponse)
+async def retexture_model(
+    base_task_id: str = Form(..., description="Task ID of the original generation to re-texture"),
+    roughness_offset: float = Form(0.0),
+    metallic_scale: float = Form(1.0),
+    formats: str = Form("glb"),
+    task_manager=Depends(get_task_manager),
+):
+    """Re-run only the texture pipeline on an existing shape with new material settings."""
+    format_list = [f.strip() for f in formats.split(",") if f.strip()]
+    params = {
+        "model": "hunyuan-image-to-3d",
+        "engine": "hunyuan",
+        "base_task_id": base_task_id,
+        "roughness_offset": roughness_offset,
+        "metallic_scale": metallic_scale,
+        "formats": format_list,
+    }
+    task_id = task_manager.submit_task("retexture", params)
+    return TaskResponse(
+        task_id=task_id,
+        status=TaskStatus.QUEUED,
+        message=f"Re-texture queued. Position: {task_manager.queue_size}",
+    )
+
+
 # -- Text-to-3D -------------------------------------------
 
 @router.post("/generate/text", response_model=TaskResponse)

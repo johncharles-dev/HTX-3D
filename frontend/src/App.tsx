@@ -10,7 +10,7 @@ import SceneSettings from './components/SceneSettings';
 import Gallery from './components/Gallery';
 import SegmentationWorkspace from './components/SegmentationWorkspace';
 import { removeFloatersFromBlob } from './components/MeshEraser';
-import { Sparkles, Images, Type, Pencil, Upload, Wand2, Check, Square, Trash2, Save } from 'lucide-react';
+import { Sparkles, Images, Type, Pencil, Upload, Wand2, Check, Square, Trash2, Save, Paintbrush } from 'lucide-react';
 import {
   generateFromImage,
   generateFromMultiImage,
@@ -21,6 +21,7 @@ import {
   connectProgress,
   cancelTask,
   saveEditedToGallery,
+  retextureModel,
 } from './api/client';
 import type {
   HealthStatus,
@@ -95,6 +96,8 @@ export default function App() {
   // Track source info for edited models (persists across generation → edit flows)
   const [sourceModel, setSourceModel] = useState<string | null>(null);
   const [sourceSeed, setSourceSeed] = useState<number | null>(null);
+  const [sourceTaskId, setSourceTaskId] = useState<string | null>(null);
+  const [retextureStatus, setRetextureStatus] = useState<string | null>(null);
 
   // -- Derived ---------------------------------------------
   const activeModelResult = modelResults.find((mr) => mr.modelId === activeResultModel);
@@ -287,6 +290,7 @@ export default function App() {
     setCleanupUndoUrl(null);
     setSourceModel(res.model);
     setSourceSeed(res.seed);
+    setSourceTaskId(res.task_id);
     const glb = res.exports.find((e) => e.format === 'glb');
     if (glb) {
       setViewerUrl(glb.url);
@@ -339,6 +343,7 @@ export default function App() {
     if (item) {
       setSourceModel(item.model);
       setSourceSeed(item.seed);
+      setSourceTaskId(item.task_id);
     }
     const glb = exports.find((e) => e.format === 'glb');
     if (glb) {
@@ -928,6 +933,76 @@ export default function App() {
                         {savedStatus || 'Save to Gallery'}
                       </button>
                     )}
+                  </div>
+                </>
+              )}
+
+              {/* Re-texture — only for Hunyuan models with a task ID */}
+              {sourceTaskId && sourceModel?.includes('hunyuan') && !isGenerating && (
+                <>
+                  <div className="border-t border-border" />
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-medium text-text-primary flex items-center gap-1.5">
+                      <Paintbrush className="w-4 h-4" />
+                      Re-texture
+                    </h3>
+                    <p className="text-[10px] text-text-muted">
+                      Re-run texture pipeline on this shape with current material settings. Skips shape generation.
+                    </p>
+                    <button
+                      onClick={async () => {
+                        setRetextureStatus('Queuing...');
+                        try {
+                          const resp = await retextureModel(
+                            sourceTaskId,
+                            genSettings.roughnessOffset,
+                            genSettings.metallicScale,
+                          );
+                          setRetextureStatus(`Queued: ${resp.task_id}`);
+                          // Poll for result like normal generation
+                          const poll = setInterval(async () => {
+                            try {
+                              const status = await getTaskStatus(resp.task_id);
+                              if (status.status === 'completed' && status.exports?.length > 0) {
+                                clearInterval(poll);
+                                const glb = status.exports.find((e) => e.format === 'glb');
+                                if (glb) {
+                                  setViewerUrl(glb.url);
+                                  setViewerFormat('glb');
+                                  setSourceTaskId(status.task_id);
+                                }
+                                setGalleryRefreshKey((k) => k + 1);
+                                setRetextureStatus('Done!');
+                                setTimeout(() => setRetextureStatus(null), 2000);
+                              } else if (status.status === 'failed') {
+                                clearInterval(poll);
+                                setRetextureStatus('Failed');
+                                setTimeout(() => setRetextureStatus(null), 3000);
+                              } else {
+                                setRetextureStatus(status.status === 'processing' ? 'Texturing...' : status.status);
+                              }
+                            } catch {
+                              clearInterval(poll);
+                              setRetextureStatus('Error');
+                              setTimeout(() => setRetextureStatus(null), 3000);
+                            }
+                          }, 2000);
+                        } catch (err) {
+                          console.error('Re-texture failed:', err);
+                          setRetextureStatus('Failed to queue');
+                          setTimeout(() => setRetextureStatus(null), 3000);
+                        }
+                      }}
+                      disabled={retextureStatus !== null}
+                      className={`w-full text-xs px-3 py-2 rounded-lg border transition-colors flex items-center gap-1.5 ${
+                        retextureStatus
+                          ? 'border-border bg-bg-tertiary text-text-muted cursor-wait'
+                          : 'border-accent/30 bg-accent/10 hover:bg-accent/20 text-accent'
+                      }`}
+                    >
+                      <Paintbrush className="w-3.5 h-3.5" />
+                      {retextureStatus || 'Re-texture with current settings'}
+                    </button>
                   </div>
                 </>
               )}

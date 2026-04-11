@@ -271,6 +271,25 @@ class TaskManager:
                 mesh_file_path=params.get("mesh_file_path"),
                 progress_callback=progress_cb,
             )
+        elif task_type == "retexture":
+            # Re-texture an existing shape with new material settings
+            base_task_id = params.get("base_task_id")
+            if not base_task_id:
+                raise ValueError("base_task_id required for retexture")
+            base_dir = os.path.join(GALLERY_DIR, base_task_id)
+            mesh_path = os.path.join(base_dir, "model_initial.glb")
+            input_image_path = os.path.join(base_dir, "input_image.png")
+            if not os.path.exists(mesh_path):
+                raise FileNotFoundError(f"Shape mesh not found: {mesh_path}")
+            if not os.path.exists(input_image_path):
+                raise FileNotFoundError(f"Input image not found: {input_image_path}")
+            gen_data = {
+                "mesh_path": mesh_path,
+                "input_image_path": input_image_path,
+                "texture_enabled": True,
+                "roughness_offset": params.get("roughness_offset", 0.0),
+                "metallic_scale": params.get("metallic_scale", 1.0),
+            }
         elif task_type == "export":
             # Re-export an existing generation — load gen_data from stored state
             raise NotImplementedError("Re-export from stored state not yet implemented")
@@ -290,13 +309,21 @@ class TaskManager:
             "target_face_count": params.get("target_face_count", 0),
             "remove_floaters": params.get("remove_floaters", True),
         }
-        export_paths = engine.export_mesh(
-            generation_data=gen_data,
-            output_dir=output_dir,
-            formats=formats,
-            progress_callback=progress_cb,
-            **export_params,
-        )
+        if task_type == "retexture" and hasattr(engine, "retexture_mesh"):
+            export_paths = engine.retexture_mesh(
+                generation_data=gen_data,
+                output_dir=output_dir,
+                formats=formats,
+                progress_callback=progress_cb,
+            )
+        else:
+            export_paths = engine.export_mesh(
+                generation_data=gen_data,
+                output_dir=output_dir,
+                formats=formats,
+                progress_callback=progress_cb,
+                **export_params,
+            )
 
         # -- Render preview video ----------------------------
         progress_cb("Rendering preview", 0.95)
@@ -307,7 +334,7 @@ class TaskManager:
             logger.warning(f"Preview render skipped: {e}")
             video_path = None
 
-        # -- Save thumbnail (use original image, not segmented) --
+        # -- Save thumbnail and input image for re-texture ------
         thumb_path = None
         thumb_source = params.get("original_image_path") or params.get("image_path")
         if thumb_source:
@@ -316,6 +343,9 @@ class TaskManager:
             img = Image.open(thumb_source).convert("RGB")
             img.thumbnail((256, 256))
             img.save(thumb_path)
+            # Save full-res input image for potential re-texturing
+            input_save_path = os.path.join(output_dir, "input_image.png")
+            Image.open(thumb_source).convert("RGB").save(input_save_path)
 
         elapsed = time.time() - start_time
 
