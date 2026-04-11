@@ -10,7 +10,7 @@ import SceneSettings from './components/SceneSettings';
 import Gallery from './components/Gallery';
 import SegmentationWorkspace from './components/SegmentationWorkspace';
 import { removeFloatersFromBlob } from './components/MeshEraser';
-import { Sparkles, Images, Type, Pencil, Upload, Wand2, Check, Square, Trash2, Download, Eye, X } from 'lucide-react';
+import { Sparkles, Images, Type, Pencil, Upload, Wand2, Check, Square, Trash2, Download, Eye, X, Save } from 'lucide-react';
 import {
   generateFromImage,
   generateFromMultiImage,
@@ -96,6 +96,8 @@ export default function App() {
   const [cleanupStatus, setCleanupStatus] = useState<string | null>(null);
   const [cleanupUndoUrl, setCleanupUndoUrl] = useState<string | null>(null);
   const [editedModels, setEditedModels] = useState<EditedModelEntry[]>([]);
+  const [gallerySubTab, setGallerySubTab] = useState<'generated' | 'edited'>('generated');
+  const [savedStatus, setSavedStatus] = useState<string | null>(null);
 
   // -- Helpers ---------------------------------------------
   const saveEditedModel = (blobUrl: string, label: string) => {
@@ -391,29 +393,65 @@ export default function App() {
       )}
 
       {activeTab === 'gallery' ? (
-        <main className="flex-1 overflow-auto p-6 space-y-8">
-          {/* Edited Models section */}
-          {editedModels.length > 0 && (
-            <section>
-              <h2 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
-                <Pencil className="w-4 h-4" />
-                Edited Models
-                <span className="text-xs text-text-muted font-normal">({editedModels.length})</span>
-              </h2>
+        <main className="flex-1 flex flex-col overflow-hidden">
+          {/* Sub-navbar for gallery sections */}
+          <div className="flex items-center gap-1 px-6 pt-4 pb-2 border-b border-border bg-bg-primary">
+            <button
+              onClick={() => setGallerySubTab('generated')}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                gallerySubTab === 'generated'
+                  ? 'bg-accent/15 text-accent'
+                  : 'text-text-muted hover:text-text-secondary hover:bg-bg-tertiary'
+              }`}
+            >
+              Generated
+            </button>
+            <button
+              onClick={() => setGallerySubTab('edited')}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 ${
+                gallerySubTab === 'edited'
+                  ? 'bg-orange-500/15 text-orange-400'
+                  : 'text-text-muted hover:text-text-secondary hover:bg-bg-tertiary'
+              }`}
+            >
+              Edited
+              {editedModels.length > 0 && (
+                <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                  gallerySubTab === 'edited' ? 'bg-orange-500/20 text-orange-400' : 'bg-bg-tertiary text-text-muted'
+                }`}>
+                  {editedModels.length}
+                </span>
+              )}
+            </button>
+          </div>
+
+          {/* Gallery content */}
+          <div className="flex-1 overflow-auto p-6">
+            {gallerySubTab === 'generated' ? (
+              <Gallery onPreview={handleGalleryPreview} />
+            ) : editedModels.length === 0 ? (
+              <div className="flex items-center justify-center h-96">
+                <div className="text-center">
+                  <div className="w-16 h-16 mx-auto mb-3 rounded-2xl bg-bg-tertiary flex items-center justify-center">
+                    <Pencil className="w-8 h-8 text-text-muted" />
+                  </div>
+                  <p className="text-sm text-text-muted">No edited models yet</p>
+                  <p className="text-xs text-text-muted/60 mt-1">Use the eraser or cleanup tools, then click &quot;Save to Gallery&quot;</p>
+                </div>
+              </div>
+            ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {editedModels.map((entry) => (
                   <div
                     key={entry.id}
                     className="bg-bg-secondary border border-border rounded-xl overflow-hidden group hover:border-border-hover transition-colors"
                   >
-                    {/* 3D icon placeholder */}
                     <div className="aspect-square bg-bg-tertiary relative flex items-center justify-center">
                       <svg className="w-10 h-10 text-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                         <path d="M12 3L2 9l10 6 10-6-10-6z" />
                         <path d="M2 17l10 6 10-6" />
                         <path d="M2 13l10 6 10-6" />
                       </svg>
-                      {/* Hover overlay */}
                       <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                         <button
                           onClick={() => {
@@ -455,7 +493,6 @@ export default function App() {
                         </button>
                       </div>
                     </div>
-                    {/* Info */}
                     <div className="p-3">
                       <div className="flex items-center gap-1.5 mb-1">
                         <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-400">
@@ -472,16 +509,8 @@ export default function App() {
                   </div>
                 ))}
               </div>
-            </section>
-          )}
-
-          {/* Generated Models section */}
-          <section>
-            {editedModels.length > 0 && (
-              <h2 className="text-sm font-semibold text-text-primary mb-3">Generated Models</h2>
             )}
-            <Gallery onPreview={handleGalleryPreview} />
-          </section>
+          </div>
         </main>
       ) : (
         <main className="flex-1 flex overflow-hidden">
@@ -882,7 +911,6 @@ export default function App() {
                   setViewerUrl(blobUrl);
                   setViewerFormat('glb');
                   setEditedGlbUrl(blobUrl);
-                  saveEditedModel(blobUrl, 'Eraser edit');
                 }}
               />
 
@@ -942,7 +970,6 @@ export default function App() {
                             setViewerUrl(cleanedUrl);
                             setViewerFormat('glb');
                             setEditedGlbUrl(cleanedUrl);
-                            saveEditedModel(cleanedUrl, 'Cleanup');
                             setCleanupStatus(`Removed ${removed} fragment${removed > 1 ? 's' : ''}`);
                           } else {
                             setCleanupStatus('No floating parts detected');
@@ -974,6 +1001,20 @@ export default function App() {
                       >
                         <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 10h13a4 4 0 010 8H7" /><path d="M3 10l5-5M3 10l5 5" /></svg>
                         Undo cleanup
+                      </button>
+                    )}
+                    {/* Save to Gallery — only when viewing an edited model */}
+                    {editedGlbUrl && (
+                      <button
+                        onClick={() => {
+                          saveEditedModel(editedGlbUrl, 'Edited');
+                          setSavedStatus('Saved to gallery');
+                          setTimeout(() => setSavedStatus(null), 2000);
+                        }}
+                        className="w-full text-xs px-3 py-2 rounded-lg border border-green-500/30 bg-green-500/10 hover:bg-green-500/20 transition-colors text-green-400 flex items-center gap-1.5"
+                      >
+                        <Save className="w-3.5 h-3.5" />
+                        {savedStatus || 'Save to Gallery'}
                       </button>
                     )}
                   </div>
