@@ -212,6 +212,7 @@ export async function saveEditedToGallery(
   label = 'Edited',
   sourceModel?: string | null,
   sourceSeed?: number | null,
+  thumbnailBlob?: Blob | null,
 ): Promise<GalleryItem> {
   const res = await fetch(blobUrl);
   const blob = await res.blob();
@@ -220,6 +221,7 @@ export async function saveEditedToGallery(
   form.append('label', label);
   if (sourceModel) form.append('source_model', sourceModel);
   if (sourceSeed != null) form.append('seed', String(sourceSeed));
+  if (thumbnailBlob) form.append('thumbnail', thumbnailBlob, 'thumbnail.png');
   const resp = await fetch(`${API_BASE}/gallery/edited`, { method: 'POST', body: form });
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({ detail: resp.statusText }));

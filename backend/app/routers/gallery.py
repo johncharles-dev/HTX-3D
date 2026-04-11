@@ -59,6 +59,7 @@ async def delete_gallery_item(task_id: str, task_manager=Depends(get_task_manage
 @router.post("/gallery/edited")
 async def save_edited_model(
     file: UploadFile = File(...),
+    thumbnail: Optional[UploadFile] = File(None),
     label: Optional[str] = Form("Edited"),
     source_model: Optional[str] = Form(None),
     seed: Optional[int] = Form(0),
@@ -68,9 +69,11 @@ async def save_edited_model(
     data = await file.read()
     if len(data) < 12:
         raise HTTPException(400, "Invalid GLB file")
+    thumb_data = await thumbnail.read() if thumbnail else None
     entry = task_manager.save_edited_to_gallery(
         data, label=label or "Edited",
         source_model=source_model, seed=seed or 0,
+        thumbnail_data=thumb_data,
     )
     task_id = entry["task_id"]
     exports = [ExportFile(

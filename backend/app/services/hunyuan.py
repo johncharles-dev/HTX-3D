@@ -410,9 +410,13 @@ class HunyuanEngine(BaseEngine):
         initial_path = os.path.join(output_dir, "model_initial.glb")
         shutil.copy2(mesh_path, initial_path)
 
-        # Copy input image for future re-textures of this result
+        # Copy input image and thumbnail for future re-textures
         input_save = os.path.join(output_dir, "input_image.png")
         shutil.copy2(input_image_path, input_save)
+        base_dir = os.path.dirname(mesh_path)
+        base_thumb = os.path.join(base_dir, "thumbnail.png")
+        if os.path.exists(base_thumb):
+            shutil.copy2(base_thumb, os.path.join(output_dir, "thumbnail.png"))
 
         try:
             if progress_callback:
@@ -488,8 +492,8 @@ class HunyuanEngine(BaseEngine):
             progress_callback("Copying textures", 0.1)
 
         # Copy all needed files from the base task
-        for name in ("model_initial.glb", "input_image.png", "textured.obj",
-                      "textured.mtl", "textured.jpg",
+        for name in ("model_initial.glb", "input_image.png", "thumbnail.png",
+                      "textured.obj", "textured.mtl", "textured.jpg",
                       "textured_metallic.jpg", "textured_roughness.jpg"):
             src = os.path.join(base_task_dir, name)
             if os.path.exists(src):

@@ -939,7 +939,15 @@ export default function App() {
                         onClick={async () => {
                           setSavedStatus('Uploading...');
                           try {
-                            await saveEditedToGallery(editedGlbUrl, 'Edited', sourceModel, sourceSeed);
+                            // Capture canvas as thumbnail
+                            let thumbBlob: Blob | null = null;
+                            const canvas = document.querySelector('canvas');
+                            if (canvas) {
+                              thumbBlob = await new Promise<Blob | null>((resolve) =>
+                                canvas.toBlob((b) => resolve(b), 'image/png'),
+                              );
+                            }
+                            await saveEditedToGallery(editedGlbUrl, 'Edited', sourceModel, sourceSeed, thumbBlob);
                             setSavedStatus('Saved!');
                             setGalleryRefreshKey((k) => k + 1);
                             setTimeout(() => setSavedStatus(null), 2000);
