@@ -290,6 +290,16 @@ class TaskManager:
                 "roughness_offset": params.get("roughness_offset", 0.0),
                 "metallic_scale": params.get("metallic_scale", 1.0),
             }
+        elif task_type == "quick_adjust":
+            # Quick material adjust — no GPU, just modify existing textures
+            base_task_id = params.get("base_task_id")
+            if not base_task_id:
+                raise ValueError("base_task_id required for quick_adjust")
+            base_dir = os.path.join(GALLERY_DIR, base_task_id)
+            obj_path = os.path.join(base_dir, "textured.obj")
+            if not os.path.exists(obj_path):
+                raise FileNotFoundError(f"Textured OBJ not found in {base_dir}")
+            gen_data = {"base_task_dir": base_dir}
         elif task_type == "export":
             # Re-export an existing generation — load gen_data from stored state
             raise NotImplementedError("Re-export from stored state not yet implemented")
@@ -309,7 +319,15 @@ class TaskManager:
             "target_face_count": params.get("target_face_count", 0),
             "remove_floaters": params.get("remove_floaters", True),
         }
-        if task_type == "retexture" and hasattr(engine, "retexture_mesh"):
+        if task_type == "quick_adjust" and hasattr(engine, "quick_adjust_materials"):
+            export_paths = engine.quick_adjust_materials(
+                base_task_dir=gen_data["base_task_dir"],
+                output_dir=output_dir,
+                roughness_offset=params.get("roughness_offset", 0.0),
+                metallic_scale=params.get("metallic_scale", 1.0),
+                progress_callback=progress_cb,
+            )
+        elif task_type == "retexture" and hasattr(engine, "retexture_mesh"):
             export_paths = engine.retexture_mesh(
                 generation_data=gen_data,
                 output_dir=output_dir,

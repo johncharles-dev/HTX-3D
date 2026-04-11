@@ -258,6 +258,32 @@ async def retexture_model(
     )
 
 
+# -- Quick Material Adjust ---------------------------------
+
+@router.post("/generate/quick-adjust", response_model=TaskResponse)
+async def quick_adjust_materials(
+    base_task_id: str = Form(..., description="Task ID of the original generation"),
+    roughness_offset: float = Form(0.0),
+    metallic_scale: float = Form(1.0),
+    task_manager=Depends(get_task_manager),
+):
+    """Adjust material textures without re-running diffusion. Instant, no GPU needed."""
+    params = {
+        "model": "hunyuan-image-to-3d",
+        "engine": "hunyuan",
+        "base_task_id": base_task_id,
+        "roughness_offset": roughness_offset,
+        "metallic_scale": metallic_scale,
+        "formats": ["glb"],
+    }
+    task_id = task_manager.submit_task("quick_adjust", params)
+    return TaskResponse(
+        task_id=task_id,
+        status=TaskStatus.QUEUED,
+        message=f"Quick adjust queued. Position: {task_manager.queue_size}",
+    )
+
+
 # -- Text-to-3D -------------------------------------------
 
 @router.post("/generate/text", response_model=TaskResponse)

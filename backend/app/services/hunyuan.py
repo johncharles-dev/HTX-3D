@@ -471,6 +471,70 @@ class HunyuanEngine(BaseEngine):
 
         return results
 
+    def quick_adjust_materials(
+        self,
+        base_task_dir: str,
+        output_dir: str,
+        roughness_offset: float,
+        metallic_scale: float,
+        progress_callback: Optional[Callable[[str, float], None]] = None,
+    ) -> dict[str, Path]:
+        """Adjust material textures without re-running diffusion. Instant, no GPU."""
+        self._add_to_path()
+        os.makedirs(output_dir, exist_ok=True)
+        results = {}
+
+        if progress_callback:
+            progress_callback("Copying textures", 0.1)
+
+        # Copy all needed files from the base task
+        for name in ("model_initial.glb", "input_image.png", "textured.obj",
+                      "textured.mtl", "textured.jpg",
+                      "textured_metallic.jpg", "textured_roughness.jpg"):
+            src = os.path.join(base_task_dir, name)
+            if os.path.exists(src):
+                shutil.copy2(src, os.path.join(output_dir, name))
+
+        # Also copy any extra texture files (normals, etc.)
+        import glob
+        for src in glob.glob(os.path.join(base_task_dir, "textured*.jpg")):
+            dst = os.path.join(output_dir, os.path.basename(src))
+            if not os.path.exists(dst):
+                shutil.copy2(src, dst)
+
+        output_obj_path = os.path.join(output_dir, "textured.obj")
+        if not os.path.exists(output_obj_path):
+            raise FileNotFoundError(f"Textured OBJ not found in {base_task_dir}")
+
+        if progress_callback:
+            progress_callback("Adjusting materials", 0.4)
+
+        # Apply adjustments to the copied texture files
+        if roughness_offset != 0.0 or metallic_scale != 1.0:
+            self._apply_mr_adjustments(output_obj_path, roughness_offset, metallic_scale)
+
+        if progress_callback:
+            progress_callback("Converting to GLB", 0.7)
+
+        # Re-convert to GLB with adjusted textures
+        from hy3dpaint.convert_utils import create_glb_with_pbr_materials
+        glb_path = os.path.join(output_dir, "model.glb")
+        textures = {
+            "albedo": output_obj_path.replace(".obj", ".jpg"),
+            "metallic": output_obj_path.replace(".obj", "_metallic.jpg"),
+            "roughness": output_obj_path.replace(".obj", "_roughness.jpg"),
+        }
+        create_glb_with_pbr_materials(output_obj_path, textures, glb_path)
+
+        if "glb" in ["glb"]:
+            results["glb"] = Path(glb_path)
+
+        if progress_callback:
+            progress_callback("Done", 1.0)
+
+        logger.info(f"Quick adjust complete: roughness={roughness_offset:+.2f}, metallic={metallic_scale:.2f}x")
+        return results
+
     @staticmethod
     def _apply_mr_adjustments(output_obj_path: str, roughness_offset: float, metallic_scale: float):
         """Adjust metallic/roughness texture JPGs after paint pipeline."""

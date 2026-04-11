@@ -22,6 +22,7 @@ import {
   cancelTask,
   saveEditedToGallery,
   retextureModel,
+  quickAdjustMaterials,
 } from './api/client';
 import type {
   HealthStatus,
@@ -939,17 +940,76 @@ export default function App() {
                 </>
               )}
 
-              {/* Re-texture — only for Hunyuan models with a task ID */}
+              {/* Material adjust & Re-texture — only for Hunyuan models */}
               {sourceTaskId && sourceModel?.includes('hunyuan') && !isGenerating && (
                 <>
                   <div className="border-t border-border" />
                   <div className="space-y-2">
                     <h3 className="text-sm font-medium text-text-primary flex items-center gap-1.5">
                       <Paintbrush className="w-4 h-4" />
-                      Re-texture
+                      Material
                     </h3>
-                    <p className="text-[10px] text-text-muted">
-                      Re-run texture pipeline on this shape with current material settings. Skips shape generation.
+
+                    {/* Quick Adjust — instant, no GPU */}
+                    <button
+                      onClick={async () => {
+                        setRetextureStatus('Adjusting...');
+                        try {
+                          const resp = await quickAdjustMaterials(
+                            sourceTaskId,
+                            genSettings.roughnessOffset,
+                            genSettings.metallicScale,
+                          );
+                          setRetextureTaskId(resp.task_id);
+                          // Poll — this is fast, should complete in <2s
+                          const poll = setInterval(async () => {
+                            try {
+                              const status = await getTaskStatus(resp.task_id);
+                              if (status.status === 'completed' && status.exports?.length > 0) {
+                                clearInterval(poll);
+                                const glb = status.exports.find((e) => e.format === 'glb');
+                                if (glb) {
+                                  setViewerUrl(glb.url);
+                                  setViewerFormat('glb');
+                                  setSourceTaskId(status.task_id);
+                                }
+                                setGalleryRefreshKey((k) => k + 1);
+                                setRetextureStatus('Done!');
+                                setRetextureTaskId(null);
+                                setTimeout(() => setRetextureStatus(null), 1500);
+                              } else if (status.status === 'failed') {
+                                clearInterval(poll);
+                                setRetextureStatus('Failed');
+                                setRetextureTaskId(null);
+                                setTimeout(() => setRetextureStatus(null), 2000);
+                              }
+                            } catch {
+                              clearInterval(poll);
+                              setRetextureTaskId(null);
+                            }
+                          }, 500);
+                        } catch (err) {
+                          console.error('Quick adjust failed:', err);
+                          setRetextureStatus('Failed');
+                          setTimeout(() => setRetextureStatus(null), 2000);
+                        }
+                      }}
+                      disabled={retextureTaskId !== null}
+                      className={`w-full text-xs px-3 py-2 rounded-lg border transition-colors text-left ${
+                        retextureTaskId
+                          ? 'border-border bg-bg-tertiary text-text-muted cursor-wait'
+                          : 'border-accent/30 bg-accent/10 hover:bg-accent/20 text-accent'
+                      }`}
+                    >
+                      Quick Adjust
+                      <span className="block text-[10px] text-text-muted mt-0.5">
+                        Modify roughness/metallic only — instant, same colors
+                      </span>
+                    </button>
+
+                    {/* Full Re-texture — runs diffusion again */}
+                    <p className="text-[10px] text-text-muted pt-1">
+                      Or re-run full texture diffusion (new colors, ~60s):
                     </p>
                     <div className="flex gap-1.5">
                       <button

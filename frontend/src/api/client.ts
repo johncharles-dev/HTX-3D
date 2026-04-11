@@ -180,6 +180,23 @@ export async function retextureModel(
   return res.json();
 }
 
+export async function quickAdjustMaterials(
+  baseTaskId: string,
+  roughnessOffset: number,
+  metallicScale: number,
+): Promise<TaskResponse> {
+  const form = new FormData();
+  form.append('base_task_id', baseTaskId);
+  form.append('roughness_offset', String(roughnessOffset));
+  form.append('metallic_scale', String(metallicScale));
+  const res = await fetch(`${API_BASE}/generate/quick-adjust`, { method: 'POST', body: form });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || `Request failed: ${res.status}`);
+  }
+  return res.json();
+}
+
 // -- Gallery -----------------------------------------------
 
 export async function getGallery(page = 1, perPage = 20): Promise<{ items: GalleryItem[]; total: number }> {
