@@ -270,6 +270,7 @@ class HunyuanEngine(BaseEngine):
         image = generation_data.get("image")
         texture_enabled = generation_data.get("texture_enabled", True)
         target_face_count = engine_params.get("target_face_count", 0)
+        remove_floaters = engine_params.get("remove_floaters", True)
         os.makedirs(output_dir, exist_ok=True)
         results = {}
 
@@ -337,6 +338,12 @@ class HunyuanEngine(BaseEngine):
                 shutil.copy2(initial_path, glb_path)
                 results["glb"] = Path(glb_path)
 
+        # Post-processing: remove disconnected floating components
+        if remove_floaters:
+            if progress_callback:
+                progress_callback("Removing floating parts", 0.87)
+            self._remove_floaters(output_dir)
+
         # Post-processing: decimate to target face count if requested
         if target_face_count and target_face_count > 0:
             if progress_callback:
@@ -370,6 +377,42 @@ class HunyuanEngine(BaseEngine):
             progress_callback("Export complete", 1.0)
 
         return results
+
+    @staticmethod
+    def _remove_floaters(output_dir: str, min_ratio: float = 0.05):
+        """Remove small disconnected mesh components, keep largest.
+
+        Args:
+            output_dir: Directory containing exported meshes.
+            min_ratio: Components with fewer faces than this ratio of
+                       the largest component are removed.
+        """
+        import trimesh
+        for name in ("model.glb", "model_initial.glb"):
+            path = os.path.join(output_dir, name)
+            if not os.path.exists(path):
+                continue
+            scene = trimesh.load(path)
+            if isinstance(scene, trimesh.Scene):
+                mesh = trimesh.util.concatenate(scene.dump())
+            else:
+                mesh = scene
+            components = mesh.split()
+            if len(components) <= 1:
+                continue
+            # Sort by face count descending
+            components.sort(key=lambda c: len(c.faces), reverse=True)
+            largest_faces = len(components[0].faces)
+            # Keep components that are at least min_ratio of the largest
+            keep = [c for c in components if len(c.faces) >= largest_faces * min_ratio]
+            removed = len(components) - len(keep)
+            if removed > 0:
+                cleaned = trimesh.util.concatenate(keep)
+                logger.info(
+                    f"Floater removal ({name}): removed {removed} component(s), "
+                    f"kept {len(keep)} ({len(cleaned.faces)} faces)"
+                )
+                cleaned.export(path)
 
     @staticmethod
     def _decimate_mesh(output_dir: str, target_count: int):

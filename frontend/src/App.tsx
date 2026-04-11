@@ -9,7 +9,8 @@ import ExportPanel from './components/ExportPanel';
 import SceneSettings from './components/SceneSettings';
 import Gallery from './components/Gallery';
 import SegmentationWorkspace from './components/SegmentationWorkspace';
-import { Sparkles, Images, Type, Pencil, Upload, Wand2, Check, Square } from 'lucide-react';
+import { removeFloatersFromBlob } from './components/MeshEraser';
+import { Sparkles, Images, Type, Pencil, Upload, Wand2, Check, Square, Trash2 } from 'lucide-react';
 import {
   generateFromImage,
   generateFromMultiImage,
@@ -83,6 +84,8 @@ export default function App() {
   const [viewerUrl, setViewerUrl] = useState<string | null>(null);
   const [viewerFormat, setViewerFormat] = useState<string>('glb');
   const [galleryExports, setGalleryExports] = useState<ExportFile[]>([]);
+  const [editedGlbUrl, setEditedGlbUrl] = useState<string | null>(null);
+  const [cleanupStatus, setCleanupStatus] = useState<string | null>(null);
 
   // -- Derived ---------------------------------------------
   const activeModelResult = modelResults.find((mr) => mr.modelId === activeResultModel);
@@ -271,6 +274,7 @@ export default function App() {
   useEffect(() => {
     if (!activeModelResult?.result) return;
     const res = activeModelResult.result;
+    setEditedGlbUrl(null); // clear edited state for new result
     const glb = res.exports.find((e) => e.format === 'glb');
     if (glb) {
       setViewerUrl(glb.url);
@@ -318,6 +322,7 @@ export default function App() {
     setGalleryExports(exports);
     setModelResults([]);
     setActiveResultModel(null);
+    setEditedGlbUrl(null);
     const glb = exports.find((e) => e.format === 'glb');
     if (glb) {
       setViewerUrl(glb.url);
@@ -331,7 +336,15 @@ export default function App() {
 
   // -- Computed --------------------------------------------
   const hasResults = modelResults.length > 0;
-  const displayExports = activeResult?.exports || galleryExports;
+  const baseExports = activeResult?.exports || galleryExports;
+  // If the model was edited (eraser/cleanup), replace the GLB export URL with the edited blob
+  const displayExports = editedGlbUrl
+    ? baseExports.map((exp) =>
+        exp.format === 'glb'
+          ? { ...exp, url: editedGlbUrl, filename: 'edited_model.glb' }
+          : exp,
+      )
+    : baseExports;
 
   // -- Render ----------------------------------------------
   return (
@@ -744,7 +757,17 @@ export default function App() {
 
             {/* 3D Viewer Area */}
             <div className="flex-1 min-h-0 p-4 relative">
-              <ModelViewer url={viewerUrl} format={viewerFormat} exports={displayExports} viewerSettings={viewerSettings} />
+              <ModelViewer
+                url={viewerUrl}
+                format={viewerFormat}
+                exports={displayExports}
+                viewerSettings={viewerSettings}
+                onEditedModel={(blobUrl) => {
+                  setViewerUrl(blobUrl);
+                  setViewerFormat('glb');
+                  setEditedGlbUrl(blobUrl);
+                }}
+              />
 
               {/* Progress Overlay — floats on top of viewer */}
               {isGenerating && (
@@ -776,10 +799,52 @@ export default function App() {
 
           </section>
 
-          {/* -- Right Panel: Scene + Downloads -------------- */}
+          {/* -- Right Panel: Scene + Cleanup + Downloads ----- */}
           {displayExports.length > 0 && (
             <aside className="w-64 border-l border-border bg-bg-secondary p-4 overflow-y-auto space-y-4">
               <SceneSettings settings={viewerSettings} onChange={setViewerSettings} />
+
+              {/* Mesh cleanup tools */}
+              {viewerUrl && (
+                <>
+                  <div className="border-t border-border" />
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-medium text-text-primary flex items-center gap-1.5">
+                      <Trash2 className="w-4 h-4" />
+                      Mesh Cleanup
+                    </h3>
+                    <button
+                      onClick={async () => {
+                        if (!viewerUrl) return;
+                        setCleanupStatus('Analyzing mesh...');
+                        try {
+                          const { url: cleanedUrl, removed } = await removeFloatersFromBlob(viewerUrl);
+                          if (removed > 0) {
+                            setViewerUrl(cleanedUrl);
+                            setViewerFormat('glb');
+                            setEditedGlbUrl(cleanedUrl);
+                            setCleanupStatus(`Removed ${removed} fragment${removed > 1 ? 's' : ''}`);
+                          } else {
+                            setCleanupStatus('No floating parts detected');
+                          }
+                          setTimeout(() => setCleanupStatus(null), 3000);
+                        } catch (err) {
+                          console.error('Floater removal failed:', err);
+                          setCleanupStatus('Failed — check console');
+                          setTimeout(() => setCleanupStatus(null), 3000);
+                        }
+                      }}
+                      className="w-full text-xs px-3 py-2 rounded-lg border border-border bg-bg-tertiary hover:border-border-hover transition-colors text-text-secondary text-left"
+                    >
+                      Keep Largest Part
+                      <span className="block text-[10px] text-text-muted mt-0.5">
+                        {cleanupStatus || 'Remove all disconnected fragments'}
+                      </span>
+                    </button>
+                  </div>
+                </>
+              )}
+
               <div className="border-t border-border" />
               <ExportPanel
                 exports={displayExports}

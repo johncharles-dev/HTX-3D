@@ -68,6 +68,7 @@ async def generate_from_image(
     octree_resolution: Optional[int] = Form(None),
     texture: Optional[bool] = Form(None),
     target_face_count: Optional[int] = Form(None, description="Target face count for mesh decimation (0 or None = no limit)"),
+    remove_floaters: Optional[bool] = Form(None, description="Remove disconnected mesh components, keep largest"),
     # SAM 3D Objects params
     sam3d_stage1_steps: Optional[int] = Form(None),
     sam3d_stage2_steps: Optional[int] = Form(None),
@@ -124,6 +125,8 @@ async def generate_from_image(
         params["texture"] = texture
     if target_face_count is not None and target_face_count > 0:
         params["target_face_count"] = target_face_count
+    if remove_floaters is not None:
+        params["remove_floaters"] = remove_floaters
     # Add SAM 3D Objects params only if provided
     if sam3d_stage1_steps is not None:
         params["sam3d_stage1_steps"] = sam3d_stage1_steps
@@ -163,6 +166,7 @@ async def generate_from_multi_image(
     octree_resolution: Optional[int] = Form(None),
     texture: Optional[bool] = Form(None),
     target_face_count: Optional[int] = Form(None, description="Target face count for mesh decimation"),
+    remove_floaters: Optional[bool] = Form(None, description="Remove disconnected mesh components"),
     # Export params
     formats: str = Form("glb"),
     mesh_simplify: float = Form(0.95),
@@ -202,6 +206,8 @@ async def generate_from_multi_image(
         params["texture"] = texture
     if target_face_count is not None and target_face_count > 0:
         params["target_face_count"] = target_face_count
+    if remove_floaters is not None:
+        params["remove_floaters"] = remove_floaters
 
     task_id = task_manager.submit_task("multi_image", params)
 

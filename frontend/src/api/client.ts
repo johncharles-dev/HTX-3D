@@ -36,6 +36,7 @@ export async function generateFromImage(
     form.append('guidance_scale', String(settings.guidanceScale));
     form.append('octree_resolution', String(settings.octreeResolution));
     form.append('texture', String(settings.texture));
+    form.append('remove_floaters', String(settings.removeFloaters));
     if (settings.targetFaceCount > 0) {
       form.append('target_face_count', String(settings.targetFaceCount));
     }
@@ -82,6 +83,7 @@ export async function generateFromMultiImage(
     form.append('guidance_scale', String(settings.guidanceScale));
     form.append('octree_resolution', String(settings.octreeResolution));
     form.append('texture', String(settings.texture));
+    form.append('remove_floaters', String(settings.removeFloaters));
     if (settings.targetFaceCount > 0) {
       form.append('target_face_count', String(settings.targetFaceCount));
     }

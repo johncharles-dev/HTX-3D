@@ -97,6 +97,7 @@ export interface GenerationSettings {
   octreeResolution: number;
   texture: boolean;
   targetFaceCount: number;  // 0 = no decimation, else target face count
+  removeFloaters: boolean;  // remove disconnected mesh components
   // SAM 3D Objects params
   sam3dStage1Steps: number;
   sam3dStage2Steps: number;
@@ -212,6 +213,7 @@ export const DEFAULT_GENERATION_SETTINGS: GenerationSettings = {
   octreeResolution: 256,
   texture: true,
   targetFaceCount: 0,
+  removeFloaters: true,
   // SAM 3D Objects defaults
   sam3dStage1Steps: 25,
   sam3dStage2Steps: 25,

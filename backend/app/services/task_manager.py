@@ -232,7 +232,8 @@ class TaskManager:
                                       "randomize_seed", "model", "engine", "formats",
                                       "mesh_simplify", "texture_size", "fill_holes",
                                       "fill_holes_max_size", "mode", "base_task_id",
-                                      "mesh_file_path", "target_face_count")}
+                                      "mesh_file_path", "target_face_count",
+                                      "remove_floaters")}
         # original_image_path is now passed through to engines (Hunyuan uses it
         # to get full RGB when a SAM3 segmented image is the primary input)
 
@@ -287,6 +288,7 @@ class TaskManager:
             "fill_holes": params.get("fill_holes", True),
             "fill_holes_max_size": params.get("fill_holes_max_size", 0.04),
             "target_face_count": params.get("target_face_count", 0),
+            "remove_floaters": params.get("remove_floaters", True),
         }
         export_paths = engine.export_mesh(
             generation_data=gen_data,
