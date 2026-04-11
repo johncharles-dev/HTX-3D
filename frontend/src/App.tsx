@@ -10,7 +10,7 @@ import SceneSettings from './components/SceneSettings';
 import Gallery from './components/Gallery';
 import SegmentationWorkspace from './components/SegmentationWorkspace';
 import { removeFloatersFromBlob } from './components/MeshEraser';
-import { Sparkles, Images, Type, Pencil, Upload, Wand2, Check, Square, Trash2, Download, Eye, X, Save } from 'lucide-react';
+import { Sparkles, Images, Type, Pencil, Upload, Wand2, Check, Square, Trash2, Save } from 'lucide-react';
 import {
   generateFromImage,
   generateFromMultiImage,
@@ -20,6 +20,7 @@ import {
   getHealth,
   connectProgress,
   cancelTask,
+  saveEditedToGallery,
 } from './api/client';
 import type {
   HealthStatus,
@@ -43,14 +44,6 @@ import {
 } from './types';
 
 type Tab = 'image' | 'text' | 'gallery';
-
-interface EditedModelEntry {
-  id: string;
-  blobUrl: string;
-  label: string;         // e.g. "Eraser edit" or "Cleanup"
-  createdAt: Date;
-  sourceName?: string;    // original model/engine name
-}
 
 export default function App() {
   // -- State -----------------------------------------------
@@ -95,24 +88,9 @@ export default function App() {
   const [editedGlbUrl, setEditedGlbUrl] = useState<string | null>(null);
   const [cleanupStatus, setCleanupStatus] = useState<string | null>(null);
   const [cleanupUndoUrl, setCleanupUndoUrl] = useState<string | null>(null);
-  const [editedModels, setEditedModels] = useState<EditedModelEntry[]>([]);
   const [gallerySubTab, setGallerySubTab] = useState<'generated' | 'edited'>('generated');
   const [savedStatus, setSavedStatus] = useState<string | null>(null);
-
-  // -- Helpers ---------------------------------------------
-  const saveEditedModel = (blobUrl: string, label: string) => {
-    const sourceName = activeModelResult?.modelId || 'unknown';
-    setEditedModels((prev) => [
-      {
-        id: `edited-${Date.now()}`,
-        blobUrl,
-        label,
-        createdAt: new Date(),
-        sourceName,
-      },
-      ...prev,
-    ]);
-  };
+  const [galleryRefreshKey, setGalleryRefreshKey] = useState(0);
 
   // -- Derived ---------------------------------------------
   const activeModelResult = modelResults.find((mr) => mr.modelId === activeResultModel);
@@ -415,101 +393,16 @@ export default function App() {
               }`}
             >
               Edited
-              {editedModels.length > 0 && (
-                <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                  gallerySubTab === 'edited' ? 'bg-orange-500/20 text-orange-400' : 'bg-bg-tertiary text-text-muted'
-                }`}>
-                  {editedModels.length}
-                </span>
-              )}
             </button>
           </div>
 
           {/* Gallery content */}
           <div className="flex-1 overflow-auto p-6">
-            {gallerySubTab === 'generated' ? (
-              <Gallery onPreview={handleGalleryPreview} />
-            ) : editedModels.length === 0 ? (
-              <div className="flex items-center justify-center h-96">
-                <div className="text-center">
-                  <div className="w-16 h-16 mx-auto mb-3 rounded-2xl bg-bg-tertiary flex items-center justify-center">
-                    <Pencil className="w-8 h-8 text-text-muted" />
-                  </div>
-                  <p className="text-sm text-text-muted">No edited models yet</p>
-                  <p className="text-xs text-text-muted/60 mt-1">Use the eraser or cleanup tools, then click &quot;Save to Gallery&quot;</p>
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {editedModels.map((entry) => (
-                  <div
-                    key={entry.id}
-                    className="bg-bg-secondary border border-border rounded-xl overflow-hidden group hover:border-border-hover transition-colors"
-                  >
-                    <div className="aspect-square bg-bg-tertiary relative flex items-center justify-center">
-                      <svg className="w-10 h-10 text-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                        <path d="M12 3L2 9l10 6 10-6-10-6z" />
-                        <path d="M2 17l10 6 10-6" />
-                        <path d="M2 13l10 6 10-6" />
-                      </svg>
-                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                        <button
-                          onClick={() => {
-                            setViewerUrl(entry.blobUrl);
-                            setViewerFormat('glb');
-                            setGalleryExports([{
-                              format: 'glb' as const,
-                              filename: `${entry.label.toLowerCase().replace(/\s+/g, '_')}.glb`,
-                              url: entry.blobUrl,
-                              size_bytes: 0,
-                            }]);
-                            setModelResults([]);
-                            setActiveResultModel(null);
-                            setEditedGlbUrl(entry.blobUrl);
-                            setActiveTab('image');
-                          }}
-                          className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
-                          title="Preview"
-                        >
-                          <Eye className="w-4 h-4 text-white" />
-                        </button>
-                        <a
-                          href={entry.blobUrl}
-                          download={`${entry.label.toLowerCase().replace(/\s+/g, '_')}.glb`}
-                          className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
-                          title="Download GLB"
-                        >
-                          <Download className="w-4 h-4 text-white" />
-                        </a>
-                        <button
-                          onClick={() => {
-                            URL.revokeObjectURL(entry.blobUrl);
-                            setEditedModels((prev) => prev.filter((m) => m.id !== entry.id));
-                          }}
-                          className="p-2 rounded-lg bg-red-500/20 hover:bg-red-500/40 transition-colors"
-                          title="Remove"
-                        >
-                          <X className="w-4 h-4 text-red-400" />
-                        </button>
-                      </div>
-                    </div>
-                    <div className="p-3">
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-400">
-                          {entry.label}
-                        </span>
-                        <span className="text-xs text-text-muted ml-auto">
-                          {entry.createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
-                      {entry.sourceName && (
-                        <span className="text-xs text-text-muted">from {entry.sourceName}</span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <Gallery
+              onPreview={handleGalleryPreview}
+              filter={gallerySubTab === 'edited' ? 'edited' : 'generated'}
+              refreshKey={galleryRefreshKey}
+            />
           </div>
         </main>
       ) : (
@@ -1006,10 +899,18 @@ export default function App() {
                     {/* Save to Gallery — only when viewing an edited model */}
                     {editedGlbUrl && (
                       <button
-                        onClick={() => {
-                          saveEditedModel(editedGlbUrl, 'Edited');
-                          setSavedStatus('Saved to gallery');
-                          setTimeout(() => setSavedStatus(null), 2000);
+                        onClick={async () => {
+                          setSavedStatus('Uploading...');
+                          try {
+                            await saveEditedToGallery(editedGlbUrl, 'Edited');
+                            setSavedStatus('Saved!');
+                            setGalleryRefreshKey((k) => k + 1);
+                            setTimeout(() => setSavedStatus(null), 2000);
+                          } catch (err) {
+                            console.error('Save to gallery failed:', err);
+                            setSavedStatus('Failed');
+                            setTimeout(() => setSavedStatus(null), 2000);
+                          }
                         }}
                         className="w-full text-xs px-3 py-2 rounded-lg border border-green-500/30 bg-green-500/10 hover:bg-green-500/20 transition-colors text-green-400 flex items-center gap-1.5"
                       >

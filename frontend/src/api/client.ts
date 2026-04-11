@@ -159,6 +159,21 @@ export async function deleteGalleryItem(taskId: string): Promise<void> {
   await request(`/gallery/${taskId}`, { method: 'DELETE' });
 }
 
+export async function saveEditedToGallery(blobUrl: string, label = 'Edited'): Promise<GalleryItem> {
+  const res = await fetch(blobUrl);
+  const blob = await res.blob();
+  const form = new FormData();
+  form.append('file', blob, 'edited_model.glb');
+  form.append('label', label);
+  const resp = await fetch(`${API_BASE}/gallery/edited`, { method: 'POST', body: form });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+    throw new Error(err.detail || `Upload failed: ${resp.status}`);
+  }
+  const data = await resp.json();
+  return data.item as GalleryItem;
+}
+
 // -- Health ------------------------------------------------
 
 export async function getHealth(): Promise<HealthStatus> {

@@ -3,12 +3,13 @@
 import os
 import logging
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
 from fastapi.responses import FileResponse
 
 from ..config import GALLERY_DIR
 from ..models.schemas import GalleryResponse, GalleryItem, ExportFile
 from ..dependencies import get_task_manager
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["gallery"])
@@ -52,6 +53,37 @@ async def delete_gallery_item(task_id: str, task_manager=Depends(get_task_manage
     """Delete a gallery item and its files."""
     task_manager.delete_gallery_item(task_id)
     return {"ok": True, "message": f"Deleted {task_id}"}
+
+
+@router.post("/gallery/edited")
+async def save_edited_model(
+    file: UploadFile = File(...),
+    label: Optional[str] = Form("Edited"),
+    task_manager=Depends(get_task_manager),
+):
+    """Save an edited GLB model to the gallery."""
+    data = await file.read()
+    if len(data) < 12:
+        raise HTTPException(400, "Invalid GLB file")
+    entry = task_manager.save_edited_to_gallery(data, label=label or "Edited")
+    task_id = entry["task_id"]
+    exports = [ExportFile(
+        format=exp["format"],
+        filename=exp["filename"],
+        url=f"/api/download/{task_id}/{exp['filename']}",
+        size_bytes=exp.get("size_bytes", 0),
+    ) for exp in entry.get("exports", [])]
+    return {
+        "ok": True,
+        "task_id": task_id,
+        "item": GalleryItem(
+            task_id=task_id,
+            model="edited",
+            exports=exports,
+            seed=0,
+            created_at=entry.get("created_at", ""),
+        ),
+    }
 
 
 @router.get("/download/{task_id}/{filename}")

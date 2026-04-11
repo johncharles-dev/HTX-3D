@@ -1,4 +1,4 @@
-export type ModelType = 'trellis-image-to-3d' | 'trellis-text-to-3d' | 'hunyuan-image-to-3d' | 'sam3d-image-to-3d';
+export type ModelType = 'trellis-image-to-3d' | 'trellis-text-to-3d' | 'hunyuan-image-to-3d' | 'sam3d-image-to-3d' | 'edited';
 export type ExportFormat = 'glb' | 'obj' | 'stl' | 'ply';
 export type TaskStatus = 'queued' | 'processing' | 'extracting' | 'completed' | 'failed' | 'cancelled';
 export type InputMode = 'single' | 'multi';

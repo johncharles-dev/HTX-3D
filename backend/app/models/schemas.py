@@ -10,6 +10,7 @@ class ModelType(str, Enum):
     TRELLIS_TEXT = "trellis-text-to-3d"
     HUNYUAN_IMAGE = "hunyuan-image-to-3d"
     SAM3D_IMAGE = "sam3d-image-to-3d"
+    EDITED = "edited"
 
 
 class ExportFormat(str, Enum):

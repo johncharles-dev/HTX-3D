@@ -379,6 +379,33 @@ class TaskManager:
         end = start + per_page
         return self._gallery_index[start:end], total
 
+    def save_edited_to_gallery(self, glb_data: bytes, label: str = "Edited") -> dict:
+        """Save an edited GLB file to the gallery and return its index entry."""
+        import uuid
+        from datetime import datetime, timezone
+        task_id = uuid.uuid4().hex[:12]
+        item_dir = os.path.join(GALLERY_DIR, task_id)
+        os.makedirs(item_dir, exist_ok=True)
+        glb_path = os.path.join(item_dir, "model.glb")
+        with open(glb_path, "wb") as f:
+            f.write(glb_data)
+        size_bytes = os.path.getsize(glb_path)
+        entry = {
+            "task_id": task_id,
+            "type": "edited",
+            "model": "edited",
+            "seed": 0,
+            "exports": [{"format": "glb", "filename": "model.glb", "path": glb_path, "size_bytes": size_bytes}],
+            "has_video": False,
+            "has_thumbnail": False,
+            "generation_time_seconds": None,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "label": label,
+        }
+        self._gallery_index.insert(0, entry)
+        self._save_gallery_index()
+        return entry
+
     def delete_gallery_item(self, task_id: str) -> bool:
         import shutil
         item_dir = os.path.join(GALLERY_DIR, task_id)

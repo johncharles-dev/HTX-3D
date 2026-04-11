@@ -5,6 +5,7 @@ import type { GalleryItem, ExportFile } from '../types';
 import { MODELS } from '../types';
 
 function modelLabel(modelId: string) {
+  if (modelId === 'edited') return { name: 'Edited', color: '#f97316' };
   // model id from backend: "trellis-image-to-3d", "hunyuan-image-to-3d", "sam3d-image-to-3d"
   const engineId = modelId.split('-')[0]; // "trellis", "hunyuan", "sam3d"
   const model = MODELS.find((m) => m.id === engineId);
@@ -13,23 +14,33 @@ function modelLabel(modelId: string) {
 
 interface Props {
   onPreview: (exports: ExportFile[]) => void;
+  /** 'generated' shows non-edited models, 'edited' shows only edited */
+  filter?: 'generated' | 'edited';
+  /** Increment to force a re-fetch (e.g. after saving an edited model) */
+  refreshKey?: number;
 }
 
-export default function Gallery({ onPreview }: Props) {
+export default function Gallery({ onPreview, filter = 'generated', refreshKey = 0 }: Props) {
   const [items, setItems] = useState<GalleryItem[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const perPage = 12;
 
+  // Reset page when filter changes
+  useEffect(() => { setPage(1); }, [filter]);
+
   const load = useCallback(async () => {
     try {
       const data = await getGallery(page, perPage);
-      setItems(data.items);
-      setTotal(data.total);
+      const filtered = filter === 'edited'
+        ? data.items.filter((item) => item.model === ('edited' as any))
+        : data.items.filter((item) => item.model !== ('edited' as any));
+      setItems(filtered);
+      setTotal(filter ? filtered.length : data.total);
     } catch {
       // API not available
     }
-  }, [page]);
+  }, [page, filter, refreshKey]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -42,14 +53,19 @@ export default function Gallery({ onPreview }: Props) {
   const totalPages = Math.ceil(total / perPage);
 
   if (items.length === 0) {
+    const isEdited = filter === 'edited';
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
           <div className="w-16 h-16 mx-auto mb-3 rounded-2xl bg-bg-tertiary flex items-center justify-center">
             <Eye className="w-8 h-8 text-text-muted" />
           </div>
-          <p className="text-sm text-text-muted">No generations yet</p>
-          <p className="text-xs text-text-muted/60 mt-1">Your generated 3D models will appear here</p>
+          <p className="text-sm text-text-muted">{isEdited ? 'No edited models yet' : 'No generations yet'}</p>
+          <p className="text-xs text-text-muted/60 mt-1">
+            {isEdited
+              ? 'Use the eraser or cleanup tools, then click "Save to Gallery"'
+              : 'Your generated 3D models will appear here'}
+          </p>
         </div>
       </div>
     );
