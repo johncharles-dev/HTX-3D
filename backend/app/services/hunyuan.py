@@ -269,6 +269,7 @@ class HunyuanEngine(BaseEngine):
         mesh = generation_data["mesh"]
         image = generation_data.get("image")
         texture_enabled = generation_data.get("texture_enabled", True)
+        target_face_count = engine_params.get("target_face_count", 0)
         os.makedirs(output_dir, exist_ok=True)
         results = {}
 
@@ -336,6 +337,12 @@ class HunyuanEngine(BaseEngine):
                 shutil.copy2(initial_path, glb_path)
                 results["glb"] = Path(glb_path)
 
+        # Post-processing: decimate to target face count if requested
+        if target_face_count and target_face_count > 0:
+            if progress_callback:
+                progress_callback("Decimating mesh", 0.88)
+            self._decimate_mesh(output_dir, target_face_count)
+
         # STL export (geometry only, from initial mesh)
         if "stl" in formats:
             if progress_callback:
@@ -363,6 +370,21 @@ class HunyuanEngine(BaseEngine):
             progress_callback("Export complete", 1.0)
 
         return results
+
+    @staticmethod
+    def _decimate_mesh(output_dir: str, target_count: int):
+        """Decimate exported meshes to a target face count using pymeshlab."""
+        import pymeshlab
+        for name in ("model.glb", "model_initial.glb"):
+            path = os.path.join(output_dir, name)
+            if not os.path.exists(path):
+                continue
+            ms = pymeshlab.MeshSet()
+            ms.load_new_mesh(path, load_in_a_single_layer=True)
+            if ms.current_mesh().face_number() > target_count:
+                logger.info(f"Decimating {name}: {ms.current_mesh().face_number()} -> {target_count} faces")
+                ms.meshing_decimation_quadric_edge_collapse(targetfacenum=target_count)
+                ms.save_current_mesh(path)
 
     # -- Preview ---------------------------------------------
 

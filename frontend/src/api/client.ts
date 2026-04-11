@@ -36,6 +36,9 @@ export async function generateFromImage(
     form.append('guidance_scale', String(settings.guidanceScale));
     form.append('octree_resolution', String(settings.octreeResolution));
     form.append('texture', String(settings.texture));
+    if (settings.targetFaceCount > 0) {
+      form.append('target_face_count', String(settings.targetFaceCount));
+    }
   }
   // SAM 3D Objects params
   if (engine === 'sam3d') {
@@ -79,6 +82,9 @@ export async function generateFromMultiImage(
     form.append('guidance_scale', String(settings.guidanceScale));
     form.append('octree_resolution', String(settings.octreeResolution));
     form.append('texture', String(settings.texture));
+    if (settings.targetFaceCount > 0) {
+      form.append('target_face_count', String(settings.targetFaceCount));
+    }
   }
   form.append('formats', exportSettings.formats.join(','));
   form.append('mesh_simplify', String(exportSettings.meshSimplify));

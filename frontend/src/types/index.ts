@@ -96,12 +96,31 @@ export interface GenerationSettings {
   guidanceScale: number;
   octreeResolution: number;
   texture: boolean;
+  targetFaceCount: number;  // 0 = no decimation, else target face count
   // SAM 3D Objects params
   sam3dStage1Steps: number;
   sam3dStage2Steps: number;
   sam3dTextureBaking: boolean;
   sam3dVertexColor: boolean;
 }
+
+export interface ViewerSettings {
+  lightPositionX: number;  // -1 to 1 (left/right)
+  lightPositionY: number;  // -1 to 1 (bottom/top)
+  lightColor: string;      // hex color
+  spotlightIntensity: number;  // 0 to 2
+  planarLightIntensity: number;  // 0 to 2
+  environmentPreset: string;
+}
+
+export const DEFAULT_VIEWER_SETTINGS: ViewerSettings = {
+  lightPositionX: 0,
+  lightPositionY: 1,
+  lightColor: '#ffffff',
+  spotlightIntensity: 0.4,
+  planarLightIntensity: 0.3,
+  environmentPreset: 'studio',
+};
 
 export interface ExportSettings {
   formats: ExportFormat[];
@@ -192,6 +211,7 @@ export const DEFAULT_GENERATION_SETTINGS: GenerationSettings = {
   guidanceScale: 5.5,
   octreeResolution: 256,
   texture: true,
+  targetFaceCount: 0,
   // SAM 3D Objects defaults
   sam3dStage1Steps: 25,
   sam3dStage2Steps: 25,

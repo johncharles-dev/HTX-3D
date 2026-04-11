@@ -6,6 +6,7 @@ import ModelSelector from './components/ModelSelector';
 import ModelViewer from './components/ModelViewer';
 import ProgressBar from './components/ProgressBar';
 import ExportPanel from './components/ExportPanel';
+import SceneSettings from './components/SceneSettings';
 import Gallery from './components/Gallery';
 import SegmentationWorkspace from './components/SegmentationWorkspace';
 import { Sparkles, Images, Type, Pencil, Upload, Wand2, Check, Square } from 'lucide-react';
@@ -30,12 +31,14 @@ import type {
   ModelResult,
   GenerationSettings,
   ExportSettings,
+  ViewerSettings,
   EngineName,
 } from './types';
 import {
   MODELS,
   DEFAULT_GENERATION_SETTINGS,
   DEFAULT_EXPORT_SETTINGS,
+  DEFAULT_VIEWER_SETTINGS,
 } from './types';
 
 type Tab = 'image' | 'text' | 'gallery';
@@ -62,6 +65,7 @@ export default function App() {
   // Settings
   const [genSettings, setGenSettings] = useState<GenerationSettings>(DEFAULT_GENERATION_SETTINGS);
   const [exportSettings, setExportSettings] = useState<ExportSettings>(DEFAULT_EXPORT_SETTINGS);
+  const [viewerSettings, setViewerSettings] = useState<ViewerSettings>(DEFAULT_VIEWER_SETTINGS);
 
   // Multi-model generation state
   const [isGenerating, setIsGenerating] = useState(false);
@@ -740,7 +744,7 @@ export default function App() {
 
             {/* 3D Viewer Area */}
             <div className="flex-1 min-h-0 p-4 relative">
-              <ModelViewer url={viewerUrl} format={viewerFormat} exports={displayExports} />
+              <ModelViewer url={viewerUrl} format={viewerFormat} exports={displayExports} viewerSettings={viewerSettings} />
 
               {/* Progress Overlay — floats on top of viewer */}
               {isGenerating && (
@@ -772,9 +776,11 @@ export default function App() {
 
           </section>
 
-          {/* -- Right Panel: Downloads --------------------- */}
+          {/* -- Right Panel: Scene + Downloads -------------- */}
           {displayExports.length > 0 && (
-            <aside className="w-64 border-l border-border bg-bg-secondary p-4 overflow-y-auto">
+            <aside className="w-64 border-l border-border bg-bg-secondary p-4 overflow-y-auto space-y-4">
+              <SceneSettings settings={viewerSettings} onChange={setViewerSettings} />
+              <div className="border-t border-border" />
               <ExportPanel
                 exports={displayExports}
                 generationTime={activeResult?.generation_time_seconds ?? null}

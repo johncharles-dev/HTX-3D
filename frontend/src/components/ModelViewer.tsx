@@ -7,7 +7,8 @@ import { PLYLoader } from 'three/examples/jsm/loaders/PLYLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { AlertTriangle, Box, Circle, Grid3x3, Dot } from 'lucide-react';
 import * as THREE from 'three';
-import type { ExportFile } from '../types';
+import type { ExportFile, ViewerSettings } from '../types';
+import { DEFAULT_VIEWER_SETTINGS } from '../types';
 
 type ViewMode = 'textured' | 'solid' | 'wireframe' | 'pointcloud';
 
@@ -168,6 +169,7 @@ interface Props {
   format?: string;
   autoRotate?: boolean;
   exports?: ExportFile[];
+  viewerSettings?: ViewerSettings;
 }
 
 const VIEW_MODES: { id: ViewMode; label: string; icon: typeof Box }[] = [
@@ -177,7 +179,7 @@ const VIEW_MODES: { id: ViewMode; label: string; icon: typeof Box }[] = [
   { id: 'pointcloud', label: 'Point Cloud', icon: Dot },
 ];
 
-export default function ModelViewer({ url, format = 'glb', autoRotate = true, exports = [] }: Props) {
+export default function ModelViewer({ url, format = 'glb', autoRotate = true, exports = [], viewerSettings = DEFAULT_VIEWER_SETTINGS }: Props) {
   const [canvasKey, setCanvasKey] = useState(0);
   const [viewMode, setViewMode] = useState<ViewMode>('textured');
 
@@ -272,15 +274,23 @@ export default function ModelViewer({ url, format = 'glb', autoRotate = true, ex
           >
             {/* These render immediately — no suspension */}
             <SceneInit />
-            <ambientLight intensity={0.6} />
-            <directionalLight position={[5, 5, 5]} intensity={1} />
-            <directionalLight position={[-3, 3, -3]} intensity={0.4} />
-            <hemisphereLight args={['#b1e1ff', '#b97a20', 0.5]} />
+            <ambientLight intensity={viewerSettings.planarLightIntensity} color={viewerSettings.lightColor} />
+            <directionalLight
+              position={[
+                viewerSettings.lightPositionX * 5,
+                viewerSettings.lightPositionY * 5,
+                5,
+              ]}
+              intensity={viewerSettings.spotlightIntensity * 2.5}
+              color={viewerSettings.lightColor}
+            />
+            <directionalLight position={[-3, 3, -3]} intensity={viewerSettings.planarLightIntensity * 0.7} />
+            <hemisphereLight args={['#b1e1ff', '#b97a20', viewerSettings.planarLightIntensity * 0.8]} />
             <AutoRotate enabled={autoRotate} />
 
             {/* Model + Environment load async — inner Suspense prevents blocking the scene */}
             <Suspense fallback={<InCanvasSpinner />}>
-              {viewMode === 'textured' && <Environment preset="studio" />}
+              {viewMode === 'textured' && viewerSettings.environmentPreset !== 'none' && <Environment preset={viewerSettings.environmentPreset as any} />}
               <ModelComponent url={modelUrl} />
             </Suspense>
           </Canvas>

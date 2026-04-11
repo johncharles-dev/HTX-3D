@@ -75,6 +75,14 @@ const OCTREE_OPTIONS = [
   { value: 512, label: '512 (highest)' },
 ];
 
+const FACE_COUNT_OPTIONS = [
+  { value: 0, label: 'Auto (no limit)' },
+  { value: 50000, label: '50K faces' },
+  { value: 500000, label: '500K faces' },
+  { value: 1000000, label: '1M faces' },
+  { value: 1500000, label: '1.5M faces' },
+];
+
 export default function SettingsPanel({ generation, exportSettings, onGenerationChange, onExportChange, selectedEngines }: Props) {
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
@@ -397,6 +405,21 @@ export default function SettingsPanel({ generation, exportSettings, onGeneration
                   className="w-full mt-1 bg-bg-tertiary border border-border rounded px-3 py-1.5 text-sm"
                 >
                   {OCTREE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-text-secondary">
+                  Target Face Count
+                  <Tooltip text="Decimate the output mesh to a target number of faces. Auto keeps the native resolution from octree." />
+                </label>
+                <select
+                  value={g.targetFaceCount}
+                  onChange={(e) => setG({ targetFaceCount: Number(e.target.value) })}
+                  className="w-full mt-1 bg-bg-tertiary border border-border rounded px-3 py-1.5 text-sm"
+                >
+                  {FACE_COUNT_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
                 </select>
