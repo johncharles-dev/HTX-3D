@@ -1024,7 +1024,7 @@ export default function App() {
                             setRetextureTaskId(resp.task_id);
                             setRetextureStatus('Starting...');
                             // Connect via WebSocket for live progress
-                            const ws = connectProgress(resp.task_id, (data) => {
+                            connectProgress(resp.task_id, (data) => {
                               if (data.status === 'completed') {
                                 // Fetch final result
                                 getTaskStatus(resp.task_id).then((result) => {
