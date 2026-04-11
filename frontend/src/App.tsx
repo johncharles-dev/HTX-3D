@@ -10,7 +10,7 @@ import SceneSettings from './components/SceneSettings';
 import Gallery from './components/Gallery';
 import SegmentationWorkspace from './components/SegmentationWorkspace';
 import { removeFloatersFromBlob } from './components/MeshEraser';
-import { Sparkles, Images, Type, Pencil, Upload, Wand2, Check, Square, Trash2 } from 'lucide-react';
+import { Sparkles, Images, Type, Pencil, Upload, Wand2, Check, Square, Trash2, Download, Eye, X } from 'lucide-react';
 import {
   generateFromImage,
   generateFromMultiImage,
@@ -43,6 +43,14 @@ import {
 } from './types';
 
 type Tab = 'image' | 'text' | 'gallery';
+
+interface EditedModelEntry {
+  id: string;
+  blobUrl: string;
+  label: string;         // e.g. "Eraser edit" or "Cleanup"
+  createdAt: Date;
+  sourceName?: string;    // original model/engine name
+}
 
 export default function App() {
   // -- State -----------------------------------------------
@@ -86,6 +94,23 @@ export default function App() {
   const [galleryExports, setGalleryExports] = useState<ExportFile[]>([]);
   const [editedGlbUrl, setEditedGlbUrl] = useState<string | null>(null);
   const [cleanupStatus, setCleanupStatus] = useState<string | null>(null);
+  const [cleanupUndoUrl, setCleanupUndoUrl] = useState<string | null>(null);
+  const [editedModels, setEditedModels] = useState<EditedModelEntry[]>([]);
+
+  // -- Helpers ---------------------------------------------
+  const saveEditedModel = (blobUrl: string, label: string) => {
+    const sourceName = activeModelResult?.modelId || 'unknown';
+    setEditedModels((prev) => [
+      {
+        id: `edited-${Date.now()}`,
+        blobUrl,
+        label,
+        createdAt: new Date(),
+        sourceName,
+      },
+      ...prev,
+    ]);
+  };
 
   // -- Derived ---------------------------------------------
   const activeModelResult = modelResults.find((mr) => mr.modelId === activeResultModel);
@@ -274,7 +299,8 @@ export default function App() {
   useEffect(() => {
     if (!activeModelResult?.result) return;
     const res = activeModelResult.result;
-    setEditedGlbUrl(null); // clear edited state for new result
+    setEditedGlbUrl(null);
+    setCleanupUndoUrl(null);
     const glb = res.exports.find((e) => e.format === 'glb');
     if (glb) {
       setViewerUrl(glb.url);
@@ -323,6 +349,7 @@ export default function App() {
     setModelResults([]);
     setActiveResultModel(null);
     setEditedGlbUrl(null);
+    setCleanupUndoUrl(null);
     const glb = exports.find((e) => e.format === 'glb');
     if (glb) {
       setViewerUrl(glb.url);
@@ -364,8 +391,97 @@ export default function App() {
       )}
 
       {activeTab === 'gallery' ? (
-        <main className="flex-1 overflow-auto p-6">
-          <Gallery onPreview={handleGalleryPreview} />
+        <main className="flex-1 overflow-auto p-6 space-y-8">
+          {/* Edited Models section */}
+          {editedModels.length > 0 && (
+            <section>
+              <h2 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
+                <Pencil className="w-4 h-4" />
+                Edited Models
+                <span className="text-xs text-text-muted font-normal">({editedModels.length})</span>
+              </h2>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {editedModels.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="bg-bg-secondary border border-border rounded-xl overflow-hidden group hover:border-border-hover transition-colors"
+                  >
+                    {/* 3D icon placeholder */}
+                    <div className="aspect-square bg-bg-tertiary relative flex items-center justify-center">
+                      <svg className="w-10 h-10 text-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <path d="M12 3L2 9l10 6 10-6-10-6z" />
+                        <path d="M2 17l10 6 10-6" />
+                        <path d="M2 13l10 6 10-6" />
+                      </svg>
+                      {/* Hover overlay */}
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => {
+                            setViewerUrl(entry.blobUrl);
+                            setViewerFormat('glb');
+                            setGalleryExports([{
+                              format: 'glb' as const,
+                              filename: `${entry.label.toLowerCase().replace(/\s+/g, '_')}.glb`,
+                              url: entry.blobUrl,
+                              size_bytes: 0,
+                            }]);
+                            setModelResults([]);
+                            setActiveResultModel(null);
+                            setEditedGlbUrl(entry.blobUrl);
+                            setActiveTab('image');
+                          }}
+                          className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                          title="Preview"
+                        >
+                          <Eye className="w-4 h-4 text-white" />
+                        </button>
+                        <a
+                          href={entry.blobUrl}
+                          download={`${entry.label.toLowerCase().replace(/\s+/g, '_')}.glb`}
+                          className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                          title="Download GLB"
+                        >
+                          <Download className="w-4 h-4 text-white" />
+                        </a>
+                        <button
+                          onClick={() => {
+                            URL.revokeObjectURL(entry.blobUrl);
+                            setEditedModels((prev) => prev.filter((m) => m.id !== entry.id));
+                          }}
+                          className="p-2 rounded-lg bg-red-500/20 hover:bg-red-500/40 transition-colors"
+                          title="Remove"
+                        >
+                          <X className="w-4 h-4 text-red-400" />
+                        </button>
+                      </div>
+                    </div>
+                    {/* Info */}
+                    <div className="p-3">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-400">
+                          {entry.label}
+                        </span>
+                        <span className="text-xs text-text-muted ml-auto">
+                          {entry.createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                      {entry.sourceName && (
+                        <span className="text-xs text-text-muted">from {entry.sourceName}</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Generated Models section */}
+          <section>
+            {editedModels.length > 0 && (
+              <h2 className="text-sm font-semibold text-text-primary mb-3">Generated Models</h2>
+            )}
+            <Gallery onPreview={handleGalleryPreview} />
+          </section>
         </main>
       ) : (
         <main className="flex-1 flex overflow-hidden">
@@ -766,6 +882,7 @@ export default function App() {
                   setViewerUrl(blobUrl);
                   setViewerFormat('glb');
                   setEditedGlbUrl(blobUrl);
+                  saveEditedModel(blobUrl, 'Eraser edit');
                 }}
               />
 
@@ -816,13 +933,16 @@ export default function App() {
                     <button
                       onClick={async () => {
                         if (!viewerUrl) return;
+                        const prevUrl = viewerUrl;
                         setCleanupStatus('Analyzing mesh...');
                         try {
                           const { url: cleanedUrl, removed } = await removeFloatersFromBlob(viewerUrl);
                           if (removed > 0) {
+                            setCleanupUndoUrl(prevUrl);
                             setViewerUrl(cleanedUrl);
                             setViewerFormat('glb');
                             setEditedGlbUrl(cleanedUrl);
+                            saveEditedModel(cleanedUrl, 'Cleanup');
                             setCleanupStatus(`Removed ${removed} fragment${removed > 1 ? 's' : ''}`);
                           } else {
                             setCleanupStatus('No floating parts detected');
@@ -841,6 +961,21 @@ export default function App() {
                         {cleanupStatus || 'Remove all disconnected fragments'}
                       </span>
                     </button>
+                    {cleanupUndoUrl && (
+                      <button
+                        onClick={() => {
+                          setViewerUrl(cleanupUndoUrl);
+                          setViewerFormat('glb');
+                          setEditedGlbUrl(cleanupUndoUrl);
+                          setCleanupUndoUrl(null);
+                          setCleanupStatus(null);
+                        }}
+                        className="w-full text-xs px-3 py-1.5 rounded-lg border border-yellow-500/30 bg-yellow-500/10 hover:bg-yellow-500/20 transition-colors text-yellow-400 text-left flex items-center gap-1.5"
+                      >
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 10h13a4 4 0 010 8H7" /><path d="M3 10l5-5M3 10l5 5" /></svg>
+                        Undo cleanup
+                      </button>
+                    )}
                   </div>
                 </>
               )}
