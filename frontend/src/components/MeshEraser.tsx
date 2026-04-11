@@ -318,7 +318,7 @@ export async function removeFloatersFromBlob(
         // Within-mesh component detection
         if (faceCount < 2) return;
         const components = findComponents(posAttr, faceCount);
-        console.log(`[FloaterRemoval] Mesh "${child.name || '(unnamed)'}": ${faceCount} faces, ${components.length} components (sizes: ${components.map(c => c.length).slice(0, 8).join(', ')}${components.length > 8 ? '...' : ''})`);
+        // components found: largest first after sort;
 
         if (components.length <= 1) return;
 
@@ -341,7 +341,6 @@ export async function removeFloatersFromBlob(
         totalRemoved += removed;
 
         const keepFaces = Array.from(keepFaceSet).sort((a, b) => a - b);
-        console.log(`[FloaterRemoval]   Removed ${removed} component(s), kept ${keptComponents} (${keepFaces.length}/${faceCount} faces)`);
         rebuildGeometry(g, keepFaces);
       });
 
@@ -349,14 +348,12 @@ export async function removeFloatersFromBlob(
       if (allMeshes.length > 1) {
         allMeshes.sort((a, b) => b.faceCount - a.faceCount);
         const largestMeshFaces = allMeshes[0].faceCount;
-        console.log(`[FloaterRemoval] Scene has ${allMeshes.length} meshes (sizes: ${allMeshes.map(m => m.faceCount).join(', ')})`);
         for (let i = 0; i < allMeshes.length; i++) {
           const { mesh, faceCount } = allMeshes[i];
           const shouldRemove = keepLargestOnly
             ? i > 0  // remove all except the first (largest)
             : faceCount < largestMeshFaces * minRatio;
           if (shouldRemove) {
-            console.log(`[FloaterRemoval]   Removing mesh "${mesh.name || '(unnamed)'}" (${faceCount} faces)`);
             mesh.removeFromParent();
             mesh.geometry.dispose();
             if (mesh.material) {
@@ -368,7 +365,6 @@ export async function removeFloatersFromBlob(
         }
       }
 
-      console.log(`[FloaterRemoval] Total removed: ${totalRemoved}`);
 
       // Export cleaned scene as GLB
       import('three/examples/jsm/exporters/GLTFExporter.js').then(({ GLTFExporter }) => {

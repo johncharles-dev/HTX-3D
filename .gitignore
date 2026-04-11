@@ -46,3 +46,8 @@ backend/engines/hunyuan/hy3dshape/tools/mini_trainset/
 temp.*
 mr_combined.png
 
+# Test files & comparison outputs
+backend/test_*.py
+backend/*.jpg
+sam3d_comparison/
+

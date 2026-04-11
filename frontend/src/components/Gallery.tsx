@@ -36,8 +36,8 @@ export default function Gallery({ onPreview, filter = 'generated', refreshKey = 
       const pageSize = 500; // fetch all for client-side filtering + pagination
       const data = await getGallery(1, pageSize);
       const allFiltered = filter === 'edited'
-        ? data.items.filter((item) => item.model === ('edited' as any))
-        : data.items.filter((item) => item.model !== ('edited' as any));
+        ? data.items.filter((item) => item.model === 'edited')
+        : data.items.filter((item) => item.model !== 'edited');
       const start = (page - 1) * perPage;
       setItems(allFiltered.slice(start, start + perPage));
       setTotal(allFiltered.length);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Header from './components/Header';
 import ImageUpload from './components/ImageUpload';
 import SettingsPanel from './components/SettingsPanel';
@@ -100,7 +100,26 @@ export default function App() {
   const [sourceTaskId, setSourceTaskId] = useState<string | null>(null);
   const [retextureStatus, setRetextureStatus] = useState<string | null>(null);
   const [retextureTaskId, setRetextureTaskId] = useState<string | null>(null);
-  const [retexturePollRef] = useState<{ current: ReturnType<typeof setInterval> | null }>({ current: null });
+  const retexturePollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Cleanup poll interval on unmount
+  useEffect(() => {
+    return () => {
+      if (retexturePollRef.current) {
+        clearInterval(retexturePollRef.current);
+        retexturePollRef.current = null;
+      }
+    };
+  }, []);
+
+  // Revoke old blob URLs to prevent memory leaks
+  const prevEditedUrl = useRef<string | null>(null);
+  useEffect(() => {
+    if (prevEditedUrl.current && prevEditedUrl.current !== editedGlbUrl) {
+      URL.revokeObjectURL(prevEditedUrl.current);
+    }
+    prevEditedUrl.current = editedGlbUrl;
+  }, [editedGlbUrl]);
 
   // -- Derived ---------------------------------------------
   const activeModelResult = modelResults.find((mr) => mr.modelId === activeResultModel);
