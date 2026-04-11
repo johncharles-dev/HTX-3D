@@ -35,6 +35,11 @@ export default function SegmentationWorkspace({ imageFile, onConfirm, onCancel }
   const canvasRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
 
+  // Zoom & pan state
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const dragRef = useRef<{ startX: number; startY: number; panX: number; panY: number; moved: boolean } | null>(null);
+
   // Close on Escape
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel(); };
@@ -59,7 +64,53 @@ export default function SegmentationWorkspace({ imageFile, onConfirm, onCancel }
     return () => { cancelled = true; };
   }, [imageFile]);
 
-  const handleCanvasClick = useCallback(async (e: React.MouseEvent<HTMLDivElement>) => {
+  // -- Zoom with scroll wheel (centered on cursor) --
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+    const handler = (e: WheelEvent) => {
+      e.preventDefault();
+      const step = e.deltaY > 0 ? -0.15 : 0.15;
+      setZoom(prev => {
+        const next = Math.max(1, Math.min(6, prev + step * prev));
+        // Adjust pan so point under cursor stays fixed
+        const rect = el.getBoundingClientRect();
+        const cx = e.clientX - rect.left - rect.width / 2;
+        const cy = e.clientY - rect.top - rect.height / 2;
+        const ratio = 1 - next / prev;
+        setPan(p => ({
+          x: next <= 1 ? 0 : p.x + (cx - p.x) * ratio,
+          y: next <= 1 ? 0 : p.y + (cy - p.y) * ratio,
+        }));
+        return next;
+      });
+    };
+    el.addEventListener('wheel', handler, { passive: false });
+    return () => el.removeEventListener('wheel', handler);
+  }, []);
+
+  // -- Drag to pan (mousedown/move/up) --
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (e.button !== 0) return; // left button only
+    dragRef.current = { startX: e.clientX, startY: e.clientY, panX: pan.x, panY: pan.y, moved: false };
+  }, [pan]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    const d = dragRef.current;
+    if (!d) return;
+    const dx = e.clientX - d.startX;
+    const dy = e.clientY - d.startY;
+    if (!d.moved && Math.abs(dx) + Math.abs(dy) < 5) return; // movement threshold
+    d.moved = true;
+    setPan({ x: d.panX + dx, y: d.panY + dy });
+  }, []);
+
+  const handleMouseUp = useCallback(async (e: React.MouseEvent) => {
+    const d = dragRef.current;
+    dragRef.current = null;
+    if (d?.moved) return; // was a drag, not a click
+
+    // -- Point placement (same as old handleCanvasClick) --
     if (!sessionId || loading) return;
     const rect = imgRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -81,6 +132,9 @@ export default function SegmentationWorkspace({ imageFile, onConfirm, onCancel }
     } catch (e: any) { setError(e.message); }
     finally { setLoading(false); }
   }, [sessionId, loading, pointMode, points]);
+
+  // Reset zoom/pan helper
+  const resetView = useCallback(() => { setZoom(1); setPan({ x: 0, y: 0 }); }, []);
 
   const handleTextSegment = async () => {
     if (!sessionId || !textPrompt.trim() || loading) return;
@@ -211,22 +265,30 @@ export default function SegmentationWorkspace({ imageFile, onConfirm, onCancel }
           </div>
         </div>
 
-        {/* Canvas area — large */}
-        <div className="flex-1 min-h-0 p-4 flex items-center justify-center bg-bg-secondary/50">
+        {/* Canvas area — large, with zoom & pan */}
+        <div className="flex-1 min-h-0 p-4 flex items-center justify-center bg-bg-secondary/50 relative">
           <div
             ref={canvasRef}
-            onClick={handleCanvasClick}
-            className="relative rounded-xl overflow-hidden border border-border bg-black cursor-crosshair select-none max-h-full"
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={() => { dragRef.current = null; }}
+            className={`relative rounded-xl overflow-hidden border border-border bg-black select-none max-h-full ${
+              zoom > 1 ? 'cursor-grab active:cursor-grabbing' : 'cursor-crosshair'
+            }`}
           >
-            <img
-              ref={imgRef}
-              src={overlayUrl || imageUrl}
-              alt="Segmentation"
-              className="block max-w-full max-h-[60vh] object-contain"
-              draggable={false}
-            />
+            {/* Transformed content — zoom & pan applied here */}
+            <div style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: 'center center', transition: dragRef.current?.moved ? 'none' : 'transform 0.1s ease-out' }}>
+              <img
+                ref={imgRef}
+                src={overlayUrl || imageUrl}
+                alt="Segmentation"
+                className="block max-w-full max-h-[60vh] object-contain"
+                draggable={false}
+              />
+            </div>
 
-            {/* Point markers */}
+            {/* Point markers — positioned over transformed image */}
             {imgRef.current && points.map((pt, i) => {
               const rect = imgRef.current!.getBoundingClientRect();
               const containerRect = canvasRef.current?.getBoundingClientRect();
@@ -254,11 +316,24 @@ export default function SegmentationWorkspace({ imageFile, onConfirm, onCancel }
             {!loading && masks.length === 0 && points.length === 0 && sessionId && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <span className="text-sm text-white/70 bg-black/50 px-4 py-2 rounded-lg">
-                  Click on the object, or type a prompt below — then refine with clicks
+                  Click on the object, or type a prompt below — scroll to zoom, drag to pan
                 </span>
               </div>
             )}
           </div>
+
+          {/* Zoom indicator */}
+          {zoom > 1 && (
+            <div className="absolute top-6 right-6 flex items-center gap-2 bg-bg-primary/80 backdrop-blur-sm border border-border rounded-lg px-3 py-1.5">
+              <span className="text-xs text-text-secondary font-medium">{Math.round(zoom * 100)}%</span>
+              <button
+                onClick={resetView}
+                className="text-[10px] text-accent hover:text-accent-hover"
+              >
+                Reset
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Bottom controls */}

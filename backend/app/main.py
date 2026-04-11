@@ -107,7 +107,7 @@ async def ws_progress(websocket: WebSocket, task_id: str):
         while True:
             update = await asyncio.wait_for(sub_queue.get(), timeout=120)
             await websocket.send_json(update.model_dump())
-            if update.status in ("completed", "failed"):
+            if update.status in ("completed", "failed", "cancelled"):
                 break
     except (WebSocketDisconnect, asyncio.TimeoutError):
         pass

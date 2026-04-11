@@ -8,7 +8,7 @@ import ProgressBar from './components/ProgressBar';
 import ExportPanel from './components/ExportPanel';
 import Gallery from './components/Gallery';
 import SegmentationWorkspace from './components/SegmentationWorkspace';
-import { Sparkles, Images, Type, Pencil, Upload, Wand2, Check } from 'lucide-react';
+import { Sparkles, Images, Type, Pencil, Upload, Wand2, Check, Square } from 'lucide-react';
 import {
   generateFromImage,
   generateFromMultiImage,
@@ -17,6 +17,7 @@ import {
   getTaskStatus,
   getHealth,
   connectProgress,
+  cancelTask,
 } from './api/client';
 import type {
   HealthStatus,
@@ -167,7 +168,7 @@ export default function App() {
                 ),
               );
 
-              if (update.status === 'completed' || update.status === 'failed') {
+              if (update.status === 'completed' || update.status === 'failed' || update.status === 'cancelled') {
                 getTaskStatus(response.task_id).then((res) => {
                   setModelResults((prev) =>
                     prev.map((mr) =>
@@ -275,6 +276,22 @@ export default function App() {
       setViewerFormat(res.exports[0].format);
     }
   }, [activeModelResult?.result]);
+
+  // -- Stop a specific model's generation ------------------
+  const handleStopModel = async (modelId: string) => {
+    const mr = modelResults.find((r) => r.modelId === modelId);
+    if (!mr || !mr.taskId) return;
+    try {
+      await cancelTask(mr.taskId);
+    } catch {
+      // Task may have already finished — update status locally
+      setModelResults((prev) =>
+        prev.map((r) =>
+          r.modelId === modelId ? { ...r, status: 'cancelled' } : r,
+        ),
+      );
+    }
+  };
 
   // -- Switch viewer when active result model changes ------
   const handleSelectResultModel = (modelId: string) => {
@@ -659,37 +676,54 @@ export default function App() {
                       if (!model) return null;
                       const isActive = activeResultModel === mr.modelId;
                       const isLoading = mr.status === 'processing' || mr.status === 'extracting';
+                      const isQueued = mr.status === 'queued';
                       const isComplete = mr.status === 'completed';
                       const isFailed = mr.status === 'failed';
+                      const isCancelled = mr.status === 'cancelled';
+                      const canStop = isLoading || isQueued;
 
                       return (
-                        <button
-                          key={mr.modelId}
-                          onClick={() => handleSelectResultModel(mr.modelId)}
-                          className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md transition-all ${
-                            isActive ? 'shadow-sm' : 'hover:bg-bg-tertiary'
-                          }`}
-                          style={{
-                            backgroundColor: isActive ? `${model.color}20` : undefined,
-                            color: isActive ? model.color : undefined,
-                          }}
-                        >
-                          {/* Status indicator */}
-                          <div
-                            className={`w-2 h-2 rounded-full ${isLoading ? 'animate-pulse' : ''}`}
+                        <div key={mr.modelId} className="flex items-center gap-0.5">
+                          <button
+                            onClick={() => handleSelectResultModel(mr.modelId)}
+                            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md transition-all ${
+                              isActive ? 'shadow-sm' : 'hover:bg-bg-tertiary'
+                            }`}
                             style={{
-                              backgroundColor: isComplete ? '#22c55e' : isFailed ? '#ef4444' : isLoading ? model.color : 'rgba(255,255,255,0.15)',
-                              boxShadow: isLoading ? `0 0 6px ${model.color}66` : undefined,
+                              backgroundColor: isActive ? `${model.color}20` : undefined,
+                              color: isActive ? model.color : undefined,
                             }}
-                          />
-                          <span className="font-medium">{model.name}</span>
-                          {isLoading && mr.progress && (
-                            <span className="opacity-60">{Math.round(mr.progress.progress * 100)}%</span>
+                          >
+                            {/* Status indicator */}
+                            <div
+                              className={`w-2 h-2 rounded-full ${isLoading ? 'animate-pulse' : ''}`}
+                              style={{
+                                backgroundColor: isComplete ? '#22c55e' : isFailed || isCancelled ? '#ef4444' : isLoading ? model.color : 'rgba(255,255,255,0.15)',
+                                boxShadow: isLoading ? `0 0 6px ${model.color}66` : undefined,
+                              }}
+                            />
+                            <span className="font-medium">{model.name}</span>
+                            {isLoading && mr.progress && (
+                              <span className="opacity-60">{Math.round(mr.progress.progress * 100)}%</span>
+                            )}
+                            {isComplete && (
+                              <span className="opacity-50 text-[10px]">Done</span>
+                            )}
+                            {isCancelled && (
+                              <span className="opacity-50 text-[10px]">Stopped</span>
+                            )}
+                          </button>
+                          {/* Per-model stop button */}
+                          {canStop && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleStopModel(mr.modelId); }}
+                              className="p-1 rounded hover:bg-red-500/20 text-text-muted hover:text-red-400 transition-colors"
+                              title={`Stop ${model.name}`}
+                            >
+                              <Square className="w-3 h-3 fill-current" />
+                            </button>
                           )}
-                          {isComplete && (
-                            <span className="opacity-50 text-[10px]">Done</span>
-                          )}
-                        </button>
+                        </div>
                       );
                     })}
                   </div>

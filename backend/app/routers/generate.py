@@ -305,6 +305,16 @@ async def edit_with_text(
     )
 
 
+# -- Task Cancel -------------------------------------------
+
+@router.post("/task/{task_id}/cancel")
+async def cancel_task(task_id: str, task_manager=Depends(get_task_manager)):
+    """Cancel a queued or running generation task."""
+    if not task_manager.cancel_task(task_id):
+        raise HTTPException(404, "Task not found")
+    return {"task_id": task_id, "status": "cancelled", "message": "Task cancelled"}
+
+
 # -- Task Status -------------------------------------------
 
 @router.get("/task/{task_id}", response_model=GenerationResult)

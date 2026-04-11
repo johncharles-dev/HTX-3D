@@ -1,4 +1,4 @@
-import { Loader2, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, Clock, Ban } from 'lucide-react';
 import { MODELS, type ModelResult } from '../types';
 
 interface Props {
@@ -23,6 +23,7 @@ export default function ResultTabs({ results, activeModelId, onSelect }: Props) 
           extracting: Loader2,
           completed: CheckCircle2,
           failed: XCircle,
+          cancelled: Ban,
         }[mr.status] || Clock;
 
         const isLoading = mr.status === 'processing' || mr.status === 'extracting';

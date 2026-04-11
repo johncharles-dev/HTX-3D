@@ -39,6 +39,7 @@ class TaskManager:
         self._active_engine: Optional[str] = None  # name of currently loaded engine
         self._worker_task: Optional[asyncio.Task] = None
         self._progress_subscribers: dict[str, list[asyncio.Queue]] = {}  # task_id -> subscriber queues
+        self._cancelled: set[str] = set()  # task IDs marked for cancellation
         self._load_gallery_index()
 
     def register_engine(self, engine: BaseEngine):
@@ -108,6 +109,21 @@ class TaskManager:
     def get_task(self, task_id: str) -> Optional[dict]:
         return self.tasks.get(task_id)
 
+    def cancel_task(self, task_id: str) -> bool:
+        """Mark a task for cancellation. Returns True if the task was found."""
+        task = self.tasks.get(task_id)
+        if not task:
+            return False
+        self._cancelled.add(task_id)
+        task["status"] = TaskStatus.CANCELLED
+        task["completed_at"] = datetime.now(timezone.utc).isoformat()
+        self._broadcast_progress(task_id, "Cancelled", 0.0, "Task cancelled by user")
+        logger.info(f"Task {task_id} cancelled")
+        return True
+
+    def is_cancelled(self, task_id: str) -> bool:
+        return task_id in self._cancelled
+
     @property
     def queue_size(self) -> int:
         return self.queue.qsize()
@@ -145,6 +161,14 @@ class TaskManager:
             try:
                 task = await self.queue.get()
                 task_id = task["id"]
+
+                # Skip tasks cancelled while queued
+                if self.is_cancelled(task_id):
+                    self._cancelled.discard(task_id)
+                    self.queue.task_done()
+                    logger.info(f"Task {task_id} skipped (cancelled while queued)")
+                    continue
+
                 task["status"] = TaskStatus.PROCESSING
                 task["started_at"] = datetime.now(timezone.utc).isoformat()
                 self._broadcast_progress(task_id, "Starting", 0.0)
@@ -153,17 +177,25 @@ class TaskManager:
                     result = await asyncio.get_event_loop().run_in_executor(
                         None, self._process_task, task
                     )
-                    task["status"] = TaskStatus.COMPLETED
-                    task["result"] = result
-                    task["completed_at"] = datetime.now(timezone.utc).isoformat()
-                    self._broadcast_progress(task_id, "Complete", 1.0, "Generation finished")
-                    self._save_to_gallery(task)
+                    # Check if cancelled during execution
+                    if self.is_cancelled(task_id):
+                        self._cancelled.discard(task_id)
+                        logger.info(f"Task {task_id} finished but was cancelled — discarding result")
+                    else:
+                        task["status"] = TaskStatus.COMPLETED
+                        task["result"] = result
+                        task["completed_at"] = datetime.now(timezone.utc).isoformat()
+                        self._broadcast_progress(task_id, "Complete", 1.0, "Generation finished")
+                        self._save_to_gallery(task)
                 except Exception as e:
-                    logger.exception(f"Task {task_id} failed: {e}")
-                    task["status"] = TaskStatus.FAILED
-                    task["error"] = str(e)
-                    task["completed_at"] = datetime.now(timezone.utc).isoformat()
-                    self._broadcast_progress(task_id, "Error", 0.0, str(e))
+                    if not self.is_cancelled(task_id):
+                        logger.exception(f"Task {task_id} failed: {e}")
+                        task["status"] = TaskStatus.FAILED
+                        task["error"] = str(e)
+                        task["completed_at"] = datetime.now(timezone.utc).isoformat()
+                        self._broadcast_progress(task_id, "Error", 0.0, str(e))
+                    else:
+                        self._cancelled.discard(task_id)
 
                 self.queue.task_done()
             except asyncio.CancelledError:

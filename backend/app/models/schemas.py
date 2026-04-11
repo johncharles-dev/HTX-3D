@@ -25,6 +25,7 @@ class TaskStatus(str, Enum):
     EXTRACTING = "extracting"
     COMPLETED = "completed"
     FAILED = "failed"
+    CANCELLED = "cancelled"
 
 
 class MultiImageMode(str, Enum):

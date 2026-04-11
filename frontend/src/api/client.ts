@@ -137,6 +137,10 @@ export async function getTaskStatus(taskId: string): Promise<GenerationResult> {
   return request<GenerationResult>(`/task/${taskId}`);
 }
 
+export async function cancelTask(taskId: string): Promise<void> {
+  await request(`/task/${taskId}/cancel`, { method: 'POST' });
+}
+
 // -- Gallery -----------------------------------------------
 
 export async function getGallery(page = 1, perPage = 20): Promise<{ items: GalleryItem[]; total: number }> {
