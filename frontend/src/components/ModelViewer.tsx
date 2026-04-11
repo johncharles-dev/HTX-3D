@@ -67,6 +67,20 @@ function InCanvasSpinner() {
   );
 }
 
+function SafeEnvironment({ preset }: { preset: string }) {
+  try {
+    return <Environment preset={preset as any} />;
+  } catch {
+    return null;
+  }
+}
+
+class EnvironmentErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  render() { return this.state.failed ? null : this.props.children; }
+}
+
 function GLBModel({ url }: { url: string }) {
   const gltf = useLoader(GLTFLoader, url);
   return <Center><primitive object={gltf.scene.clone()} /></Center>;
@@ -297,9 +311,16 @@ export default function ModelViewer({ url, format = 'glb', autoRotate = true, ex
             <hemisphereLight args={['#b1e1ff', '#b97a20', viewerSettings.planarLightIntensity * 0.8]} />
             <OrbitControls autoRotate={!eraserActive && autoRotate} autoRotateSpeed={2} />
 
-            <Suspense fallback={<InCanvasSpinner />}>
-              {viewerSettings.environmentPreset !== 'none' && <Environment preset={viewerSettings.environmentPreset as any} />}
+            {/* Environment loaded separately so HDR fetch failures don't block the model */}
+            {viewerSettings.environmentPreset !== 'none' && (
+              <EnvironmentErrorBoundary>
+                <Suspense fallback={null}>
+                  <SafeEnvironment preset={viewerSettings.environmentPreset} />
+                </Suspense>
+              </EnvironmentErrorBoundary>
+            )}
 
+            <Suspense fallback={<InCanvasSpinner />}>
               {eraserActive ? (
                 <EditableModel
                   url={modelUrl}
