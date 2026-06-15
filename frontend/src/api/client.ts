@@ -1,4 +1,4 @@
-import type { TaskResponse, GenerationResult, GalleryItem, HealthStatus, GenerationSettings, ExportSettings, MultiImageMode } from '../types';
+import type { TaskResponse, GenerationResult, GalleryItem, HealthStatus, GenerationSettings, ExportSettings, MultiImageMode, AutoScaleMetadata } from '../types';
 
 const API_BASE = '/api';
 
@@ -159,6 +159,14 @@ export async function getTaskStatus(taskId: string): Promise<GenerationResult> {
 
 export async function cancelTask(taskId: string): Promise<void> {
   await request(`/task/${taskId}/cancel`, { method: 'POST' });
+}
+
+export async function rescaleTask(taskId: string, targetLongestM: number): Promise<{ task_id: string; auto_scale: AutoScaleMetadata }> {
+  return request(`/task/${taskId}/rescale`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ target_longest_m: targetLongestM }),
+  });
 }
 
 // -- Re-texture -------------------------------------------

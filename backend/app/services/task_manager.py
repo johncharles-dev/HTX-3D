@@ -185,8 +185,10 @@ class TaskManager:
                         task["status"] = TaskStatus.COMPLETED
                         task["result"] = result
                         task["completed_at"] = datetime.now(timezone.utc).isoformat()
-                        self._broadcast_progress(task_id, "Complete", 1.0, "Generation finished")
+                        # Run auto-scale (attaches auto_scale to result) BEFORE notifying
+                        # clients, so the frontend fetch on "Complete" sees the scale data.
                         self._save_to_gallery(task)
+                        self._broadcast_progress(task_id, "Complete", 1.0, "Generation finished")
                 except Exception as e:
                     if not self.is_cancelled(task_id):
                         logger.exception(f"Task {task_id} failed: {e}")
@@ -427,6 +429,28 @@ class TaskManager:
         # Add source info for edited/retexture/quick_adjust tasks
         if task_type in ("retexture", "quick_adjust"):
             entry["source_model"] = "hunyuan-image-to-3d"
+
+        # Auto-scale: estimate real-world dimensions and bake into the GLB.
+        # Runs only for fresh image-to-3D generations; retexture/quick_adjust share
+        # geometry with their source model and don't need re-scaling.
+        if task_type in ("image", "multi_image"):
+            try:
+                glb_export = next((e for e in entry["exports"] if e.get("format") == "glb"), None)
+                input_image = os.path.join(GALLERY_DIR, task["id"], "input_image.png")
+                if glb_export and os.path.exists(input_image) and os.path.exists(glb_export["path"]):
+                    from .auto_scale import auto_scale
+                    debug_png = os.path.join(GALLERY_DIR, task["id"], "autoscale_debug.png")
+                    scale_meta = auto_scale(glb_export["path"], input_image,
+                                            in_place=True, debug_png=debug_png)
+                    entry["auto_scale"] = scale_meta
+                    result["auto_scale"] = scale_meta  # surface in task-status endpoint
+                    # Refresh export size (GLB was rewritten with new scale)
+                    glb_path = Path(glb_export["path"])
+                    if glb_path.exists():
+                        glb_export["size_bytes"] = glb_path.stat().st_size
+            except Exception as e:
+                logger.warning("auto_scale hook failed for task %s: %s", task["id"], e)
+
         self._gallery_index.insert(0, entry)  # newest first
         self._save_gallery_index()
 

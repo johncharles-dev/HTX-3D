@@ -111,6 +111,55 @@ class ExportFile(BaseModel):
     size_bytes: int
 
 
+class AutoScaleDimensions(BaseModel):
+    xyz: List[float]
+    longest_m: float
+    middle_m: float
+    shortest_m: float
+
+
+class AutoScaleViewAlignment(BaseModel):
+    method: str
+    iou: float
+    azim_deg: float = 0.0
+    elev_deg: float = 0.0
+
+
+class AutoScaleClassPrediction(BaseModel):
+    """CLIP zero-shot classifier output (Tier 1)."""
+    label: str
+    classifier_confidence: float
+    plausible_range_m: List[float]
+    median_m: float
+
+
+class AutoScaleClassPriorCheck(BaseModel):
+    """Class prior sanity-check + blend (Tier 1)."""
+    in_range: bool
+    snap_applied: bool
+    pre_snap_longest_m: float
+    post_snap_longest_m: float
+    snap_scale_factor: float
+    confidence_modifier: str
+    blend_alpha: float
+
+
+class AutoScaleMetadata(BaseModel):
+    """Auto-scale metadata. Present iff auto-scaling was attempted."""
+    auto_scaled: bool
+    confidence: Optional[str] = None
+    mask_source: Optional[str] = None
+    scale_source: Optional[str] = None
+    scale_factor: Optional[float] = None
+    geometric_scale_factor: Optional[float] = None
+    dimensions_m: Optional[AutoScaleDimensions] = None
+    view_alignment: Optional[AutoScaleViewAlignment] = None
+    object_distance_m: Optional[float] = None
+    class_prediction: Optional[AutoScaleClassPrediction] = None
+    class_prior_check: Optional[AutoScaleClassPriorCheck] = None
+    reason: Optional[str] = None
+
+
 class GenerationResult(BaseModel):
     """Full result of a completed generation."""
     task_id: str
@@ -123,6 +172,12 @@ class GenerationResult(BaseModel):
     generation_time_seconds: Optional[float] = None
     error: Optional[str] = None
     created_at: Optional[str] = None
+    auto_scale: Optional[AutoScaleMetadata] = None
+
+
+class RescaleRequest(BaseModel):
+    """User override for auto-scale. Uniformly scales the GLB so its longest local-axis dim equals the target."""
+    target_longest_m: float = Field(gt=0, le=1000.0)
 
 
 class ProgressUpdate(BaseModel):
@@ -147,6 +202,7 @@ class GalleryItem(BaseModel):
     generation_time_seconds: Optional[float] = None
     created_at: str = ""
     source_model: Optional[str] = None  # for edited models: which engine produced the original
+    auto_scale: Optional[AutoScaleMetadata] = None
 
 
 class GalleryResponse(BaseModel):

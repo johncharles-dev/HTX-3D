@@ -44,6 +44,7 @@ async def list_gallery(
             generation_time_seconds=raw.get("generation_time_seconds"),
             created_at=raw.get("created_at", ""),
             source_model=raw.get("source_model"),
+            auto_scale=raw.get("auto_scale"),
         ))
 
     return GalleryResponse(items=items, total=total, page=page, per_page=per_page)

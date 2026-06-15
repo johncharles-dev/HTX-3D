@@ -239,13 +239,67 @@ class HunyuanEngine(BaseEngine):
         progress_callback: Optional[Callable[[str, float], None]] = None,
         **engine_params,
     ) -> dict:
-        # Hunyuan doesn't have native multi-view input — use first image
-        return self.generate_from_image(
-            image_paths[0],
-            seed,
-            progress_callback=progress_callback,
-            **engine_params,
-        )
+        """Multi-image 3D generation using stochastic or multidiffusion fusion.
+
+        Each image is preprocessed (background removal) independently, then
+        conditionings are injected into the sampling loop via the chosen mode.
+        """
+        import numpy as np
+
+        if not self.shape_pipeline:
+            raise RuntimeError("Hunyuan shape pipeline not loaded")
+
+        num_inference_steps = engine_params.get("num_inference_steps", 30)
+        guidance_scale = engine_params.get("guidance_scale", 5.5)
+        octree_resolution = engine_params.get("octree_resolution", 256)
+        texture = engine_params.get("texture", True)
+
+        if progress_callback:
+            progress_callback(f"Processing {len(image_paths)} images", 0.0)
+
+        # Preprocess each image (background removal)
+        processed_images = []
+        for idx, img_path in enumerate(image_paths):
+            image = Image.open(img_path).convert("RGBA")
+            alpha = np.array(image)[:, :, 3]
+            has_alpha = not np.all(alpha == 255)
+
+            if has_alpha:
+                logger.info(f"Image {idx}: has alpha, skipping rembg")
+            else:
+                image = self.rembg(image)
+                logger.info(f"Image {idx}: rembg applied")
+
+            processed_images.append(image)
+
+            if progress_callback:
+                frac = 0.05 + 0.05 * (idx + 1) / len(image_paths)
+                progress_callback(f"Preprocessed image {idx + 1}/{len(image_paths)}", frac)
+
+        if progress_callback:
+            progress_callback(f"Generating 3D shape ({mode} fusion, {len(processed_images)} views)", 0.10)
+
+        start_time = time.time()
+        mesh = self.shape_pipeline.run_multi_image(
+            images=processed_images,
+            mode=mode,
+            num_inference_steps=num_inference_steps,
+            guidance_scale=guidance_scale,
+            octree_resolution=octree_resolution,
+        )[0]
+        logger.info(f"Multi-image shape generation ({mode}) took {time.time() - start_time:.1f}s")
+
+        if progress_callback:
+            progress_callback("Shape generation complete", 0.50)
+
+        return {
+            "mesh": mesh,
+            "image": processed_images[0],  # Primary image for texture pipeline
+            "image_path": image_paths[0],
+            "texture_enabled": texture,
+            "roughness_offset": engine_params.get("roughness_offset", 0.0),
+            "metallic_scale": engine_params.get("metallic_scale", 1.0),
+        }
 
     def generate_from_text(
         self,

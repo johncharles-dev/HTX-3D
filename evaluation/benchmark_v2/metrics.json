@@ -1,0 +1,2102 @@
+[
+  {
+    "obj_id": "01_scdf_ambulance",
+    "condition": "trellis_rembg",
+    "engine": "trellis",
+    "use_sam3": false,
+    "task_id": "b628a2a1b26e",
+    "status": "completed",
+    "elapsed_s": 30.0,
+    "generation_time_s": 9.1,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/01_scdf_ambulance/trellis_rembg/model.glb",
+    "mesh_metrics": {
+      "vertices": 7879,
+      "faces": 10481,
+      "watertight": false,
+      "surface_area": 1.6852,
+      "bbox_x": 0.4127,
+      "bbox_y": 0.4779,
+      "bbox_z": 1.0,
+      "min_axis_dim": 0.4127,
+      "file_size_mb": 1.486,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.2729,
+      "psnr": 5.97,
+      "lpips": 0.7201,
+      "clip": 0.466
+    }
+  },
+  {
+    "obj_id": "02_scdf_fire_engine",
+    "condition": "trellis_rembg",
+    "engine": "trellis",
+    "use_sam3": false,
+    "task_id": "9a87fb2bcd02",
+    "status": "completed",
+    "elapsed_s": 10.0,
+    "generation_time_s": 9.5,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/02_scdf_fire_engine/trellis_rembg/model.glb",
+    "mesh_metrics": {
+      "vertices": 16187,
+      "faces": 18616,
+      "watertight": false,
+      "surface_area": 2.5816,
+      "bbox_x": 0.3513,
+      "bbox_y": 0.4098,
+      "bbox_z": 0.9996,
+      "min_axis_dim": 0.3513,
+      "file_size_mb": 1.784,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.239,
+      "psnr": 7.33,
+      "lpips": 0.748,
+      "clip": 0.5298
+    }
+  },
+  {
+    "obj_id": "03_terrex_apc",
+    "condition": "trellis_rembg",
+    "engine": "trellis",
+    "use_sam3": false,
+    "task_id": "3df9e486340b",
+    "status": "completed",
+    "elapsed_s": 10.0,
+    "generation_time_s": 7.5,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/03_terrex_apc/trellis_rembg/model.glb",
+    "mesh_metrics": {
+      "vertices": 8773,
+      "faces": 9618,
+      "watertight": false,
+      "surface_area": 1.0139,
+      "bbox_x": 1.0009,
+      "bbox_y": 0.2238,
+      "bbox_z": 0.3567,
+      "min_axis_dim": 0.2238,
+      "file_size_mb": 1.483,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.2297,
+      "psnr": 4.85,
+      "lpips": 0.8184,
+      "clip": 0.4799
+    }
+  },
+  {
+    "obj_id": "04_police_motorcycle",
+    "condition": "trellis_rembg",
+    "engine": "trellis",
+    "use_sam3": false,
+    "task_id": "586d68ad7c2e",
+    "status": "completed",
+    "elapsed_s": 10.0,
+    "generation_time_s": 9.8,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/04_police_motorcycle/trellis_rembg/model.glb",
+    "mesh_metrics": {
+      "vertices": 15660,
+      "faces": 18301,
+      "watertight": false,
+      "surface_area": 2.0289,
+      "bbox_x": 0.9999,
+      "bbox_y": 0.6794,
+      "bbox_z": 0.3994,
+      "min_axis_dim": 0.3994,
+      "file_size_mb": 1.85,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.2046,
+      "psnr": 5.51,
+      "lpips": 0.736,
+      "clip": 0.5517
+    }
+  },
+  {
+    "obj_id": "05_bomb_disposal_robot",
+    "condition": "trellis_rembg",
+    "engine": "trellis",
+    "use_sam3": false,
+    "task_id": "e37ea2345a7d",
+    "status": "completed",
+    "elapsed_s": 10.0,
+    "generation_time_s": 9.8,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/05_bomb_disposal_robot/trellis_rembg/model.glb",
+    "mesh_metrics": {
+      "vertices": 19083,
+      "faces": 21739,
+      "watertight": false,
+      "surface_area": 2.5853,
+      "bbox_x": 0.4596,
+      "bbox_y": 0.8903,
+      "bbox_z": 1.0017,
+      "min_axis_dim": 0.4596,
+      "file_size_mb": 1.764,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.2806,
+      "psnr": 6.04,
+      "lpips": 0.7419,
+      "clip": 0.5533
+    }
+  },
+  {
+    "obj_id": "06_sbs_double_decker_bus",
+    "condition": "trellis_rembg",
+    "engine": "trellis",
+    "use_sam3": false,
+    "task_id": "5027fc550b7e",
+    "status": "completed",
+    "elapsed_s": 10.3,
+    "generation_time_s": 9.8,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/06_sbs_double_decker_bus/trellis_rembg/model.glb",
+    "mesh_metrics": {
+      "vertices": 7339,
+      "faces": 9474,
+      "watertight": false,
+      "surface_area": 1.9244,
+      "bbox_x": 0.4007,
+      "bbox_y": 0.5154,
+      "bbox_z": 0.9996,
+      "min_axis_dim": 0.4007,
+      "file_size_mb": 1.408,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.1514,
+      "psnr": 6.85,
+      "lpips": 0.7828,
+      "clip": 0.4659
+    }
+  },
+  {
+    "obj_id": "07_security_guard_house",
+    "condition": "trellis_rembg",
+    "engine": "trellis",
+    "use_sam3": false,
+    "task_id": "4afc48cee7e8",
+    "status": "completed",
+    "elapsed_s": 22.4,
+    "generation_time_s": 17.8,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/07_security_guard_house/trellis_rembg/model.glb",
+    "mesh_metrics": {
+      "vertices": 33524,
+      "faces": 52376,
+      "watertight": false,
+      "surface_area": 7.5337,
+      "bbox_x": 0.7666,
+      "bbox_y": 0.9998,
+      "bbox_z": 0.7652,
+      "min_axis_dim": 0.7652,
+      "file_size_mb": 2.192,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.3162,
+      "psnr": 9.25,
+      "lpips": 0.8124,
+      "clip": 0.5294
+    }
+  },
+  {
+    "obj_id": "08_police_patrol_car",
+    "condition": "trellis_rembg",
+    "engine": "trellis",
+    "use_sam3": false,
+    "task_id": "b1c8eb3000b5",
+    "status": "completed",
+    "elapsed_s": 10.0,
+    "generation_time_s": 8.5,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/08_police_patrol_car/trellis_rembg/model.glb",
+    "mesh_metrics": {
+      "vertices": 6625,
+      "faces": 9649,
+      "watertight": false,
+      "surface_area": 1.4172,
+      "bbox_x": 0.4335,
+      "bbox_y": 0.3321,
+      "bbox_z": 1.0003,
+      "min_axis_dim": 0.3321,
+      "file_size_mb": 1.347,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.2288,
+      "psnr": 4.5,
+      "lpips": 0.8295,
+      "clip": 0.4355
+    }
+  },
+  {
+    "obj_id": "09_himars_launcher",
+    "condition": "trellis_rembg",
+    "engine": "trellis",
+    "use_sam3": false,
+    "task_id": "93aa36871731",
+    "status": "completed",
+    "elapsed_s": 15.0,
+    "generation_time_s": 10.4,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/09_himars_launcher/trellis_rembg/model.glb",
+    "mesh_metrics": {
+      "vertices": 17455,
+      "faces": 19074,
+      "watertight": false,
+      "surface_area": 2.4874,
+      "bbox_x": 0.9991,
+      "bbox_y": 0.4538,
+      "bbox_z": 0.4502,
+      "min_axis_dim": 0.4502,
+      "file_size_mb": 1.714,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.3515,
+      "psnr": 5.95,
+      "lpips": 0.6817,
+      "clip": 0.4979
+    }
+  },
+  {
+    "obj_id": "10_coast_guard_boat",
+    "condition": "trellis_rembg",
+    "engine": "trellis",
+    "use_sam3": false,
+    "task_id": "dcd81021b398",
+    "status": "completed",
+    "elapsed_s": 10.0,
+    "generation_time_s": 8.5,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/10_coast_guard_boat/trellis_rembg/model.glb",
+    "mesh_metrics": {
+      "vertices": 13062,
+      "faces": 14097,
+      "watertight": false,
+      "surface_area": 1.4996,
+      "bbox_x": 1.0009,
+      "bbox_y": 0.4489,
+      "bbox_z": 0.868,
+      "min_axis_dim": 0.4489,
+      "file_size_mb": 1.923,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.1871,
+      "psnr": 5.42,
+      "lpips": 0.8619,
+      "clip": 0.5126
+    }
+  },
+  {
+    "obj_id": "11_apics_red_car_booth",
+    "condition": "trellis_rembg",
+    "engine": "trellis",
+    "use_sam3": false,
+    "task_id": "b351ad976f4e",
+    "status": "completed",
+    "elapsed_s": 10.1,
+    "generation_time_s": 9.4,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/11_apics_red_car_booth/trellis_rembg/model.glb",
+    "mesh_metrics": {
+      "vertices": 16082,
+      "faces": 25254,
+      "watertight": false,
+      "surface_area": 3.0907,
+      "bbox_x": 1.0027,
+      "bbox_y": 0.4471,
+      "bbox_z": 0.9918,
+      "min_axis_dim": 0.4471,
+      "file_size_mb": 1.744,
+      "degenerate_faces": 8
+    },
+    "image_metrics": {
+      "ssim": 0.2318,
+      "psnr": 7.19,
+      "lpips": 0.8734,
+      "clip": 0.4709
+    }
+  },
+  {
+    "obj_id": "12_apics_boom_gate",
+    "condition": "trellis_rembg",
+    "engine": "trellis",
+    "use_sam3": false,
+    "task_id": "4c1fca5c3e13",
+    "status": "completed",
+    "elapsed_s": 15.0,
+    "generation_time_s": 11.3,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/12_apics_boom_gate/trellis_rembg/model.glb",
+    "mesh_metrics": {
+      "vertices": 22331,
+      "faces": 31847,
+      "watertight": false,
+      "surface_area": 4.6727,
+      "bbox_x": 1.0026,
+      "bbox_y": 0.6965,
+      "bbox_z": 0.6828,
+      "min_axis_dim": 0.6828,
+      "file_size_mb": 1.914,
+      "degenerate_faces": 6
+    },
+    "image_metrics": {
+      "ssim": 0.1798,
+      "psnr": 7.54,
+      "lpips": 0.7592,
+      "clip": 0.5162
+    }
+  },
+  {
+    "obj_id": "13_apics_booth_barrier",
+    "condition": "trellis_rembg",
+    "engine": "trellis",
+    "use_sam3": false,
+    "task_id": "abd9bbfd22cc",
+    "status": "completed",
+    "elapsed_s": 15.0,
+    "generation_time_s": 11.5,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/13_apics_booth_barrier/trellis_rembg/model.glb",
+    "mesh_metrics": {
+      "vertices": 21863,
+      "faces": 31820,
+      "watertight": false,
+      "surface_area": 4.6731,
+      "bbox_x": 1.0027,
+      "bbox_y": 0.6965,
+      "bbox_z": 0.6829,
+      "min_axis_dim": 0.6829,
+      "file_size_mb": 1.882,
+      "degenerate_faces": 4
+    },
+    "image_metrics": {
+      "ssim": 0.1714,
+      "psnr": 7.09,
+      "lpips": 0.8,
+      "clip": 0.5549
+    }
+  },
+  {
+    "obj_id": "14_apics_kiosks_passport",
+    "condition": "trellis_rembg",
+    "engine": "trellis",
+    "use_sam3": false,
+    "task_id": "2525b43e7335",
+    "status": "completed",
+    "elapsed_s": 15.0,
+    "generation_time_s": 12.9,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/14_apics_kiosks_passport/trellis_rembg/model.glb",
+    "mesh_metrics": {
+      "vertices": 19718,
+      "faces": 28877,
+      "watertight": false,
+      "surface_area": 5.3131,
+      "bbox_x": 0.8141,
+      "bbox_y": 1.001,
+      "bbox_z": 0.9955,
+      "min_axis_dim": 0.8141,
+      "file_size_mb": 1.788,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.3435,
+      "psnr": 8.26,
+      "lpips": 0.7869,
+      "clip": 0.6601
+    }
+  },
+  {
+    "obj_id": "01_scdf_ambulance",
+    "condition": "hunyuan_rembg",
+    "engine": "hunyuan",
+    "use_sam3": false,
+    "task_id": "b808c04e0cbd",
+    "status": "completed",
+    "elapsed_s": 85.1,
+    "generation_time_s": 72.3,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/01_scdf_ambulance/hunyuan_rembg/model.glb",
+    "mesh_metrics": {
+      "vertices": 26501,
+      "faces": 40000,
+      "watertight": false,
+      "surface_area": 6.6067,
+      "bbox_x": 0.8022,
+      "bbox_y": 0.9352,
+      "bbox_z": 1.9852,
+      "min_axis_dim": 0.8022,
+      "file_size_mb": 6.065,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.2906,
+      "psnr": 6.63,
+      "lpips": 0.7121,
+      "clip": 0.3851
+    }
+  },
+  {
+    "obj_id": "02_scdf_fire_engine",
+    "condition": "hunyuan_rembg",
+    "engine": "hunyuan",
+    "use_sam3": false,
+    "task_id": "aead54fbb544",
+    "status": "completed",
+    "elapsed_s": 77.7,
+    "generation_time_s": 74.1,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/02_scdf_fire_engine/hunyuan_rembg/model.glb",
+    "mesh_metrics": {
+      "vertices": 28062,
+      "faces": 40000,
+      "watertight": false,
+      "surface_area": 6.3934,
+      "bbox_x": 0.7127,
+      "bbox_y": 0.8797,
+      "bbox_z": 1.9879,
+      "min_axis_dim": 0.7127,
+      "file_size_mb": 7.471,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.2058,
+      "psnr": 5.83,
+      "lpips": 0.7598,
+      "clip": 0.4942
+    }
+  },
+  {
+    "obj_id": "03_terrex_apc",
+    "condition": "hunyuan_rembg",
+    "engine": "hunyuan",
+    "use_sam3": false,
+    "task_id": "d9ba2dea03c9",
+    "status": "completed",
+    "elapsed_s": 90.4,
+    "generation_time_s": 87.1,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/03_terrex_apc/hunyuan_rembg/model.glb",
+    "mesh_metrics": {
+      "vertices": 35679,
+      "faces": 40000,
+      "watertight": false,
+      "surface_area": 4.0317,
+      "bbox_x": 0.6102,
+      "bbox_y": 0.3763,
+      "bbox_z": 1.9829,
+      "min_axis_dim": 0.3763,
+      "file_size_mb": 6.99,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.2493,
+      "psnr": 4.92,
+      "lpips": 0.8298,
+      "clip": 0.4652
+    }
+  },
+  {
+    "obj_id": "04_police_motorcycle",
+    "condition": "hunyuan_rembg",
+    "engine": "hunyuan",
+    "use_sam3": false,
+    "task_id": "cd5ee0c81dca",
+    "status": "completed",
+    "elapsed_s": 60.2,
+    "generation_time_s": 56.8,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/04_police_motorcycle/hunyuan_rembg/model.glb",
+    "mesh_metrics": {
+      "vertices": 20666,
+      "faces": 40000,
+      "watertight": false,
+      "surface_area": 5.6714,
+      "bbox_x": 0.0122,
+      "bbox_y": 1.4238,
+      "bbox_z": 1.9883,
+      "min_axis_dim": 0.0122,
+      "file_size_mb": 3.01,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.3066,
+      "psnr": 3.65,
+      "lpips": 0.9006,
+      "clip": 0.5084
+    }
+  },
+  {
+    "obj_id": "05_bomb_disposal_robot",
+    "condition": "hunyuan_rembg",
+    "engine": "hunyuan",
+    "use_sam3": false,
+    "task_id": "7813ea2753da",
+    "status": "completed",
+    "elapsed_s": 85.3,
+    "generation_time_s": 85.3,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/05_bomb_disposal_robot/hunyuan_rembg/model.glb",
+    "mesh_metrics": {
+      "vertices": 32537,
+      "faces": 40000,
+      "watertight": false,
+      "surface_area": 4.5379,
+      "bbox_x": 1.9823,
+      "bbox_y": 1.0713,
+      "bbox_z": 0.8139,
+      "min_axis_dim": 0.8139,
+      "file_size_mb": 7.519,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.2713,
+      "psnr": 5.58,
+      "lpips": 0.7361,
+      "clip": 0.6046
+    }
+  },
+  {
+    "obj_id": "06_sbs_double_decker_bus",
+    "condition": "hunyuan_rembg",
+    "engine": "hunyuan",
+    "use_sam3": false,
+    "task_id": "2eec57c60d33",
+    "status": "completed",
+    "elapsed_s": 81.6,
+    "generation_time_s": 79.4,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/06_sbs_double_decker_bus/hunyuan_rembg/model.glb",
+    "mesh_metrics": {
+      "vertices": 24105,
+      "faces": 40000,
+      "watertight": false,
+      "surface_area": 6.742,
+      "bbox_x": 0.4408,
+      "bbox_y": 0.7271,
+      "bbox_z": 1.985,
+      "min_axis_dim": 0.4408,
+      "file_size_mb": 4.576,
+      "degenerate_faces": 1
+    },
+    "image_metrics": {
+      "ssim": 0.2245,
+      "psnr": 5.22,
+      "lpips": 0.7382,
+      "clip": 0.5146
+    }
+  },
+  {
+    "obj_id": "07_security_guard_house",
+    "condition": "hunyuan_rembg",
+    "engine": "hunyuan",
+    "use_sam3": false,
+    "task_id": "abb5f842951e",
+    "status": "completed",
+    "elapsed_s": 63.8,
+    "generation_time_s": 63.1,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/07_security_guard_house/hunyuan_rembg/model.glb",
+    "mesh_metrics": {
+      "vertices": 25108,
+      "faces": 40000,
+      "watertight": false,
+      "surface_area": 8.5893,
+      "bbox_x": 1.9876,
+      "bbox_y": 0.4991,
+      "bbox_z": 1.9871,
+      "min_axis_dim": 0.4991,
+      "file_size_mb": 3.096,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.3227,
+      "psnr": 4.82,
+      "lpips": 0.8714,
+      "clip": 0.4709
+    }
+  },
+  {
+    "obj_id": "08_police_patrol_car",
+    "condition": "hunyuan_rembg",
+    "engine": "hunyuan",
+    "use_sam3": false,
+    "task_id": "0969ec014a63",
+    "status": "completed",
+    "elapsed_s": 65.0,
+    "generation_time_s": 61.4,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/08_police_patrol_car/hunyuan_rembg/model.glb",
+    "mesh_metrics": {
+      "vertices": 17228,
+      "faces": 22840,
+      "watertight": false,
+      "surface_area": 0.5426,
+      "bbox_x": 0.2471,
+      "bbox_y": 0.3578,
+      "bbox_z": 1.9828,
+      "min_axis_dim": 0.2471,
+      "file_size_mb": 5.535,
+      "degenerate_faces": 9
+    },
+    "image_metrics": {
+      "ssim": 0.2649,
+      "psnr": 3.74,
+      "lpips": 0.9257,
+      "clip": 0.5233
+    }
+  },
+  {
+    "obj_id": "09_himars_launcher",
+    "condition": "hunyuan_rembg",
+    "engine": "hunyuan",
+    "use_sam3": false,
+    "task_id": "ced2aba83517",
+    "status": "completed",
+    "elapsed_s": 90.3,
+    "generation_time_s": 89.9,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/09_himars_launcher/hunyuan_rembg/model.glb",
+    "mesh_metrics": {
+      "vertices": 34444,
+      "faces": 40000,
+      "watertight": false,
+      "surface_area": 10.7383,
+      "bbox_x": 0.726,
+      "bbox_y": 0.8371,
+      "bbox_z": 1.9476,
+      "min_axis_dim": 0.726,
+      "file_size_mb": 6.053,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.4466,
+      "psnr": 8.04,
+      "lpips": 0.6462,
+      "clip": 0.4325
+    }
+  },
+  {
+    "obj_id": "10_coast_guard_boat",
+    "condition": "hunyuan_rembg",
+    "engine": "hunyuan",
+    "use_sam3": false,
+    "task_id": "c8a2001d68e9",
+    "status": "completed",
+    "elapsed_s": 80.3,
+    "generation_time_s": 79.6,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/10_coast_guard_boat/hunyuan_rembg/model.glb",
+    "mesh_metrics": {
+      "vertices": 25980,
+      "faces": 34572,
+      "watertight": false,
+      "surface_area": 0.7819,
+      "bbox_x": 1.5598,
+      "bbox_y": 0.4933,
+      "bbox_z": 1.0538,
+      "min_axis_dim": 0.4933,
+      "file_size_mb": 6.293,
+      "degenerate_faces": 8
+    },
+    "image_metrics": {
+      "ssim": 0.2051,
+      "psnr": 4.53,
+      "lpips": 0.937,
+      "clip": 0.4309
+    }
+  },
+  {
+    "obj_id": "11_apics_red_car_booth",
+    "condition": "hunyuan_rembg",
+    "engine": "hunyuan",
+    "use_sam3": false,
+    "task_id": "fe22122320f8",
+    "status": "completed",
+    "elapsed_s": 60.0,
+    "generation_time_s": 55.3,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/11_apics_red_car_booth/hunyuan_rembg/model.glb",
+    "mesh_metrics": {
+      "vertices": 20584,
+      "faces": 40000,
+      "watertight": false,
+      "surface_area": 2.7966,
+      "bbox_x": 1.9876,
+      "bbox_y": 0.7004,
+      "bbox_z": 0.0133,
+      "min_axis_dim": 0.0133,
+      "file_size_mb": 3.822,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.3758,
+      "psnr": 6.77,
+      "lpips": 0.8764,
+      "clip": 0.4642
+    }
+  },
+  {
+    "obj_id": "12_apics_boom_gate",
+    "condition": "hunyuan_rembg",
+    "engine": "hunyuan",
+    "use_sam3": false,
+    "task_id": "39ae7b2cc56d",
+    "status": "completed",
+    "elapsed_s": 85.1,
+    "generation_time_s": 83.1,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/12_apics_boom_gate/hunyuan_rembg/model.glb",
+    "mesh_metrics": {
+      "vertices": 27584,
+      "faces": 40000,
+      "watertight": false,
+      "surface_area": 13.3724,
+      "bbox_x": 1.0995,
+      "bbox_y": 0.6993,
+      "bbox_z": 1.9842,
+      "min_axis_dim": 0.6993,
+      "file_size_mb": 4.584,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.2614,
+      "psnr": 8.69,
+      "lpips": 0.7152,
+      "clip": 0.5747
+    }
+  },
+  {
+    "obj_id": "13_apics_booth_barrier",
+    "condition": "hunyuan_rembg",
+    "engine": "hunyuan",
+    "use_sam3": false,
+    "task_id": "b7b2e1f97d91",
+    "status": "completed",
+    "elapsed_s": 85.0,
+    "generation_time_s": 82.6,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/13_apics_booth_barrier/hunyuan_rembg/model.glb",
+    "mesh_metrics": {
+      "vertices": 27584,
+      "faces": 40000,
+      "watertight": false,
+      "surface_area": 13.3724,
+      "bbox_x": 1.0995,
+      "bbox_y": 0.6993,
+      "bbox_z": 1.9842,
+      "min_axis_dim": 0.6993,
+      "file_size_mb": 4.584,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.2614,
+      "psnr": 8.69,
+      "lpips": 0.7152,
+      "clip": 0.5747
+    }
+  },
+  {
+    "obj_id": "14_apics_kiosks_passport",
+    "condition": "hunyuan_rembg",
+    "engine": "hunyuan",
+    "use_sam3": false,
+    "task_id": "bb84e371f95d",
+    "status": "completed",
+    "elapsed_s": 80.0,
+    "generation_time_s": 78.8,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/14_apics_kiosks_passport/hunyuan_rembg/model.glb",
+    "mesh_metrics": {
+      "vertices": 24415,
+      "faces": 40000,
+      "watertight": false,
+      "surface_area": 11.5054,
+      "bbox_x": 1.8058,
+      "bbox_y": 1.9737,
+      "bbox_z": 1.0633,
+      "min_axis_dim": 1.0633,
+      "file_size_mb": 4.308,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.3649,
+      "psnr": 8.71,
+      "lpips": 0.6847,
+      "clip": 0.7208
+    }
+  },
+  {
+    "obj_id": "01_scdf_ambulance",
+    "condition": "trellis_sam3",
+    "engine": "trellis",
+    "use_sam3": true,
+    "task_id": "55fefca6f63e",
+    "status": "completed",
+    "elapsed_s": 30.1,
+    "generation_time_s": 10.0,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/01_scdf_ambulance/trellis_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 10722,
+      "faces": 14435,
+      "watertight": false,
+      "surface_area": 1.8889,
+      "bbox_x": 0.9999,
+      "bbox_y": 0.4873,
+      "bbox_z": 0.4537,
+      "min_axis_dim": 0.4537,
+      "file_size_mb": 1.619,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.3209,
+      "psnr": 6.65,
+      "lpips": 0.7108,
+      "clip": 0.5162
+    }
+  },
+  {
+    "obj_id": "02_scdf_fire_engine",
+    "condition": "trellis_sam3",
+    "engine": "trellis",
+    "use_sam3": true,
+    "task_id": "3327a70876f5",
+    "status": "completed",
+    "elapsed_s": 10.0,
+    "generation_time_s": 10.0,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/02_scdf_fire_engine/trellis_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 16421,
+      "faces": 19007,
+      "watertight": false,
+      "surface_area": 2.6742,
+      "bbox_x": 0.3555,
+      "bbox_y": 0.4342,
+      "bbox_z": 0.9962,
+      "min_axis_dim": 0.3555,
+      "file_size_mb": 1.827,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.2274,
+      "psnr": 6.71,
+      "lpips": 0.7574,
+      "clip": 0.4869
+    }
+  },
+  {
+    "obj_id": "03_terrex_apc",
+    "condition": "trellis_sam3",
+    "engine": "trellis",
+    "use_sam3": true,
+    "task_id": "b33ab8bc93c3",
+    "status": "completed",
+    "elapsed_s": 10.0,
+    "generation_time_s": 8.5,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/03_terrex_apc/trellis_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 8736,
+      "faces": 10749,
+      "watertight": false,
+      "surface_area": 1.3257,
+      "bbox_x": 0.3602,
+      "bbox_y": 0.2741,
+      "bbox_z": 0.9985,
+      "min_axis_dim": 0.2741,
+      "file_size_mb": 1.385,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.2483,
+      "psnr": 5.78,
+      "lpips": 0.784,
+      "clip": 0.4777
+    }
+  },
+  {
+    "obj_id": "04_police_motorcycle",
+    "condition": "trellis_sam3",
+    "engine": "trellis",
+    "use_sam3": true,
+    "task_id": "e99c94eeb26e",
+    "status": "completed",
+    "elapsed_s": 15.1,
+    "generation_time_s": 10.1,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/04_police_motorcycle/trellis_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 15047,
+      "faces": 17900,
+      "watertight": false,
+      "surface_area": 1.9916,
+      "bbox_x": 1.0008,
+      "bbox_y": 0.704,
+      "bbox_z": 0.3846,
+      "min_axis_dim": 0.3846,
+      "file_size_mb": 1.832,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.2232,
+      "psnr": 5.73,
+      "lpips": 0.7271,
+      "clip": 0.5923
+    }
+  },
+  {
+    "obj_id": "05_bomb_disposal_robot",
+    "condition": "trellis_sam3",
+    "engine": "trellis",
+    "use_sam3": true,
+    "task_id": "7922819abebb",
+    "status": "completed",
+    "elapsed_s": 10.1,
+    "generation_time_s": 9.9,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/05_bomb_disposal_robot/trellis_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 18309,
+      "faces": 21754,
+      "watertight": false,
+      "surface_area": 2.4704,
+      "bbox_x": 0.8782,
+      "bbox_y": 0.9737,
+      "bbox_z": 0.5067,
+      "min_axis_dim": 0.5067,
+      "file_size_mb": 1.807,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.1362,
+      "psnr": 5.15,
+      "lpips": 0.7315,
+      "clip": 0.5952
+    }
+  },
+  {
+    "obj_id": "06_sbs_double_decker_bus",
+    "condition": "trellis_sam3",
+    "engine": "trellis",
+    "use_sam3": true,
+    "task_id": "27235702ccdd",
+    "status": "completed",
+    "elapsed_s": 15.1,
+    "generation_time_s": 12.2,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/06_sbs_double_decker_bus/trellis_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 26291,
+      "faces": 33109,
+      "watertight": false,
+      "surface_area": 4.4015,
+      "bbox_x": 0.4098,
+      "bbox_y": 0.5224,
+      "bbox_z": 0.9976,
+      "min_axis_dim": 0.4098,
+      "file_size_mb": 1.905,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.1956,
+      "psnr": 6.09,
+      "lpips": 0.8932,
+      "clip": 0.4631
+    }
+  },
+  {
+    "obj_id": "07_security_guard_house",
+    "condition": "trellis_sam3",
+    "engine": "trellis",
+    "use_sam3": true,
+    "task_id": "d3916e8c3d15",
+    "status": "completed",
+    "elapsed_s": 20.0,
+    "generation_time_s": 15.3,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/07_security_guard_house/trellis_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 20018,
+      "faces": 30284,
+      "watertight": false,
+      "surface_area": 4.2061,
+      "bbox_x": 0.7584,
+      "bbox_y": 1.0016,
+      "bbox_z": 0.7766,
+      "min_axis_dim": 0.7584,
+      "file_size_mb": 1.792,
+      "degenerate_faces": 2
+    },
+    "image_metrics": {
+      "ssim": 0.2786,
+      "psnr": 10.5,
+      "lpips": 0.766,
+      "clip": 0.47
+    }
+  },
+  {
+    "obj_id": "08_police_patrol_car",
+    "condition": "trellis_sam3",
+    "engine": "trellis",
+    "use_sam3": true,
+    "task_id": "24a10d57e940",
+    "status": "completed",
+    "elapsed_s": 10.0,
+    "generation_time_s": 8.5,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/08_police_patrol_car/trellis_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 6606,
+      "faces": 9777,
+      "watertight": false,
+      "surface_area": 1.421,
+      "bbox_x": 0.4351,
+      "bbox_y": 0.3382,
+      "bbox_z": 0.9996,
+      "min_axis_dim": 0.3382,
+      "file_size_mb": 1.357,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.2335,
+      "psnr": 4.99,
+      "lpips": 0.8223,
+      "clip": 0.5636
+    }
+  },
+  {
+    "obj_id": "09_himars_launcher",
+    "condition": "trellis_sam3",
+    "engine": "trellis",
+    "use_sam3": true,
+    "task_id": "fefed481d5cd",
+    "status": "completed",
+    "elapsed_s": 15.0,
+    "generation_time_s": 10.5,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/09_himars_launcher/trellis_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 16589,
+      "faces": 18325,
+      "watertight": false,
+      "surface_area": 2.4232,
+      "bbox_x": 0.999,
+      "bbox_y": 0.4929,
+      "bbox_z": 0.4468,
+      "min_axis_dim": 0.4468,
+      "file_size_mb": 1.656,
+      "degenerate_faces": 2
+    },
+    "image_metrics": {
+      "ssim": 0.3255,
+      "psnr": 5.35,
+      "lpips": 0.723,
+      "clip": 0.5715
+    }
+  },
+  {
+    "obj_id": "10_coast_guard_boat",
+    "condition": "trellis_sam3",
+    "engine": "trellis",
+    "use_sam3": true,
+    "task_id": "93629d4ae688",
+    "status": "completed",
+    "elapsed_s": 10.0,
+    "generation_time_s": 8.2,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/10_coast_guard_boat/trellis_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 11044,
+      "faces": 11505,
+      "watertight": false,
+      "surface_area": 1.2178,
+      "bbox_x": 0.9959,
+      "bbox_y": 0.4252,
+      "bbox_z": 0.3616,
+      "min_axis_dim": 0.3616,
+      "file_size_mb": 1.828,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.1841,
+      "psnr": 5.45,
+      "lpips": 0.8644,
+      "clip": 0.49
+    }
+  },
+  {
+    "obj_id": "11_apics_red_car_booth",
+    "condition": "trellis_sam3",
+    "engine": "trellis",
+    "use_sam3": true,
+    "task_id": "0024c4d55afb",
+    "status": "completed",
+    "elapsed_s": 10.1,
+    "generation_time_s": 9.5,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/11_apics_red_car_booth/trellis_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 15199,
+      "faces": 20800,
+      "watertight": false,
+      "surface_area": 2.685,
+      "bbox_x": 0.5666,
+      "bbox_y": 0.4015,
+      "bbox_z": 0.9995,
+      "min_axis_dim": 0.4015,
+      "file_size_mb": 1.753,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.2342,
+      "psnr": 5.8,
+      "lpips": 0.7807,
+      "clip": 0.3876
+    }
+  },
+  {
+    "obj_id": "12_apics_boom_gate",
+    "condition": "trellis_sam3",
+    "engine": "trellis",
+    "use_sam3": true,
+    "task_id": "e5832cb6f493",
+    "status": "completed",
+    "elapsed_s": 10.0,
+    "generation_time_s": 6.9,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/12_apics_boom_gate/trellis_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 4212,
+      "faces": 6824,
+      "watertight": false,
+      "surface_area": 0.9843,
+      "bbox_x": 1.0007,
+      "bbox_y": 0.5016,
+      "bbox_z": 0.4835,
+      "min_axis_dim": 0.4835,
+      "file_size_mb": 1.263,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.2567,
+      "psnr": 6.35,
+      "lpips": 0.8014,
+      "clip": 0.5094
+    }
+  },
+  {
+    "obj_id": "13_apics_booth_barrier",
+    "condition": "trellis_sam3",
+    "engine": "trellis",
+    "use_sam3": true,
+    "task_id": "616b42363a1c",
+    "status": "completed",
+    "elapsed_s": 15.0,
+    "generation_time_s": 12.9,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/13_apics_booth_barrier/trellis_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 21179,
+      "faces": 31898,
+      "watertight": false,
+      "surface_area": 4.603,
+      "bbox_x": 1.0009,
+      "bbox_y": 0.5533,
+      "bbox_z": 0.6312,
+      "min_axis_dim": 0.5533,
+      "file_size_mb": 1.796,
+      "degenerate_faces": 2
+    },
+    "image_metrics": {
+      "ssim": 0.1816,
+      "psnr": 6.71,
+      "lpips": 0.8809,
+      "clip": 0.506
+    }
+  },
+  {
+    "obj_id": "14_apics_kiosks_passport",
+    "condition": "trellis_sam3",
+    "engine": "trellis",
+    "use_sam3": true,
+    "task_id": "0a05554c6326",
+    "status": "completed",
+    "elapsed_s": 15.0,
+    "generation_time_s": 10.3,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/14_apics_kiosks_passport/trellis_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 9621,
+      "faces": 13496,
+      "watertight": false,
+      "surface_area": 2.1514,
+      "bbox_x": 0.4048,
+      "bbox_y": 1.0012,
+      "bbox_z": 0.5397,
+      "min_axis_dim": 0.4048,
+      "file_size_mb": 1.38,
+      "degenerate_faces": 2
+    },
+    "image_metrics": {
+      "ssim": 0.3519,
+      "psnr": 8.03,
+      "lpips": 0.7584,
+      "clip": 0.5598
+    }
+  },
+  {
+    "obj_id": "01_scdf_ambulance",
+    "condition": "hunyuan_sam3",
+    "engine": "hunyuan",
+    "use_sam3": true,
+    "task_id": "b62985699c20",
+    "status": "completed",
+    "elapsed_s": 100.1,
+    "generation_time_s": 83.2,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/01_scdf_ambulance/hunyuan_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 30588,
+      "faces": 40000,
+      "watertight": false,
+      "surface_area": 7.4196,
+      "bbox_x": 0.813,
+      "bbox_y": 0.9102,
+      "bbox_z": 1.9785,
+      "min_axis_dim": 0.813,
+      "file_size_mb": 5.666,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.2933,
+      "psnr": 6.44,
+      "lpips": 0.7092,
+      "clip": 0.4419
+    }
+  },
+  {
+    "obj_id": "02_scdf_fire_engine",
+    "condition": "hunyuan_sam3",
+    "engine": "hunyuan",
+    "use_sam3": true,
+    "task_id": "501fd41ef665",
+    "status": "completed",
+    "elapsed_s": 77.5,
+    "generation_time_s": 75.4,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/02_scdf_fire_engine/hunyuan_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 29510,
+      "faces": 40000,
+      "watertight": false,
+      "surface_area": 6.391,
+      "bbox_x": 0.6818,
+      "bbox_y": 0.8185,
+      "bbox_z": 1.9872,
+      "min_axis_dim": 0.6818,
+      "file_size_mb": 7.809,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.2322,
+      "psnr": 6.1,
+      "lpips": 0.7641,
+      "clip": 0.4811
+    }
+  },
+  {
+    "obj_id": "03_terrex_apc",
+    "condition": "hunyuan_sam3",
+    "engine": "hunyuan",
+    "use_sam3": true,
+    "task_id": "ba116bfcc53e",
+    "status": "completed",
+    "elapsed_s": 85.2,
+    "generation_time_s": 81.1,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/03_terrex_apc/hunyuan_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 30785,
+      "faces": 40000,
+      "watertight": false,
+      "surface_area": 4.5824,
+      "bbox_x": 0.7678,
+      "bbox_y": 0.476,
+      "bbox_z": 1.9142,
+      "min_axis_dim": 0.476,
+      "file_size_mb": 6.093,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.2442,
+      "psnr": 5.39,
+      "lpips": 0.7838,
+      "clip": 0.5367
+    }
+  },
+  {
+    "obj_id": "04_police_motorcycle",
+    "condition": "hunyuan_sam3",
+    "engine": "hunyuan",
+    "use_sam3": true,
+    "task_id": "249d5d2ac092",
+    "status": "completed",
+    "elapsed_s": 60.0,
+    "generation_time_s": 55.9,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/04_police_motorcycle/hunyuan_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 20445,
+      "faces": 40000,
+      "watertight": false,
+      "surface_area": 5.661,
+      "bbox_x": 0.0122,
+      "bbox_y": 1.4217,
+      "bbox_z": 1.9882,
+      "min_axis_dim": 0.0122,
+      "file_size_mb": 4.331,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.3071,
+      "psnr": 3.68,
+      "lpips": 0.9012,
+      "clip": 0.5413
+    }
+  },
+  {
+    "obj_id": "05_bomb_disposal_robot",
+    "condition": "hunyuan_sam3",
+    "engine": "hunyuan",
+    "use_sam3": true,
+    "task_id": "59522141a1b9",
+    "status": "completed",
+    "elapsed_s": 80.0,
+    "generation_time_s": 79.3,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/05_bomb_disposal_robot/hunyuan_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 21365,
+      "faces": 40000,
+      "watertight": false,
+      "surface_area": 23.8367,
+      "bbox_x": 0.9937,
+      "bbox_y": 1.9853,
+      "bbox_z": 1.9855,
+      "min_axis_dim": 0.9937,
+      "file_size_mb": 3.801,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.2187,
+      "psnr": 4.96,
+      "lpips": 0.8254,
+      "clip": 0.5903
+    }
+  },
+  {
+    "obj_id": "06_sbs_double_decker_bus",
+    "condition": "hunyuan_sam3",
+    "engine": "hunyuan",
+    "use_sam3": true,
+    "task_id": "f9f5e7eb254d",
+    "status": "completed",
+    "elapsed_s": 77.9,
+    "generation_time_s": 77.0,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/06_sbs_double_decker_bus/hunyuan_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 24771,
+      "faces": 40000,
+      "watertight": false,
+      "surface_area": 5.4028,
+      "bbox_x": 0.4506,
+      "bbox_y": 0.7656,
+      "bbox_z": 1.9881,
+      "min_axis_dim": 0.4506,
+      "file_size_mb": 4.919,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.2258,
+      "psnr": 5.03,
+      "lpips": 0.7524,
+      "clip": 0.5295
+    }
+  },
+  {
+    "obj_id": "07_security_guard_house",
+    "condition": "hunyuan_sam3",
+    "engine": "hunyuan",
+    "use_sam3": true,
+    "task_id": "dc6814dee171",
+    "status": "completed",
+    "elapsed_s": 70.3,
+    "generation_time_s": 67.7,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/07_security_guard_house/hunyuan_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 25687,
+      "faces": 40000,
+      "watertight": false,
+      "surface_area": 14.6497,
+      "bbox_x": 1.5024,
+      "bbox_y": 1.9423,
+      "bbox_z": 1.3169,
+      "min_axis_dim": 1.3169,
+      "file_size_mb": 4.834,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.3285,
+      "psnr": 9.51,
+      "lpips": 0.7627,
+      "clip": 0.583
+    }
+  },
+  {
+    "obj_id": "08_police_patrol_car",
+    "condition": "hunyuan_sam3",
+    "engine": "hunyuan",
+    "use_sam3": true,
+    "task_id": "23bcaf933c1d",
+    "status": "completed",
+    "elapsed_s": 70.8,
+    "generation_time_s": 67.3,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/08_police_patrol_car/hunyuan_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 24932,
+      "faces": 40000,
+      "watertight": false,
+      "surface_area": 4.7569,
+      "bbox_x": 0.8383,
+      "bbox_y": 0.6199,
+      "bbox_z": 1.9878,
+      "min_axis_dim": 0.6199,
+      "file_size_mb": 6.059,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.2204,
+      "psnr": 4.63,
+      "lpips": 0.8134,
+      "clip": 0.5233
+    }
+  },
+  {
+    "obj_id": "09_himars_launcher",
+    "condition": "hunyuan_sam3",
+    "engine": "hunyuan",
+    "use_sam3": true,
+    "task_id": "ae5d63cece8c",
+    "status": "completed",
+    "elapsed_s": 95.4,
+    "generation_time_s": 90.8,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/09_himars_launcher/hunyuan_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 34965,
+      "faces": 40000,
+      "watertight": false,
+      "surface_area": 10.7146,
+      "bbox_x": 0.7101,
+      "bbox_y": 0.8565,
+      "bbox_z": 1.9858,
+      "min_axis_dim": 0.7101,
+      "file_size_mb": 5.941,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.4247,
+      "psnr": 7.66,
+      "lpips": 0.6669,
+      "clip": 0.494
+    }
+  },
+  {
+    "obj_id": "10_coast_guard_boat",
+    "condition": "hunyuan_sam3",
+    "engine": "hunyuan",
+    "use_sam3": true,
+    "task_id": "f2af5dbf24ba",
+    "status": "completed",
+    "elapsed_s": 86.7,
+    "generation_time_s": 83.5,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/10_coast_guard_boat/hunyuan_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 31015,
+      "faces": 40000,
+      "watertight": false,
+      "surface_area": 4.2066,
+      "bbox_x": 1.9861,
+      "bbox_y": 0.7795,
+      "bbox_z": 0.5655,
+      "min_axis_dim": 0.5655,
+      "file_size_mb": 5.708,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.1939,
+      "psnr": 5.32,
+      "lpips": 0.8754,
+      "clip": 0.4967
+    }
+  },
+  {
+    "obj_id": "11_apics_red_car_booth",
+    "condition": "hunyuan_sam3",
+    "engine": "hunyuan",
+    "use_sam3": true,
+    "task_id": "a500b5790abf",
+    "status": "completed",
+    "elapsed_s": 71.5,
+    "generation_time_s": 67.3,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/11_apics_red_car_booth/hunyuan_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 22030,
+      "faces": 40000,
+      "watertight": false,
+      "surface_area": 2.4772,
+      "bbox_x": 1.9865,
+      "bbox_y": 0.7059,
+      "bbox_z": 0.1893,
+      "min_axis_dim": 0.1893,
+      "file_size_mb": 4.056,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.2944,
+      "psnr": 5.78,
+      "lpips": 0.8425,
+      "clip": 0.3897
+    }
+  },
+  {
+    "obj_id": "12_apics_boom_gate",
+    "condition": "hunyuan_sam3",
+    "engine": "hunyuan",
+    "use_sam3": true,
+    "task_id": "4fe49119dd14",
+    "status": "completed",
+    "elapsed_s": 80.0,
+    "generation_time_s": 75.5,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/12_apics_boom_gate/hunyuan_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 5366,
+      "faces": 7564,
+      "watertight": false,
+      "surface_area": 0.1749,
+      "bbox_x": 0.3173,
+      "bbox_y": 0.3112,
+      "bbox_z": 1.9859,
+      "min_axis_dim": 0.3112,
+      "file_size_mb": 3.033,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.2877,
+      "psnr": 5.82,
+      "lpips": 0.8685,
+      "clip": 0.4364
+    }
+  },
+  {
+    "obj_id": "13_apics_booth_barrier",
+    "condition": "hunyuan_sam3",
+    "engine": "hunyuan",
+    "use_sam3": true,
+    "task_id": "f932464487e6",
+    "status": "completed",
+    "elapsed_s": 82.9,
+    "generation_time_s": 80.6,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/13_apics_booth_barrier/hunyuan_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 27270,
+      "faces": 40000,
+      "watertight": false,
+      "surface_area": 9.2105,
+      "bbox_x": 1.1039,
+      "bbox_y": 0.6898,
+      "bbox_z": 1.9876,
+      "min_axis_dim": 0.6898,
+      "file_size_mb": 5.554,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.245,
+      "psnr": 8.48,
+      "lpips": 0.7037,
+      "clip": 0.6847
+    }
+  },
+  {
+    "obj_id": "14_apics_kiosks_passport",
+    "condition": "hunyuan_sam3",
+    "engine": "hunyuan",
+    "use_sam3": true,
+    "task_id": "0efe02c40a88",
+    "status": "completed",
+    "elapsed_s": 70.1,
+    "generation_time_s": 65.5,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/14_apics_kiosks_passport/hunyuan_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 24589,
+      "faces": 40000,
+      "watertight": false,
+      "surface_area": 10.3346,
+      "bbox_x": 1.874,
+      "bbox_y": 1.4726,
+      "bbox_z": 1.9819,
+      "min_axis_dim": 1.4726,
+      "file_size_mb": 4.637,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.4999,
+      "psnr": 9.17,
+      "lpips": 0.7713,
+      "clip": 0.6087
+    }
+  },
+  {
+    "obj_id": "01_scdf_ambulance",
+    "condition": "sam3d_sam3",
+    "engine": "sam3d",
+    "use_sam3": true,
+    "task_id": "edd8a5519b3a",
+    "status": "completed",
+    "elapsed_s": 30.0,
+    "generation_time_s": 17.9,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/01_scdf_ambulance/sam3d_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 9982,
+      "faces": 14090,
+      "watertight": false,
+      "surface_area": 1.8496,
+      "bbox_x": 0.4767,
+      "bbox_y": 0.4876,
+      "bbox_z": 0.999,
+      "min_axis_dim": 0.4767,
+      "file_size_mb": 1.549,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.2822,
+      "psnr": 6.76,
+      "lpips": 0.7308,
+      "clip": 0.4674
+    }
+  },
+  {
+    "obj_id": "02_scdf_fire_engine",
+    "condition": "sam3d_sam3",
+    "engine": "sam3d",
+    "use_sam3": true,
+    "task_id": "485109f769af",
+    "status": "completed",
+    "elapsed_s": 25.1,
+    "generation_time_s": 20.1,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/02_scdf_fire_engine/sam3d_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 15413,
+      "faces": 17971,
+      "watertight": false,
+      "surface_area": 2.3483,
+      "bbox_x": 0.9991,
+      "bbox_y": 0.4548,
+      "bbox_z": 0.3948,
+      "min_axis_dim": 0.3948,
+      "file_size_mb": 1.816,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.2368,
+      "psnr": 6.88,
+      "lpips": 0.7435,
+      "clip": 0.5448
+    }
+  },
+  {
+    "obj_id": "03_terrex_apc",
+    "condition": "sam3d_sam3",
+    "engine": "sam3d",
+    "use_sam3": true,
+    "task_id": "9d411ed576a1",
+    "status": "completed",
+    "elapsed_s": 25.0,
+    "generation_time_s": 20.5,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/03_terrex_apc/sam3d_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 14321,
+      "faces": 17376,
+      "watertight": false,
+      "surface_area": 2.4262,
+      "bbox_x": 0.9993,
+      "bbox_y": 0.4523,
+      "bbox_z": 0.5421,
+      "min_axis_dim": 0.4523,
+      "file_size_mb": 1.59,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.2403,
+      "psnr": 8.15,
+      "lpips": 0.7354,
+      "clip": 0.531
+    }
+  },
+  {
+    "obj_id": "04_police_motorcycle",
+    "condition": "sam3d_sam3",
+    "engine": "sam3d",
+    "use_sam3": true,
+    "task_id": "edd2f43e3d0e",
+    "status": "completed",
+    "elapsed_s": 20.0,
+    "generation_time_s": 18.9,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/04_police_motorcycle/sam3d_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 16609,
+      "faces": 19960,
+      "watertight": false,
+      "surface_area": 2.3285,
+      "bbox_x": 0.3918,
+      "bbox_y": 0.5893,
+      "bbox_z": 0.9993,
+      "min_axis_dim": 0.3918,
+      "file_size_mb": 1.767,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.2575,
+      "psnr": 4.62,
+      "lpips": 0.7716,
+      "clip": 0.5819
+    }
+  },
+  {
+    "obj_id": "05_bomb_disposal_robot",
+    "condition": "sam3d_sam3",
+    "engine": "sam3d",
+    "use_sam3": true,
+    "task_id": "914ffb1c504c",
+    "status": "completed",
+    "elapsed_s": 20.2,
+    "generation_time_s": 19.8,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/05_bomb_disposal_robot/sam3d_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 18387,
+      "faces": 20036,
+      "watertight": false,
+      "surface_area": 2.7056,
+      "bbox_x": 0.9963,
+      "bbox_y": 0.9379,
+      "bbox_z": 0.4763,
+      "min_axis_dim": 0.4763,
+      "file_size_mb": 1.677,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.1816,
+      "psnr": 5.01,
+      "lpips": 0.7432,
+      "clip": 0.6108
+    }
+  },
+  {
+    "obj_id": "06_sbs_double_decker_bus",
+    "condition": "sam3d_sam3",
+    "engine": "sam3d",
+    "use_sam3": true,
+    "task_id": "6211040cef70",
+    "status": "completed",
+    "elapsed_s": 20.0,
+    "generation_time_s": 18.3,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/06_sbs_double_decker_bus/sam3d_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 6037,
+      "faces": 8438,
+      "watertight": false,
+      "surface_area": 1.6621,
+      "bbox_x": 0.351,
+      "bbox_y": 0.4818,
+      "bbox_z": 0.9934,
+      "min_axis_dim": 0.351,
+      "file_size_mb": 1.412,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.1741,
+      "psnr": 5.85,
+      "lpips": 0.8442,
+      "clip": 0.5053
+    }
+  },
+  {
+    "obj_id": "07_security_guard_house",
+    "condition": "sam3d_sam3",
+    "engine": "sam3d",
+    "use_sam3": true,
+    "task_id": "eba0daddd1e1",
+    "status": "completed",
+    "elapsed_s": 30.0,
+    "generation_time_s": 27.0,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/07_security_guard_house/sam3d_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 36823,
+      "faces": 60790,
+      "watertight": false,
+      "surface_area": 8.7422,
+      "bbox_x": 0.787,
+      "bbox_y": 1.0012,
+      "bbox_z": 0.7882,
+      "min_axis_dim": 0.787,
+      "file_size_mb": 2.266,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.2543,
+      "psnr": 8.33,
+      "lpips": 0.8588,
+      "clip": 0.4583
+    }
+  },
+  {
+    "obj_id": "08_police_patrol_car",
+    "condition": "sam3d_sam3",
+    "engine": "sam3d",
+    "use_sam3": true,
+    "task_id": "1e9f904f94ce",
+    "status": "completed",
+    "elapsed_s": 20.0,
+    "generation_time_s": 17.5,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/08_police_patrol_car/sam3d_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 7597,
+      "faces": 11313,
+      "watertight": false,
+      "surface_area": 1.6207,
+      "bbox_x": 0.5112,
+      "bbox_y": 0.3877,
+      "bbox_z": 1.0,
+      "min_axis_dim": 0.3877,
+      "file_size_mb": 1.434,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.2382,
+      "psnr": 6.0,
+      "lpips": 0.7883,
+      "clip": 0.4499
+    }
+  },
+  {
+    "obj_id": "09_himars_launcher",
+    "condition": "sam3d_sam3",
+    "engine": "sam3d",
+    "use_sam3": true,
+    "task_id": "9d86aa44e08e",
+    "status": "completed",
+    "elapsed_s": 25.0,
+    "generation_time_s": 20.5,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/09_himars_launcher/sam3d_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 16923,
+      "faces": 20936,
+      "watertight": false,
+      "surface_area": 2.8187,
+      "bbox_x": 0.5169,
+      "bbox_y": 0.4756,
+      "bbox_z": 0.9966,
+      "min_axis_dim": 0.4756,
+      "file_size_mb": 1.65,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.2633,
+      "psnr": 6.31,
+      "lpips": 0.7447,
+      "clip": 0.5658
+    }
+  },
+  {
+    "obj_id": "10_coast_guard_boat",
+    "condition": "sam3d_sam3",
+    "engine": "sam3d",
+    "use_sam3": true,
+    "task_id": "6353b863dd7c",
+    "status": "completed",
+    "elapsed_s": 20.0,
+    "generation_time_s": 16.9,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/10_coast_guard_boat/sam3d_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 8258,
+      "faces": 9340,
+      "watertight": false,
+      "surface_area": 1.0418,
+      "bbox_x": 0.3263,
+      "bbox_y": 0.412,
+      "bbox_z": 0.9988,
+      "min_axis_dim": 0.3263,
+      "file_size_mb": 1.713,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.2016,
+      "psnr": 4.74,
+      "lpips": 0.8938,
+      "clip": 0.4887
+    }
+  },
+  {
+    "obj_id": "11_apics_red_car_booth",
+    "condition": "sam3d_sam3",
+    "engine": "sam3d",
+    "use_sam3": true,
+    "task_id": "583f11acae6c",
+    "status": "completed",
+    "elapsed_s": 20.0,
+    "generation_time_s": 17.1,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/11_apics_red_car_booth/sam3d_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 7670,
+      "faces": 11030,
+      "watertight": false,
+      "surface_area": 1.5268,
+      "bbox_x": 0.5046,
+      "bbox_y": 0.3407,
+      "bbox_z": 0.9991,
+      "min_axis_dim": 0.3407,
+      "file_size_mb": 1.446,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.235,
+      "psnr": 5.11,
+      "lpips": 0.8503,
+      "clip": 0.4298
+    }
+  },
+  {
+    "obj_id": "12_apics_boom_gate",
+    "condition": "sam3d_sam3",
+    "engine": "sam3d",
+    "use_sam3": true,
+    "task_id": "5ed0473dc30e",
+    "status": "completed",
+    "elapsed_s": 20.0,
+    "generation_time_s": 15.1,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/12_apics_boom_gate/sam3d_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 1558,
+      "faces": 2560,
+      "watertight": false,
+      "surface_area": 0.3255,
+      "bbox_x": 0.1202,
+      "bbox_y": 0.5068,
+      "bbox_z": 0.9935,
+      "min_axis_dim": 0.1202,
+      "file_size_mb": 1.422,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.2951,
+      "psnr": 6.0,
+      "lpips": 0.8741,
+      "clip": 0.4808
+    }
+  },
+  {
+    "obj_id": "13_apics_booth_barrier",
+    "condition": "sam3d_sam3",
+    "engine": "sam3d",
+    "use_sam3": true,
+    "task_id": "9c4c6e958c9b",
+    "status": "completed",
+    "elapsed_s": 25.3,
+    "generation_time_s": 24.4,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/13_apics_booth_barrier/sam3d_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 9374,
+      "faces": 15862,
+      "watertight": false,
+      "surface_area": 3.9192,
+      "bbox_x": 0.9142,
+      "bbox_y": 0.6182,
+      "bbox_z": 0.9992,
+      "min_axis_dim": 0.6182,
+      "file_size_mb": 1.361,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.1861,
+      "psnr": 5.05,
+      "lpips": 0.8371,
+      "clip": 0.6391
+    }
+  },
+  {
+    "obj_id": "14_apics_kiosks_passport",
+    "condition": "sam3d_sam3",
+    "engine": "sam3d",
+    "use_sam3": true,
+    "task_id": "a538dd01a378",
+    "status": "completed",
+    "elapsed_s": 25.0,
+    "generation_time_s": 21.6,
+    "error": null,
+    "output": "/home/cj/HTX-3D/evaluation/benchmark_v2/outputs/14_apics_kiosks_passport/sam3d_sam3/model.glb",
+    "mesh_metrics": {
+      "vertices": 6207,
+      "faces": 10213,
+      "watertight": false,
+      "surface_area": 2.607,
+      "bbox_x": 0.4737,
+      "bbox_y": 1.0005,
+      "bbox_z": 0.5412,
+      "min_axis_dim": 0.4737,
+      "file_size_mb": 1.215,
+      "degenerate_faces": 0
+    },
+    "image_metrics": {
+      "ssim": 0.4815,
+      "psnr": 10.26,
+      "lpips": 0.7484,
+      "clip": 0.6743
+    }
+  }
+]

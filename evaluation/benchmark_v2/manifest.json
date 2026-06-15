@@ -1,0 +1,139 @@
+{
+  "version": "1.0",
+  "description": "5-condition x 14-object benchmark for 2nd term final report",
+  "conditions": [
+    {"key": "trellis_rembg",  "engine": "trellis",  "use_sam3": false},
+    {"key": "trellis_sam3",   "engine": "trellis",  "use_sam3": true},
+    {"key": "hunyuan_rembg",  "engine": "hunyuan",  "use_sam3": false},
+    {"key": "hunyuan_sam3",   "engine": "hunyuan",  "use_sam3": true},
+    {"key": "sam3d_sam3",     "engine": "sam3d",    "use_sam3": true}
+  ],
+  "objects": [
+    {
+      "id": "01_scdf_ambulance",
+      "image": "/home/cj/HTX-3D_samples/SCDF 7th-gen Ambulance.jpg",
+      "category": "emergency_vehicle",
+      "target": "ambulance",
+      "prompt": {"mode": "text", "text": "ambulance"},
+      "mask_index": 0,
+      "notes": "Clean reference. Text prompt should suffice."
+    },
+    {
+      "id": "02_scdf_fire_engine",
+      "image": "/home/cj/HTX-3D_samples/singapore_scdf_fire_engine_scania_321.png",
+      "category": "emergency_vehicle",
+      "target": "fire_truck",
+      "prompt": {"mode": "text", "text": "fire truck"},
+      "mask_index": 0,
+      "notes": "Clean reference."
+    },
+    {
+      "id": "03_terrex_apc",
+      "image": "/home/cj/HTX-3D_samples/singapore_army_terrex_apc_8x8.png",
+      "category": "tactical_vehicle",
+      "target": "armored_vehicle",
+      "prompt": {"mode": "text", "text": "armored vehicle"},
+      "mask_index": 0,
+      "notes": "Switched from _02 (had two vehicles, SAM3 picked the half-visible one) to single-vehicle 8x8 shot."
+    },
+    {
+      "id": "04_police_motorcycle",
+      "image": "/home/cj/HTX-3D_samples/singapore_police_yamaha_motorcycle_white.png",
+      "category": "tactical_vehicle",
+      "target": "motorcycle",
+      "prompt": {"mode": "text", "text": "motorcycle"},
+      "mask_index": 0,
+      "notes": "Thin-geometry stress test (spokes, frame)."
+    },
+    {
+      "id": "05_bomb_disposal_robot",
+      "image": "/home/cj/HTX-3D_samples/singapore_eod_bomb_disposal_robot.png",
+      "category": "tactical_equipment",
+      "target": "robot",
+      "prompt": {"mode": "text", "text": "robot"},
+      "mask_index": 0,
+      "notes": "Articulated tracked unit. Verify SAM3 grabs the whole body + arm."
+    },
+    {
+      "id": "06_sbs_double_decker_bus",
+      "image": "/home/cj/HTX-3D_samples/singapore_sbs_double_decker_bus_97.png",
+      "category": "civilian_vehicle",
+      "target": "bus",
+      "prompt": {"mode": "text", "text": "bus"},
+      "mask_index": 0,
+      "notes": "Large flat-paneled vehicle."
+    },
+    {
+      "id": "07_security_guard_house",
+      "image": "/home/cj/HTX-3D_samples/singapore_portable_security_guard_house.png",
+      "category": "infrastructure",
+      "target": "guard_booth",
+      "prompt": {"mode": "text", "text": "guard house"},
+      "mask_index": 0,
+      "notes": "If 'guard house' fails, try 'booth' or 'small building'."
+    },
+    {
+      "id": "08_police_patrol_car",
+      "image": "/home/cj/HTX-3D_samples/singapore_police_patrol_car_toyota_corolla.png",
+      "category": "emergency_vehicle",
+      "target": "patrol_car",
+      "prompt": {"mode": "text", "text": "police car"},
+      "mask_index": 0,
+      "notes": "Verify roof light bar is included in mask."
+    },
+    {
+      "id": "09_himars_launcher",
+      "image": "/home/cj/HTX-3D_samples/singapore_army_himars_rocket_launcher_display.png",
+      "category": "tactical_vehicle",
+      "target": "rocket_launcher_vehicle",
+      "prompt": {"mode": "text", "text": "military truck"},
+      "mask_index": 0,
+      "notes": "Switched to display-angle shot (cleaner). If text still fails, fall back to UI with click on truck cabin + click on launcher arm."
+    },
+    {
+      "id": "10_coast_guard_boat",
+      "image": "/home/cj/HTX-3D_samples/singapore_police_coast_guard_boat_orange_kerki28.png",
+      "category": "maritime_vehicle",
+      "target": "boat",
+      "prompt": {"mode": "text", "text": "boat"},
+      "mask_index": 0,
+      "notes": "Replaced Lamborghini (irrelevant + SAM3 picked adjacent taxi) with SPF Coast Guard boat — adds maritime category, still tests glossy/reflective hull."
+    },
+    {
+      "id": "11_apics_red_car_booth",
+      "image": "/home/cj/HTX_ICA/apics_red_car_entering_booth.webp",
+      "category": "apics_scene",
+      "target": "car",
+      "prompt": {"mode": "text", "text": "car"},
+      "mask_index": 0,
+      "notes": "APICS multi-object scene. Target = car only (not booth)."
+    },
+    {
+      "id": "12_apics_boom_gate",
+      "image": "/home/cj/HTX_ICA/apics_booth_with_barrier.jpg",
+      "category": "apics_scene",
+      "target": "boom_gate",
+      "prompt": {"mode": "manual", "fallback_text": "boom gate"},
+      "mask_index": 0,
+      "notes": "SAME image as #13 — different target. Demonstrates operator selecting different objects from one photograph. 'boom gate' / 'barrier' are unlikely to work as text prompts; use UI with 1-2 positive points on the horizontal arm and 1 negative point on the booth."
+    },
+    {
+      "id": "13_apics_booth_barrier",
+      "image": "/home/cj/HTX_ICA/apics_booth_with_barrier.jpg",
+      "category": "apics_scene",
+      "target": "booth",
+      "prompt": {"mode": "text", "text": "booth"},
+      "mask_index": 0,
+      "notes": "APICS multi-object. Target = booth only. May need negative point on barrier if mask leaks."
+    },
+    {
+      "id": "14_apics_kiosks_passport",
+      "image": "/home/cj/HTX_ICA/apics_kiosks_passport_biometric.jpg",
+      "category": "apics_scene",
+      "target": "kiosk",
+      "prompt": {"mode": "text", "text": "kiosk"},
+      "mask_index": 0,
+      "notes": "Replaced kiosks_biometric_pair with passport_biometric variant per operator preference."
+    }
+  ]
+}

@@ -1,0 +1,126 @@
+{
+  "overall": {
+    "n": 70,
+    "longest_mape": 32.45219849536161,
+    "longest_median_pct": 25.992675015312244,
+    "middle_mape": 41.81677325338709,
+    "shortest_mape": 52.0345122231819,
+    "mean_iou": 0.5346726128985084,
+    "frac_within_20pct": 0.38571428571428573,
+    "frac_within_50pct": 0.8285714285714286
+  },
+  "high_gt_only": {
+    "n": 30,
+    "longest_mape": 24.60531131025633,
+    "longest_median_pct": 19.81548887024978,
+    "middle_mape": 28.333772228568268,
+    "shortest_mape": 45.471031556799886,
+    "mean_iou": 0.5561992963532002,
+    "frac_within_20pct": 0.5,
+    "frac_within_50pct": 0.9
+  },
+  "per_pipeline": {
+    "trellis_rembg": {
+      "n": 14,
+      "longest_mape": 26.747231051136374,
+      "longest_median_pct": 24.00900479543982,
+      "middle_mape": 55.491933055736425,
+      "shortest_mape": 56.985227924789534,
+      "mean_iou": 0.5443285228636592,
+      "frac_within_20pct": 0.42857142857142855,
+      "frac_within_50pct": 0.8571428571428571
+    },
+    "trellis_sam3": {
+      "n": 14,
+      "longest_mape": 31.63958877321596,
+      "longest_median_pct": 25.73087804110309,
+      "middle_mape": 31.94992344414232,
+      "shortest_mape": 39.88291032190711,
+      "mean_iou": 0.54012210549781,
+      "frac_within_20pct": 0.35714285714285715,
+      "frac_within_50pct": 0.8571428571428571
+    },
+    "hunyuan_rembg": {
+      "n": 14,
+      "longest_mape": 40.640675608148705,
+      "longest_median_pct": 33.57548791399229,
+      "middle_mape": 44.256417512079004,
+      "shortest_mape": 61.3587241635493,
+      "mean_iou": 0.5197686772180349,
+      "frac_within_20pct": 0.2857142857142857,
+      "frac_within_50pct": 0.7142857142857143
+    },
+    "hunyuan_sam3": {
+      "n": 14,
+      "longest_mape": 32.80039602783433,
+      "longest_median_pct": 23.818802322156657,
+      "middle_mape": 37.67865720337932,
+      "shortest_mape": 52.53020606917558,
+      "mean_iou": 0.5185144081319053,
+      "frac_within_20pct": 0.35714285714285715,
+      "frac_within_50pct": 0.8571428571428571
+    },
+    "sam3d_sam3": {
+      "n": 14,
+      "longest_mape": 30.433101016472687,
+      "longest_median_pct": 18.941937432587977,
+      "middle_mape": 39.70693505159843,
+      "shortest_mape": 49.415492636488004,
+      "mean_iou": 0.5506293507811321,
+      "frac_within_20pct": 0.5,
+      "frac_within_50pct": 0.8571428571428571
+    }
+  },
+  "per_pipeline_high_gt": {
+    "trellis_rembg": {
+      "n": 6,
+      "longest_mape": 19.55183809974469,
+      "longest_median_pct": 18.152871486611467,
+      "middle_mape": 24.4629580817774,
+      "shortest_mape": 37.79625607369566,
+      "mean_iou": 0.5686805547715224,
+      "frac_within_20pct": 0.6666666666666666,
+      "frac_within_50pct": 1.0
+    },
+    "trellis_sam3": {
+      "n": 6,
+      "longest_mape": 21.386493770424366,
+      "longest_median_pct": 20.302419011674054,
+      "middle_mape": 16.3002276321554,
+      "shortest_mape": 26.19445908627007,
+      "mean_iou": 0.5601045747834035,
+      "frac_within_20pct": 0.5,
+      "frac_within_50pct": 1.0
+    },
+    "hunyuan_rembg": {
+      "n": 6,
+      "longest_mape": 35.09607284152497,
+      "longest_median_pct": 26.775096164212314,
+      "middle_mape": 24.864600094257963,
+      "shortest_mape": 54.33496353197563,
+      "mean_iou": 0.5420124387502385,
+      "frac_within_20pct": 0.3333333333333333,
+      "frac_within_50pct": 0.6666666666666666
+    },
+    "hunyuan_sam3": {
+      "n": 6,
+      "longest_mape": 27.612124843528346,
+      "longest_median_pct": 21.97948862346248,
+      "middle_mape": 32.20104875476928,
+      "shortest_mape": 51.43390341588225,
+      "mean_iou": 0.5416512575516986,
+      "frac_within_20pct": 0.3333333333333333,
+      "frac_within_50pct": 0.8333333333333334
+    },
+    "sam3d_sam3": {
+      "n": 6,
+      "longest_mape": 19.380026996059282,
+      "longest_median_pct": 16.87777490196346,
+      "middle_mape": 43.84002657988132,
+      "shortest_mape": 57.59557567617585,
+      "mean_iou": 0.5685476559091379,
+      "frac_within_20pct": 0.6666666666666666,
+      "frac_within_50pct": 1.0
+    }
+  }
+}

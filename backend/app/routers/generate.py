@@ -20,6 +20,7 @@ from ..models.schemas import (
     ExportRequest,
     GenerationSettings,
     ExportSettings,
+    RescaleRequest,
 )
 from ..dependencies import get_task_manager
 
@@ -393,6 +394,59 @@ async def cancel_task(task_id: str, task_manager=Depends(get_task_manager)):
     return {"task_id": task_id, "status": "cancelled", "message": "Task cancelled"}
 
 
+# -- Manual Rescale (override auto-scale) ------------------
+
+@router.post("/task/{task_id}/rescale")
+async def rescale_task(task_id: str, body: RescaleRequest,
+                       task_manager=Depends(get_task_manager)):
+    """Uniformly rescale a gallery item's GLB so its longest local-axis dim equals target.
+    Updates the gallery metadata to mark scale_source='manual' and bumps confidence to 'high'."""
+    entry = next((e for e in task_manager._gallery_index if e["task_id"] == task_id), None)
+    if not entry:
+        raise HTTPException(404, f"task {task_id} not in gallery")
+    glb_export = next((e for e in entry.get("exports", []) if e.get("format") == "glb"), None)
+    if not glb_export or not os.path.exists(glb_export["path"]):
+        raise HTTPException(400, f"task {task_id} has no GLB export on disk")
+
+    import trimesh
+    scene = trimesh.load(glb_export["path"], force="scene", process=False)
+    ext = scene.bounds[1] - scene.bounds[0]
+    current_longest = float(max(ext))
+    if current_longest <= 0:
+        raise HTTPException(500, "current GLB has zero extent")
+    scale = body.target_longest_m / current_longest
+
+    from ..services.auto_scale import bake_scale_into_glb
+    bake = bake_scale_into_glb(glb_export["path"], scale, glb_export["path"])
+
+    new_scaled = bake["scaled_extent_xyz_m"]
+    new_sorted = sorted(new_scaled, reverse=True)
+    prev_auto = entry.get("auto_scale") or {}
+    prev_factor = prev_auto.get("scale_factor") or 1.0
+    entry["auto_scale"] = {
+        **prev_auto,
+        "auto_scaled": True,
+        "scale_source": "manual",
+        "scale_factor": float(prev_factor * scale),
+        "dimensions_m": {
+            "xyz": new_scaled,
+            "longest_m": new_sorted[0],
+            "middle_m": new_sorted[1],
+            "shortest_m": new_sorted[2],
+        },
+        "confidence": "high",
+    }
+    glb_export["size_bytes"] = os.path.getsize(glb_export["path"])
+    task_manager._save_gallery_index()
+
+    # mirror onto the in-memory task result so /api/task/{id} reflects it too
+    task = task_manager.get_task(task_id)
+    if task and task.get("result"):
+        task["result"]["auto_scale"] = entry["auto_scale"]
+
+    return {"task_id": task_id, "auto_scale": entry["auto_scale"]}
+
+
 # -- Task Status -------------------------------------------
 
 @router.get("/task/{task_id}", response_model=GenerationResult)
@@ -423,4 +477,5 @@ async def get_task_status(task_id: str, task_manager=Depends(get_task_manager)):
         generation_time_seconds=result.get("generation_time_seconds"),
         error=task.get("error"),
         created_at=task.get("created_at"),
+        auto_scale=result.get("auto_scale"),
     )

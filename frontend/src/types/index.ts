@@ -163,6 +163,32 @@ export interface TaskResponse {
   message: string;
 }
 
+export interface AutoScaleDimensions {
+  xyz: [number, number, number];
+  longest_m: number;
+  middle_m: number;
+  shortest_m: number;
+}
+
+export interface AutoScaleViewAlignment {
+  method: string;
+  iou: number;
+  azim_deg: number;
+  elev_deg: number;
+}
+
+export interface AutoScaleMetadata {
+  auto_scaled: boolean;
+  confidence: 'high' | 'medium' | 'low' | null;
+  mask_source: 'alpha' | 'rembg' | 'fullframe' | null;
+  scale_source: 'unidepth_view_align' | 'manual' | null;
+  scale_factor: number | null;
+  dimensions_m: AutoScaleDimensions | null;
+  view_alignment: AutoScaleViewAlignment | null;
+  object_distance_m: number | null;
+  reason: string | null;
+}
+
 export interface GenerationResult {
   task_id: string;
   status: TaskStatus;
@@ -174,6 +200,7 @@ export interface GenerationResult {
   generation_time_seconds: number | null;
   error: string | null;
   created_at: string | null;
+  auto_scale: AutoScaleMetadata | null;
 }
 
 export interface ProgressUpdate {
@@ -194,6 +221,7 @@ export interface GalleryItem {
   generation_time_seconds: number | null;
   created_at: string;
   source_model?: string | null;
+  auto_scale?: AutoScaleMetadata | null;
 }
 
 export interface HealthStatus {

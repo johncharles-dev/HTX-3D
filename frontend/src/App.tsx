@@ -6,6 +6,7 @@ import ModelSelector from './components/ModelSelector';
 import ModelViewer from './components/ModelViewer';
 import ProgressBar from './components/ProgressBar';
 import ExportPanel from './components/ExportPanel';
+import AutoScalePanel from './components/AutoScalePanel';
 import SceneSettings from './components/SceneSettings';
 import Gallery from './components/Gallery';
 import SegmentationWorkspace from './components/SegmentationWorkspace';
@@ -88,6 +89,7 @@ export default function App() {
   const [viewerUrl, setViewerUrl] = useState<string | null>(null);
   const [viewerFormat, setViewerFormat] = useState<string>('glb');
   const [galleryExports, setGalleryExports] = useState<ExportFile[]>([]);
+  const [galleryAutoScale, setGalleryAutoScale] = useState<import('./types').AutoScaleMetadata | null>(null);
   const [editedGlbUrl, setEditedGlbUrl] = useState<string | null>(null);
   const [cleanupStatus, setCleanupStatus] = useState<string | null>(null);
   const [cleanupUndoUrl, setCleanupUndoUrl] = useState<string | null>(null);
@@ -358,6 +360,7 @@ export default function App() {
   // -- Gallery Preview -------------------------------------
   const handleGalleryPreview = (exports: ExportFile[], item?: GalleryItem) => {
     setGalleryExports(exports);
+    setGalleryAutoScale(item?.auto_scale ?? null);
     setModelResults([]);
     setActiveResultModel(null);
     setEditedGlbUrl(null);
@@ -1150,6 +1153,27 @@ export default function App() {
                   </div>
                 </>
               )}
+
+              <div className="border-t border-border" />
+              <AutoScalePanel
+                autoScale={activeResult?.auto_scale ?? galleryAutoScale}
+                taskId={activeResult?.task_id ?? sourceTaskId}
+                onRescaled={(newAuto) => {
+                  // Reload viewer to pick up the re-baked GLB (cache-bust via URL param)
+                  const glb = displayExports.find((e) => e.format === 'glb');
+                  if (glb) setViewerUrl(`${glb.url}?v=${Date.now()}`);
+                  // Mirror the new metadata back into local state
+                  if (activeResult) {
+                    setModelResults((prev) => prev.map((mr) =>
+                      mr.result?.task_id === activeResult.task_id
+                        ? { ...mr, result: { ...mr.result!, auto_scale: newAuto } }
+                        : mr,
+                    ));
+                  } else {
+                    setGalleryAutoScale(newAuto);
+                  }
+                }}
+              />
 
               <div className="border-t border-border" />
               <ExportPanel

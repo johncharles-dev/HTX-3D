@@ -51,3 +51,9 @@ backend/test_*.py
 backend/*.jpg
 sam3d_comparison/
 
+# Large reference / benchmark binaries (kept on disk, not in git)
+references/
+evaluation/benchmark_v2/data/
+evaluation/benchmark_v2/outputs/
+**/.ipynb_checkpoints/
+

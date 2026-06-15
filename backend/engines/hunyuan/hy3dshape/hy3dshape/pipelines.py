@@ -16,7 +16,7 @@ import copy
 import importlib
 import inspect
 import os
-from typing import List, Optional, Union
+from typing import List, Literal, Optional, Union
 
 import numpy as np
 import torch
@@ -789,6 +789,141 @@ class Hunyuan3DDiTFlowMatchingPipeline(Hunyuan3DDiTPipeline):
                 if callback is not None and i % callback_steps == 0:
                     step_idx = i // getattr(self.scheduler, "order", 1)
                     callback(step_idx, t, outputs)
+
+        return self._export(
+            latents,
+            output_type,
+            box_v, mc_level, num_chunks, octree_resolution, mc_algo,
+            enable_pbar=enable_pbar,
+        )
+
+    @torch.inference_mode()
+    def run_multi_image(
+        self,
+        images: List[Image.Image],
+        mode: Literal['stochastic', 'multidiffusion'] = 'stochastic',
+        num_inference_steps: int = 50,
+        sigmas: List[float] = None,
+        guidance_scale: float = 5.0,
+        generator=None,
+        box_v=1.01,
+        octree_resolution=384,
+        mc_level=0.0,
+        mc_algo=None,
+        num_chunks=8000,
+        output_type: Optional[str] = "trimesh",
+        enable_pbar=True,
+        **kwargs,
+    ) -> List[List[trimesh.Trimesh]]:
+        """Generate 3D from multiple images using stochastic or multidiffusion fusion.
+
+        Stochastic: cycles through image conditionings at each sampling step.
+        Multidiffusion: runs all conditionings at each step and averages predictions.
+        """
+        callback = kwargs.pop("callback", None)
+        callback_steps = kwargs.pop("callback_steps", None)
+
+        self.set_surface_extractor(mc_algo)
+
+        device = self.device
+        dtype = self.dtype
+        num_images = len(images)
+        do_classifier_free_guidance = guidance_scale >= 0 and not (
+            hasattr(self.model, 'guidance_embed') and
+            self.model.guidance_embed is True
+        )
+
+        # Encode each image separately
+        cond_list = []
+        for img in images:
+            cond_inputs = self.prepare_image(img, None)
+            image_tensor = cond_inputs.pop('image')
+            cond = self.encode_cond(
+                image=image_tensor,
+                additional_cond_inputs=cond_inputs,
+                do_classifier_free_guidance=do_classifier_free_guidance,
+                dual_guidance=False,
+            )
+            cond_list.append(cond)
+
+        batch_size = 1
+
+        # Prepare timesteps
+        sigmas = np.linspace(0, 1, num_inference_steps) if sigmas is None else sigmas
+        timesteps, num_inference_steps = retrieve_timesteps(
+            self.scheduler,
+            num_inference_steps,
+            device,
+            sigmas=sigmas,
+        )
+        latents = self.prepare_latents(batch_size, dtype, device, generator)
+
+        guidance = None
+        if hasattr(self.model, 'guidance_embed') and \
+            self.model.guidance_embed is True:
+            guidance = torch.tensor([guidance_scale] * batch_size, device=device, dtype=dtype)
+
+        # Build cycling indices for stochastic mode
+        if mode == 'stochastic':
+            if num_images > num_inference_steps:
+                import logging
+                logging.getLogger(__name__).warning(
+                    f"Number of conditioning images ({num_images}) > steps ({num_inference_steps}). "
+                    "Some images won't be used."
+                )
+            cond_indices = [i % num_images for i in range(num_inference_steps)]
+
+        with synchronize_timer('Diffusion Sampling (multi-image)'):
+            for step_i, t in enumerate(tqdm(timesteps, disable=not enable_pbar,
+                                            desc=f"Multi-image diffusion ({mode}):")):
+                timestep_val = t / self.scheduler.config.num_train_timesteps
+
+                if mode == 'stochastic':
+                    # Use one image's conditioning per step, cycling through
+                    cond = cond_list[cond_indices[step_i]]
+
+                    if do_classifier_free_guidance:
+                        latent_model_input = torch.cat([latents] * 2)
+                        ts = timestep_val.expand(latent_model_input.shape[0]).to(latents.dtype)
+                    else:
+                        latent_model_input = latents
+                        ts = timestep_val.expand(latent_model_input.shape[0]).to(latents.dtype)
+
+                    noise_pred = self.model(latent_model_input, ts, cond, guidance=guidance)
+
+                    if do_classifier_free_guidance:
+                        noise_pred_cond, noise_pred_uncond = noise_pred.chunk(2)
+                        noise_pred = noise_pred_uncond + guidance_scale * (
+                            noise_pred_cond - noise_pred_uncond
+                        )
+
+                elif mode == 'multidiffusion':
+                    # Run model for each image's conditioning, average predictions
+                    preds = []
+                    for cond in cond_list:
+                        if do_classifier_free_guidance:
+                            latent_model_input = torch.cat([latents] * 2)
+                            ts = timestep_val.expand(latent_model_input.shape[0]).to(latents.dtype)
+                        else:
+                            latent_model_input = latents
+                            ts = timestep_val.expand(latent_model_input.shape[0]).to(latents.dtype)
+
+                        pred = self.model(latent_model_input, ts, cond, guidance=guidance)
+
+                        if do_classifier_free_guidance:
+                            pred_cond, pred_uncond = pred.chunk(2)
+                            pred = pred_uncond + guidance_scale * (pred_cond - pred_uncond)
+
+                        preds.append(pred)
+
+                    noise_pred = sum(preds) / len(preds)
+
+                # Step the scheduler
+                outputs = self.scheduler.step(noise_pred, t, latents)
+                latents = outputs.prev_sample
+
+                if callback is not None and callback_steps and step_i % callback_steps == 0:
+                    callback(step_i, t, outputs)
 
         return self._export(
             latents,

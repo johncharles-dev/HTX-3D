@@ -1,0 +1,15 @@
+object_id,input_filename,display_name,longest_m,middle_m,shortest_m,gt_confidence,source
+01_scdf_ambulance,01_scdf_ambulance.jpg,SCDF ambulance (Mercedes Sprinter chassis),6.94,2.70,2.02,high,Mercedes Sprinter 519 L3H2 official spec
+02_scdf_fire_engine,02_scdf_fire_engine.png,SCDF fire engine (Scania P-series pumper),9.50,3.30,2.50,medium,typical SCDF heavy pumper class
+03_terrex_apc,03_terrex_apc.png,Terrex 8x8 ICV,7.00,2.70,2.60,high,ST Engineering Terrex 2 published spec
+04_police_motorcycle,04_police_motorcycle.png,Police motorcycle (Yamaha/BMW class),2.20,1.40,0.90,high,typical 1200cc police bike spec
+05_bomb_disposal_robot,05_bomb_disposal_robot.png,EOD robot (Caliber/Andros class),1.30,1.10,0.70,medium,typical class spec range
+06_sbs_double_decker_bus,06_sbs_double_decker_bus.png,SBS Transit double-decker (Volvo B9TL),12.00,4.40,2.55,high,Volvo B9TL official spec
+07_security_guard_house,07_security_guard_house.png,Singapore guard house,2.50,2.20,1.80,low,estimated typical size
+08_police_patrol_car,08_police_patrol_car.png,SPF patrol car (Hyundai i40 / sedan),4.85,1.85,1.48,high,Hyundai i40 official spec
+09_himars_launcher,09_himars_launcher.png,M142 HIMARS launcher,7.00,3.18,2.40,high,Lockheed Martin HIMARS spec
+10_coast_guard_boat,10_coast_guard_boat.png,PCG White Shark / patrol craft,15.00,4.10,2.50,medium,typical PCG fast craft class
+11_apics_red_car_booth,11_apics_red_car_booth.webp,APICS car booth,2.50,2.00,2.00,low,estimated typical kiosk
+12_apics_boom_gate,12_apics_boom_gate.jpg,Boom gate + housing,5.00,2.00,1.50,low,estimated typical gate
+13_apics_booth_barrier,13_apics_booth_barrier.jpg,Booth + barrier combo,5.00,2.50,2.00,low,estimated
+14_apics_kiosks_passport,14_apics_kiosks_passport.jpg,Passport kiosk pair,2.00,1.30,1.00,low,estimated waist-height kiosk
