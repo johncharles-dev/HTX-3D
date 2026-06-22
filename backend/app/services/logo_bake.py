@@ -97,6 +97,9 @@ def bake_logos(
 
     logo_arr = np.asarray(Image.open(io.BytesIO(logo_bytes)).convert("RGBA"), dtype=np.float64)
     lh, lw = logo_arr.shape[:2]
+    # Footprint aspect from the logo, so a non-square logo isn't squished.
+    # Mirrors the frontend rule: the controlling `size` is the longer side.
+    aspect = lw / lh if lh else 1.0
 
     logo_buf = np.zeros((H, W, 4), dtype=np.float64)  # accumulated logo RGBA per texel
     footprint = np.zeros((H, W), dtype=np.uint8)       # decal coverage (for inpaint mask)
@@ -107,10 +110,12 @@ def bake_logos(
         size = float(pl["size"])
         rot = float(pl.get("rotation", 0.0))
         u, v, w = _decal_basis(nrm, rot)
-        # Uniform projector box (three.js decal convention). A shallow depth
+        # Footprint matches the logo aspect (longer side = size). A shallow depth
         # keeps the logo on the local surface patch instead of punching through
         # to far panels on layered geometry.
-        hx = hy = hz = size / 2.0
+        fw, fh = (size, size / aspect) if aspect >= 1 else (size * aspect, size)
+        hx, hy = fw / 2.0, fh / 2.0
+        hz = max(fw, fh) / 2.0
 
         rel = verts - pos
         du = rel @ u
@@ -147,8 +152,8 @@ def bake_logos(
             du_f = l1 * du[a] + l2 * du[b] + l3 * du[c]
             dv_f = l1 * dv[a] + l2 * dv[b] + l3 * dv[c]
             dw_f = l1 * dw[a] + l2 * dw[b] + l3 * dw[c]
-            lu = du_f / size + 0.5
-            lv = dv_f / size + 0.5
+            lu = du_f / fw + 0.5
+            lv = dv_f / fh + 0.5
             valid = inside & (lu >= 0) & (lu <= 1) & (lv >= 0) & (lv <= 1) & (np.abs(dw_f) <= hz)
             if not valid.any():
                 continue

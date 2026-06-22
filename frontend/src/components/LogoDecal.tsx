@@ -22,10 +22,23 @@ interface Placement {
   targetMesh: THREE.Mesh;
   position: THREE.Vector3; // world-space hit point
   normal: THREE.Vector3;   // world-space surface normal
-  size: number;
+  size: number;            // footprint's longer side, in model units
   rotation: number;        // in-plane rotation (radians)
+  aspect: number;          // logo width / height
   texture: THREE.Texture;
   mesh: THREE.Mesh;        // rendered decal mesh (child of targetMesh)
+}
+
+/** Logo width/height ratio from the texture's image (1 if unknown). */
+function textureAspect(tex: THREE.Texture): number {
+  const im: any = tex.image;
+  return im && im.width && im.height ? im.width / im.height : 1;
+}
+
+/** Footprint (width, height) in model units from the controlling size (longer
+ * side) and the logo aspect ratio — keeps the logo from being squished. */
+function footprint(size: number, aspect: number): [number, number] {
+  return aspect >= 1 ? [size, size / aspect] : [size * aspect, size];
 }
 
 export interface LogoSelection {
@@ -79,7 +92,8 @@ function orientationFromNormal(position: THREE.Vector3, normal: THREE.Vector3, r
 function buildDecalGeometry(p: Placement): THREE.BufferGeometry {
   p.targetMesh.updateWorldMatrix(true, false);
   const euler = orientationFromNormal(p.position, p.normal, p.rotation);
-  const sizeVec = new THREE.Vector3(p.size, p.size, Math.max(p.size, 0.5));
+  const [fw, fh] = footprint(p.size, p.aspect);
+  const sizeVec = new THREE.Vector3(fw, fh, Math.max(fw, fh));
   const geom = new DecalGeometry(p.targetMesh, p.position, euler, sizeVec);
   geom.applyMatrix4(p.targetMesh.matrixWorld.clone().invert());
   return geom;
@@ -294,6 +308,7 @@ export function LogoDecalModel({
       normal: hit.face.normal.clone().applyMatrix3(normalMatrix).normalize(),
       size: logoSizeRef.current,
       rotation: logoRotationRef.current,
+      aspect: textureAspect(texture),
       texture, mesh,
     };
     mesh.geometry = buildDecalGeometry(p);
