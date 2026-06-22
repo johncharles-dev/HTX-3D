@@ -5,11 +5,12 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
 import { PLYLoader } from 'three/examples/jsm/loaders/PLYLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
-import { AlertTriangle, Box, Circle, Grid3x3, Dot, Eraser, Undo2, Redo2, Check, X, Minus, Plus, Triangle } from 'lucide-react';
+import { AlertTriangle, Box, Circle, Grid3x3, Dot, Eraser, Undo2, Redo2, Check, X, Minus, Plus, Triangle, RotateCw, Sticker, Upload } from 'lucide-react';
 import * as THREE from 'three';
 import type { ExportFile, ViewerSettings } from '../types';
 import { DEFAULT_VIEWER_SETTINGS } from '../types';
 import { EditableModel } from './MeshEraser';
+import { LogoDecalModel, loadLogoTexture } from './LogoDecal';
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
 
 type ViewMode = 'textured' | 'mesh' | 'solid' | 'wireframe' | 'pointcloud';
@@ -164,6 +165,17 @@ export default function ModelViewer({ url, format = 'glb', autoRotate = true, ex
   const [undoSignal, setUndoSignal] = useState(0);
   const editableGroupRef = useRef<THREE.Group | null>(null);
 
+  // Logo decal mode
+  const [logoActive, setLogoActive] = useState(false);
+  const [logoTexture, setLogoTexture] = useState<THREE.Texture | null>(null);
+  const [logoSize, setLogoSize] = useState(0.3);
+  const [logoRotation, setLogoRotation] = useState(0);
+  const [logoCount, setLogoCount] = useState(0);
+  const [logoSelected, setLogoSelected] = useState(false);
+  const [logoResetKey, setLogoResetKey] = useState(0);
+  const [logoUndoSignal, setLogoUndoSignal] = useState(0);
+  const logoFileInputRef = useRef<HTMLInputElement | null>(null);
+
   const resetCanvas = useCallback(() => {
     setCanvasKey((k) => k + 1);
   }, []);
@@ -174,6 +186,12 @@ export default function ModelViewer({ url, format = 'glb', autoRotate = true, ex
     setEraseCount(0);
     setEraserResetKey(0);
     setUndoSignal(0);
+    setLogoActive(false);
+    setLogoTexture(null);
+    setLogoCount(0);
+    setLogoSelected(false);
+    setLogoResetKey(0);
+    setLogoUndoSignal(0);
   }, [url]);
 
   // Enter eraser mode
@@ -229,6 +247,71 @@ export default function ModelViewer({ url, format = 'glb', autoRotate = true, ex
     setUndoSignal(0);
   }, []);
 
+  // ── Logo decal handlers ──────────────────────────────
+  const enterLogo = useCallback(() => {
+    setLogoActive(true);
+  }, []);
+
+  const cancelLogo = useCallback(() => {
+    setLogoActive(false);
+    setLogoCount(0);
+    setLogoSelected(false);
+    setLogoResetKey((k) => k + 1);
+    setLogoUndoSignal(0);
+  }, []);
+
+  const handleLogoUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // allow re-selecting the same file
+    if (!file) return;
+    try {
+      const tex = await loadLogoTexture(file);
+      setLogoTexture((prev) => { prev?.dispose(); return tex; });
+    } catch (err) {
+      console.error('Logo image load failed:', err);
+    }
+  }, []);
+
+  const handleLogoUndo = useCallback(() => {
+    if (logoCount <= 0) return;
+    setLogoUndoSignal((s) => s + 1);
+    setLogoCount((c) => Math.max(0, c - 1));
+  }, [logoCount]);
+
+  const handleLogoReset = useCallback(() => {
+    setLogoResetKey((k) => k + 1);
+    setLogoCount(0);
+    setLogoSelected(false);
+    setLogoUndoSignal(0);
+  }, []);
+
+  // Done — export model + decals as a GLB blob, hand to parent, exit logo mode
+  const finishLogo = useCallback(() => {
+    const group = editableGroupRef.current;
+    if (!group) {
+      console.error('No logo model group available');
+      return;
+    }
+    const exporter = new GLTFExporter();
+    exporter.parse(
+      group,
+      (result) => {
+        const blob = result instanceof ArrayBuffer
+          ? new Blob([result], { type: 'model/gltf-binary' })
+          : new Blob([JSON.stringify(result)], { type: 'model/gltf+json' });
+        const blobUrl = URL.createObjectURL(blob);
+        setLogoActive(false);
+        setLogoCount(0);
+        setLogoSelected(false);
+        setLogoUndoSignal(0);
+        editableGroupRef.current = null;
+        onEditedModel?.(blobUrl);
+      },
+      (err) => console.error('GLB export failed:', err),
+      { binary: true },
+    );
+  }, [onEditedModel]);
+
   const hasPly = exports.some((e) => e.format === 'ply');
   const hasGlb = exports.some((e) => e.format === 'glb');
   const showViewModes = exports.length > 0 && url;
@@ -281,10 +364,12 @@ export default function ModelViewer({ url, format = 'glb', autoRotate = true, ex
   const ModelComponent = modelProps?.component || GLBModel;
   const modelUrl = modelProps?.modelUrl || url;
 
-  // Canvas key: stable during eraser use, changes on view mode or URL
+  // Canvas key: stable during eraser/logo use, changes on view mode or URL
   const cKey = eraserActive
     ? `${canvasKey}-eraser-${modelUrl}`
-    : `${canvasKey}-${viewMode}-${modelUrl}`;
+    : logoActive
+      ? `${canvasKey}-logo-${modelUrl}`
+      : `${canvasKey}-${viewMode}-${modelUrl}`;
 
   return (
     <div className="w-full h-full relative">
@@ -309,7 +394,7 @@ export default function ModelViewer({ url, format = 'glb', autoRotate = true, ex
             />
             <directionalLight position={[-3, 3, -3]} intensity={viewerSettings.planarLightIntensity * 0.7} />
             <hemisphereLight args={['#b1e1ff', '#b97a20', viewerSettings.planarLightIntensity * 0.8]} />
-            <OrbitControls autoRotate={!eraserActive && autoRotate} autoRotateSpeed={2} />
+            <OrbitControls makeDefault autoRotate={!eraserActive && !logoActive && autoRotate} autoRotateSpeed={2} />
 
             {/* Environment loaded separately so HDR fetch failures don't block the model */}
             {viewerSettings.environmentPreset !== 'none' && (
@@ -331,6 +416,21 @@ export default function ModelViewer({ url, format = 'glb', autoRotate = true, ex
                   undoSignal={undoSignal}
                   onGroupReady={(g) => { editableGroupRef.current = g; }}
                 />
+              ) : logoActive ? (
+                <LogoDecalModel
+                  url={modelUrl}
+                  logoTexture={logoTexture}
+                  logoSize={logoSize}
+                  logoRotation={logoRotation}
+                  onCountChange={setLogoCount}
+                  onSelectionChange={(sel) => {
+                    setLogoSelected(!!sel);
+                    if (sel) { setLogoSize(sel.size); setLogoRotation(sel.rotation); }
+                  }}
+                  resetKey={logoResetKey}
+                  undoSignal={logoUndoSignal}
+                  onGroupReady={(g) => { editableGroupRef.current = g; }}
+                />
               ) : (
                 <ModelComponent url={modelUrl} />
               )}
@@ -345,13 +445,36 @@ export default function ModelViewer({ url, format = 'glb', autoRotate = true, ex
             <span className="text-[10px] text-red-400/60 ml-2">Click to erase, drag to rotate</span>
           </div>
         )}
+
+        {/* Logo mode indicator */}
+        {logoActive && (
+          <div className="absolute top-3 right-3 z-10 bg-accent/10 border border-accent/30 rounded-lg px-3 py-1.5">
+            <span className="text-xs text-accent font-medium">Logo Mode</span>
+            <span className="text-[10px] text-accent/60 ml-2">
+              {!logoTexture
+                ? 'Upload a logo to begin'
+                : logoSelected
+                  ? 'Drag to move · Size/Rotate edits this logo'
+                  : 'Click surface to stamp · click a logo to select'}
+            </span>
+          </div>
+        )}
+
+        {/* Hidden file input for logo upload */}
+        <input
+          ref={logoFileInputRef}
+          type="file"
+          accept="image/png,image/*"
+          className="hidden"
+          onChange={handleLogoUpload}
+        />
       </div>
 
       {/* View Mode Toggle + Eraser — floating at top of viewer */}
       {showViewModes && (
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10">
-          <div className="flex gap-0.5 bg-bg-primary/80 backdrop-blur-sm rounded-lg p-0.5 border border-border shadow-lg">
-            {!eraserActive && VIEW_MODES.map(({ id, label, icon: Icon }) => {
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 max-w-[calc(100%-1.5rem)]">
+          <div className="flex flex-wrap justify-center gap-0.5 bg-bg-primary/80 backdrop-blur-sm rounded-lg p-0.5 border border-border shadow-lg">
+            {!eraserActive && !logoActive && VIEW_MODES.map(({ id, label, icon: Icon }) => {
               const disabled =
                 (id === 'pointcloud' && !hasPly) ||
                 (id === 'mesh' && !hasGlb && format !== 'glb') ||
@@ -376,10 +499,10 @@ export default function ModelViewer({ url, format = 'glb', autoRotate = true, ex
               );
             })}
 
-            {!eraserActive && hasGlb && <div className="w-px bg-border mx-0.5" />}
+            {!eraserActive && !logoActive && hasGlb && <div className="w-px bg-border mx-0.5" />}
 
-            {/* Eraser toggle (only show when not in eraser mode) */}
-            {!eraserActive && hasGlb && (
+            {/* Eraser toggle (only show when not in an edit mode) */}
+            {!eraserActive && !logoActive && hasGlb && (
               <button
                 onClick={enterEraser}
                 className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md transition-colors text-text-muted hover:text-text-secondary hover:bg-bg-tertiary/50"
@@ -387,6 +510,18 @@ export default function ModelViewer({ url, format = 'glb', autoRotate = true, ex
               >
                 <Eraser className="w-3.5 h-3.5" />
                 Eraser
+              </button>
+            )}
+
+            {/* Logo toggle (only show when not in an edit mode) */}
+            {!eraserActive && !logoActive && hasGlb && (
+              <button
+                onClick={enterLogo}
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md transition-colors text-text-muted hover:text-text-secondary hover:bg-bg-tertiary/50"
+                title="Add a PNG logo onto the model surface"
+              >
+                <Sticker className="w-3.5 h-3.5" />
+                Logo
               </button>
             )}
 
@@ -456,6 +591,107 @@ export default function ModelViewer({ url, format = 'glb', autoRotate = true, ex
                       ? 'bg-green-500/15 text-green-400 hover:bg-green-500/25'
                       : 'text-text-muted/30 cursor-not-allowed'}`}
                   title="Apply edits and return to normal view"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  Done
+                </button>
+              </>
+            )}
+
+            {/* Logo toolbar (replaces view modes when in logo mode) */}
+            {logoActive && (
+              <>
+                {/* Upload logo */}
+                <button
+                  onClick={() => logoFileInputRef.current?.click()}
+                  className="flex items-center gap-1 text-xs px-2 py-1.5 rounded-md text-text-muted hover:text-text-secondary hover:bg-bg-tertiary transition-colors"
+                  title="Upload a PNG logo"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  {logoTexture ? 'Change' : 'Upload'}
+                </button>
+
+                <div className="w-px bg-border mx-0.5" />
+
+                {/* Size */}
+                <span className="text-[10px] text-text-muted self-center px-1">Size</span>
+                <button onClick={() => setLogoSize((s) => Math.max(0.05, +(s - 0.05).toFixed(2)))} className="p-1 rounded hover:bg-bg-tertiary text-text-muted">
+                  <Minus className="w-3 h-3" />
+                </button>
+                <span className="text-xs font-mono text-text-secondary w-8 text-center self-center">{logoSize.toFixed(2)}</span>
+                <button onClick={() => setLogoSize((s) => Math.min(1.0, +(s + 0.05).toFixed(2)))} className="p-1 rounded hover:bg-bg-tertiary text-text-muted">
+                  <Plus className="w-3 h-3" />
+                </button>
+
+                <div className="w-px bg-border mx-0.5" />
+
+                {/* Rotation */}
+                <button
+                  onClick={() => setLogoRotation((r) => r + Math.PI / 12)}
+                  className="flex items-center gap-1 text-xs px-2 py-1.5 rounded-md text-text-muted hover:text-text-secondary hover:bg-bg-tertiary transition-colors"
+                  title="Rotate logo 15°"
+                >
+                  <RotateCw className="w-3.5 h-3.5" />
+                  {Math.round(((logoRotation % (Math.PI * 2)) * 180 / Math.PI))}°
+                </button>
+
+                <div className="w-px bg-border mx-0.5" />
+
+                {/* Undo */}
+                <button
+                  onClick={handleLogoUndo}
+                  disabled={logoCount <= 0}
+                  className={`flex items-center gap-1 text-xs px-2 py-1.5 rounded-md transition-colors
+                    ${logoCount > 0 ? 'text-text-muted hover:text-text-secondary hover:bg-bg-tertiary' : 'text-text-muted/30 cursor-not-allowed'}`}
+                  title="Undo last logo"
+                >
+                  <Undo2 className="w-3.5 h-3.5" />
+                </button>
+
+                {/* Reset all */}
+                <button
+                  onClick={handleLogoReset}
+                  disabled={logoCount <= 0}
+                  className={`flex items-center gap-1 text-xs px-2 py-1.5 rounded-md transition-colors
+                    ${logoCount > 0 ? 'text-text-muted hover:text-text-secondary hover:bg-bg-tertiary' : 'text-text-muted/30 cursor-not-allowed'}`}
+                  title="Remove all logos"
+                >
+                  <Redo2 className="w-3.5 h-3.5" />
+                  Reset
+                </button>
+
+                <div className="w-px bg-border mx-0.5" />
+
+                {/* Logo count / selection */}
+                <span className="text-[10px] text-text-muted self-center">
+                  {logoCount === 0
+                    ? (logoTexture ? 'Click to stamp' : 'Upload a logo')
+                    : logoSelected
+                      ? `${logoCount} placed · 1 selected`
+                      : `${logoCount} placed`}
+                </span>
+
+                <div className="w-px bg-border mx-0.5" />
+
+                {/* Cancel */}
+                <button
+                  onClick={cancelLogo}
+                  className="flex items-center gap-1 text-xs px-2 py-1.5 rounded-md text-text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                  title="Cancel and discard logos"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  Cancel
+                </button>
+
+                {/* Done */}
+                <button
+                  onClick={finishLogo}
+                  disabled={logoCount <= 0}
+                  className={`flex items-center gap-1 text-xs px-3 py-1.5 rounded-md transition-colors
+                    ${logoCount > 0
+                      ? 'bg-green-500/15 text-green-400 hover:bg-green-500/25'
+                      : 'text-text-muted/30 cursor-not-allowed'}`}
+                  title="Apply logos and return to normal view"
                 >
                   <Check className="w-3.5 h-3.5" />
                   Done
