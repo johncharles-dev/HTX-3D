@@ -2,6 +2,7 @@ import { useRef, useCallback, useEffect, useState } from 'react';
 import { useThree } from '@react-three/fiber';
 import { Center } from '@react-three/drei';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
 import { DecalGeometry } from 'three/examples/jsm/geometries/DecalGeometry.js';
 import * as THREE from 'three';
 
@@ -32,6 +33,17 @@ export interface LogoSelection {
   rotation: number;
 }
 
+export interface BakePlacement {
+  px: number; py: number; pz: number;
+  nx: number; ny: number; nz: number;
+  size: number; rotation: number;
+}
+
+export interface BakeData {
+  glb: Blob;
+  placements: BakePlacement[];
+}
+
 interface LogoDecalModelProps {
   url: string;
   /** Uploaded logo as a texture; null until the user picks a PNG. */
@@ -50,6 +62,9 @@ interface LogoDecalModelProps {
   undoSignal: number;
   /** Passes the loaded scene group to the parent for GLB export. */
   onGroupReady?: (group: THREE.Group | null) => void;
+  /** Registers a function the parent can call to gather bake data (base GLB +
+   * placements in the GLB scene-root frame). Passes null when unavailable. */
+  registerBake?: (fn: (() => Promise<BakeData>) | null) => void;
 }
 
 function orientationFromNormal(position: THREE.Vector3, normal: THREE.Vector3, rotation: number): THREE.Euler {
@@ -80,10 +95,12 @@ export function LogoDecalModel({
   resetKey,
   undoSignal,
   onGroupReady,
+  registerBake,
 }: LogoDecalModelProps) {
   const { camera, raycaster, gl, controls } = useThree() as any;
   const groupRef = useRef<THREE.Group>(null);
   const [loadedScene, setLoadedScene] = useState<THREE.Group | null>(null);
+  const loadedSceneRef = useRef<THREE.Group | null>(null);
 
   const placements = useRef<Placement[]>([]);
   const selectedId = useRef<number | null>(null);
@@ -115,6 +132,7 @@ export function LogoDecalModel({
           child.geometry.computeBoundingBox();
         }
       });
+      loadedSceneRef.current = cloned;
       setLoadedScene(cloned);
       onGroupReady?.(cloned);
     });
@@ -305,6 +323,48 @@ export function LogoDecalModel({
     const hitBase = raycaster.intersectObjects(base, false)[0];
     if (hitBase) placeNew(hitBase);
   }, [controls, gl, setRay, collectMeshes, raycaster, selectPlacement, placeNew]);
+
+  // ── Provide bake data to the parent ──────────────────
+  const buildBakeData = useCallback((): Promise<BakeData> => {
+    return new Promise((resolve, reject) => {
+      const scene = loadedSceneRef.current;
+      if (!scene) { reject(new Error('No model loaded')); return; }
+      scene.updateWorldMatrix(true, true);
+
+      // Map each placement (stored in world space) into the scene-root frame,
+      // which matches trimesh.load(force='mesh') on the exported GLB.
+      const placementData: BakePlacement[] = placements.current.map((p) => {
+        const pL = scene.worldToLocal(p.position.clone());
+        const qL = scene.worldToLocal(p.position.clone().add(p.normal));
+        const nL = qL.sub(pL).normalize();
+        return { px: pL.x, py: pL.y, pz: pL.z, nx: nL.x, ny: nL.y, nz: nL.z, size: p.size, rotation: p.rotation };
+      });
+
+      // Export the base mesh WITHOUT the decal overlays — they get baked into
+      // the texture, not added as geometry.
+      const exportRoot = scene.clone(true);
+      const decals: THREE.Object3D[] = [];
+      exportRoot.traverse((c) => { if (c.userData?.isLogoDecal) decals.push(c); });
+      decals.forEach((d) => d.removeFromParent());
+
+      new GLTFExporter().parse(
+        exportRoot,
+        (result) => {
+          const glb = result instanceof ArrayBuffer
+            ? new Blob([result], { type: 'model/gltf-binary' })
+            : new Blob([JSON.stringify(result)], { type: 'model/gltf+json' });
+          resolve({ glb, placements: placementData });
+        },
+        (err) => reject(err),
+        { binary: true },
+      );
+    });
+  }, []);
+
+  useEffect(() => {
+    registerBake?.(loadedScene ? buildBakeData : null);
+    return () => registerBake?.(null);
+  }, [loadedScene, buildBakeData, registerBake]);
 
   if (!loadedScene) return null;
 

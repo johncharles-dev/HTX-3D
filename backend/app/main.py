@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
 from .config import CORS_ORIGINS, TRELLIS_ENGINE_DIR, HUNYUAN_ENGINE_DIR, SAM3D_OBJECTS_DIR, WEIGHTS_DIR, GALLERY_DIR, detect_gpu
-from .routers import generate, gallery, segment
+from .routers import generate, gallery, segment, logo
 from .services.trellis import TrellisEngine
 from .services.hunyuan import HunyuanEngine
 from .services.sam3d_objects import Sam3DObjectsEngine
@@ -92,6 +92,7 @@ app.add_middleware(
 app.include_router(generate.router)
 app.include_router(gallery.router)
 app.include_router(segment.router)
+app.include_router(logo.router)
 
 
 # -- WebSocket for Progress --------------------------------

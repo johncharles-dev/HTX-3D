@@ -5,12 +5,14 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
 import { PLYLoader } from 'three/examples/jsm/loaders/PLYLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
-import { AlertTriangle, Box, Circle, Grid3x3, Dot, Eraser, Undo2, Redo2, Check, X, Minus, Plus, Triangle, RotateCw, Sticker, Upload } from 'lucide-react';
+import { AlertTriangle, Box, Circle, Grid3x3, Dot, Eraser, Undo2, Redo2, Check, X, Minus, Plus, Triangle, RotateCw, Sticker, Upload, Sparkles, Loader2 } from 'lucide-react';
 import * as THREE from 'three';
 import type { ExportFile, ViewerSettings } from '../types';
 import { DEFAULT_VIEWER_SETTINGS } from '../types';
 import { EditableModel } from './MeshEraser';
-import { LogoDecalModel, loadLogoTexture } from './LogoDecal';
+import { LogoDecalModel, loadLogoTexture, type BakeData } from './LogoDecal';
+import { bakeLogo } from '../api/client';
+import type { GalleryItem } from '../types';
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
 
 type ViewMode = 'textured' | 'mesh' | 'solid' | 'wireframe' | 'pointcloud';
@@ -145,6 +147,12 @@ interface Props {
   viewerSettings?: ViewerSettings;
   /** Called when user finishes editing — passes a blob URL of the edited GLB */
   onEditedModel?: (blobUrl: string) => void;
+  /** Source model id of the current model (for gallery metadata on bake). */
+  sourceModel?: string | null;
+  /** Source seed of the current model (for gallery metadata on bake). */
+  sourceSeed?: number | null;
+  /** Called when a logo is baked into the surface — passes the new gallery item. */
+  onLogoBaked?: (item: GalleryItem) => void;
 }
 
 const VIEW_MODES: { id: ViewMode; label: string; icon: typeof Box }[] = [
@@ -155,7 +163,7 @@ const VIEW_MODES: { id: ViewMode; label: string; icon: typeof Box }[] = [
   { id: 'pointcloud', label: 'Point Cloud', icon: Dot },
 ];
 
-export default function ModelViewer({ url, format = 'glb', autoRotate = true, exports = [], viewerSettings = DEFAULT_VIEWER_SETTINGS, onEditedModel }: Props) {
+export default function ModelViewer({ url, format = 'glb', autoRotate = true, exports = [], viewerSettings = DEFAULT_VIEWER_SETTINGS, onEditedModel, sourceModel, sourceSeed, onLogoBaked }: Props) {
   const [canvasKey, setCanvasKey] = useState(0);
   const [viewMode, setViewMode] = useState<ViewMode>('textured');
   const [eraserActive, setEraserActive] = useState(false);
@@ -174,7 +182,12 @@ export default function ModelViewer({ url, format = 'glb', autoRotate = true, ex
   const [logoSelected, setLogoSelected] = useState(false);
   const [logoResetKey, setLogoResetKey] = useState(0);
   const [logoUndoSignal, setLogoUndoSignal] = useState(0);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoSmudge, setLogoSmudge] = useState(true);
+  const [logoHiRes, setLogoHiRes] = useState(false);
+  const [logoBaking, setLogoBaking] = useState(false);
   const logoFileInputRef = useRef<HTMLInputElement | null>(null);
+  const logoBakeRef = useRef<(() => Promise<BakeData>) | null>(null);
 
   const resetCanvas = useCallback(() => {
     setCanvasKey((k) => k + 1);
@@ -188,6 +201,7 @@ export default function ModelViewer({ url, format = 'glb', autoRotate = true, ex
     setUndoSignal(0);
     setLogoActive(false);
     setLogoTexture(null);
+    setLogoFile(null);
     setLogoCount(0);
     setLogoSelected(false);
     setLogoResetKey(0);
@@ -267,10 +281,30 @@ export default function ModelViewer({ url, format = 'glb', autoRotate = true, ex
     try {
       const tex = await loadLogoTexture(file);
       setLogoTexture((prev) => { prev?.dispose(); return tex; });
+      setLogoFile(file);
     } catch (err) {
       console.error('Logo image load failed:', err);
     }
   }, []);
+
+  // Bake the placed logos into the model's surface texture (backend).
+  const bakeLogos = useCallback(async () => {
+    if (!logoBakeRef.current || !logoFile) return;
+    setLogoBaking(true);
+    try {
+      const { glb, placements } = await logoBakeRef.current();
+      const item = await bakeLogo(glb, logoFile, placements, logoSmudge, logoHiRes ? 8192 : 4096, sourceModel, sourceSeed);
+      setLogoActive(false);
+      setLogoCount(0);
+      setLogoSelected(false);
+      setLogoUndoSignal(0);
+      onLogoBaked?.(item);
+    } catch (err) {
+      console.error('Logo bake failed:', err);
+    } finally {
+      setLogoBaking(false);
+    }
+  }, [logoFile, logoSmudge, logoHiRes, sourceModel, sourceSeed, onLogoBaked]);
 
   const handleLogoUndo = useCallback(() => {
     if (logoCount <= 0) return;
@@ -430,6 +464,7 @@ export default function ModelViewer({ url, format = 'glb', autoRotate = true, ex
                   resetKey={logoResetKey}
                   undoSignal={logoUndoSignal}
                   onGroupReady={(g) => { editableGroupRef.current = g; }}
+                  registerBake={(fn) => { logoBakeRef.current = fn; }}
                 />
               ) : (
                 <ModelComponent url={modelUrl} />
@@ -673,28 +708,71 @@ export default function ModelViewer({ url, format = 'glb', autoRotate = true, ex
 
                 <div className="w-px bg-border mx-0.5" />
 
+                {/* Smudge toggle */}
+                <button
+                  onClick={() => setLogoSmudge((s) => !s)}
+                  className={`flex items-center gap-1 text-xs px-2 py-1.5 rounded-md transition-colors
+                    ${logoSmudge ? 'text-accent hover:bg-accent/10' : 'text-text-muted hover:text-text-secondary hover:bg-bg-tertiary'}`}
+                  title="When baking, heal (inpaint) the surface under the logo to hide any existing logo/texture"
+                >
+                  <span className={`w-3 h-3 rounded-sm border ${logoSmudge ? 'bg-accent border-accent' : 'border-text-muted'} flex items-center justify-center`}>
+                    {logoSmudge && <Check className="w-2.5 h-2.5 text-bg-primary" />}
+                  </span>
+                  Smudge
+                </button>
+
+                {/* Hi-res bake toggle (8192 vs 4096) */}
+                <button
+                  onClick={() => setLogoHiRes((h) => !h)}
+                  className={`flex items-center gap-1 text-xs px-2 py-1.5 rounded-md transition-colors
+                    ${logoHiRes ? 'text-accent hover:bg-accent/10' : 'text-text-muted hover:text-text-secondary hover:bg-bg-tertiary'}`}
+                  title="Bake at 8192px instead of 4096px — crisper small text, larger file"
+                >
+                  <span className={`w-3 h-3 rounded-sm border ${logoHiRes ? 'bg-accent border-accent' : 'border-text-muted'} flex items-center justify-center`}>
+                    {logoHiRes && <Check className="w-2.5 h-2.5 text-bg-primary" />}
+                  </span>
+                  Hi-res
+                </button>
+
+                <div className="w-px bg-border mx-0.5" />
+
                 {/* Cancel */}
                 <button
                   onClick={cancelLogo}
-                  className="flex items-center gap-1 text-xs px-2 py-1.5 rounded-md text-text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                  disabled={logoBaking}
+                  className="flex items-center gap-1 text-xs px-2 py-1.5 rounded-md text-text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-40"
                   title="Cancel and discard logos"
                 >
                   <X className="w-3.5 h-3.5" />
                   Cancel
                 </button>
 
-                {/* Done */}
+                {/* Keep as decal (export overlay geometry) */}
                 <button
                   onClick={finishLogo}
-                  disabled={logoCount <= 0}
+                  disabled={logoCount <= 0 || logoBaking}
                   className={`flex items-center gap-1 text-xs px-3 py-1.5 rounded-md transition-colors
-                    ${logoCount > 0
-                      ? 'bg-green-500/15 text-green-400 hover:bg-green-500/25'
+                    ${logoCount > 0 && !logoBaking
+                      ? 'bg-bg-tertiary text-text-secondary hover:bg-bg-tertiary/70'
                       : 'text-text-muted/30 cursor-not-allowed'}`}
-                  title="Apply logos and return to normal view"
+                  title="Keep logos as overlay decals (GLB only) and return to normal view"
                 >
                   <Check className="w-3.5 h-3.5" />
-                  Done
+                  Keep as decal
+                </button>
+
+                {/* Bake into surface (backend) */}
+                <button
+                  onClick={bakeLogos}
+                  disabled={logoCount <= 0 || logoBaking}
+                  className={`flex items-center gap-1 text-xs px-3 py-1.5 rounded-md transition-colors
+                    ${logoCount > 0 && !logoBaking
+                      ? 'bg-green-500/15 text-green-400 hover:bg-green-500/25'
+                      : 'text-text-muted/30 cursor-not-allowed'}`}
+                  title="Bake logos into the surface texture (all formats); optionally smudge the old logo"
+                >
+                  {logoBaking ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                  {logoBaking ? 'Baking…' : 'Bake into surface'}
                 </button>
               </>
             )}

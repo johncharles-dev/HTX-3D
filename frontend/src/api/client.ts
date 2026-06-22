@@ -239,6 +239,39 @@ export async function saveEditedToGallery(
   return data.item as GalleryItem;
 }
 
+export interface LogoPlacement {
+  px: number; py: number; pz: number;
+  nx: number; ny: number; nz: number;
+  size: number; rotation: number;
+}
+
+/** Bake a logo PNG into the model's albedo texture and save the result. */
+export async function bakeLogo(
+  glb: Blob,
+  logo: Blob,
+  placements: LogoPlacement[],
+  smudge: boolean,
+  targetResolution = 4096,
+  sourceModel?: string | null,
+  sourceSeed?: number | null,
+): Promise<GalleryItem> {
+  const form = new FormData();
+  form.append('file', glb, 'base_model.glb');
+  form.append('logo', logo, 'logo.png');
+  form.append('placements', JSON.stringify(placements));
+  form.append('smudge', String(smudge));
+  form.append('target_resolution', String(targetResolution));
+  if (sourceModel) form.append('source_model', sourceModel);
+  if (sourceSeed != null) form.append('seed', String(sourceSeed));
+  const resp = await fetch(`${API_BASE}/logo/bake`, { method: 'POST', body: form });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+    throw new Error(err.detail || `Logo bake failed: ${resp.status}`);
+  }
+  const data = await resp.json();
+  return data.item as GalleryItem;
+}
+
 // -- Health ------------------------------------------------
 
 export async function getHealth(): Promise<HealthStatus> {

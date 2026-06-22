@@ -845,6 +845,17 @@ export default function App() {
                   setViewerFormat('glb');
                   setEditedGlbUrl(blobUrl);
                 }}
+                sourceModel={sourceModel}
+                sourceSeed={sourceSeed}
+                onLogoBaked={(item) => {
+                  const glb = item.exports.find((e) => e.format === 'glb');
+                  if (glb) {
+                    setViewerUrl(glb.url);
+                    setViewerFormat('glb');
+                    setSourceTaskId(item.task_id);
+                  }
+                  setGalleryRefreshKey((k) => k + 1);
+                }}
               />
 
               {/* Progress Overlay — floats on top of viewer */}
