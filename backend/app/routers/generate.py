@@ -45,6 +45,8 @@ def _model_id_for_engine(engine: str, task_type: str) -> str:
         return "sam3d-image-to-3d"
     if engine == "hunyuan":
         return "hunyuan-image-to-3d"
+    if engine == "trellis2":
+        return "trellis2-image-to-3d"
     if task_type == "text":
         return "trellis-text-to-3d"
     return "trellis-image-to-3d"
@@ -55,7 +57,7 @@ def _model_id_for_engine(engine: str, task_type: str) -> str:
 @router.post("/generate/image", response_model=TaskResponse)
 async def generate_from_image(
     image: UploadFile = File(..., description="Input image (PNG/JPG, ideally with transparent background)"),
-    engine: str = Form("trellis", description="Engine to use: trellis, hunyuan, or sam3d"),
+    engine: str = Form("trellis", description="Engine to use: trellis, trellis2, hunyuan, or sam3d"),
     seed: int = Form(42),
     randomize_seed: bool = Form(True),
     # TRELLIS params
@@ -303,7 +305,7 @@ async def generate_from_text(
     task_manager=Depends(get_task_manager),
 ):
     """Generate a 3D model from a text description."""
-    if engine in ("hunyuan", "sam3d"):
+    if engine in ("hunyuan", "sam3d", "trellis2"):
         raise HTTPException(400, f"{engine} does not support text-to-3D. Use image-to-3D instead.")
 
     format_list = [f.strip() for f in formats.split(",") if f.strip()]

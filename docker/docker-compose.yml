@@ -33,6 +33,10 @@ services:
       - SAM3D_OBJECTS_DIR=/app/engines/sam3d_objects
       - CORS_ORIGINS=http://localhost:5173,http://localhost:8000
       - PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+      # TRELLIS.2 runs as a host-side microservice; reach it over the host gateway
+      - TRELLIS2_SERVICE_URL=http://host.docker.internal:8710
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     deploy:
       resources:
         reservations:

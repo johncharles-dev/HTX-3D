@@ -35,6 +35,10 @@ SAM3_BPE_PATH = os.environ.get(
     os.path.join(SAM3_DIR, "sam3", "assets", "bpe_simple_vocab_16e6.txt.gz"),
 )
 
+# TRELLIS.2 runs as a host-side microservice (it needs the host's sm120 torch/FA2 stack).
+# The container reaches the host over the docker bridge gateway. Override via env if needed.
+TRELLIS2_SERVICE_URL = os.environ.get("TRELLIS2_SERVICE_URL", "http://172.18.0.1:8710")
+
 # GPU / Hardware
 def detect_gpu():
     if not torch.cuda.is_available():

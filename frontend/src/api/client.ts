@@ -54,6 +54,12 @@ export async function generateFromImage(
     form.append('sam3d_texture_baking', String(settings.sam3dTextureBaking));
     form.append('sam3d_vertex_color', String(settings.sam3dVertexColor));
   }
+  // TRELLIS.2 params (proxied to host service; face-count controls mesh decimation)
+  if (engine === 'trellis2') {
+    if (settings.targetFaceCount > 0) {
+      form.append('target_face_count', String(settings.targetFaceCount));
+    }
+  }
   // Segmented image path (from SAM3 segmentation)
   if (segmentedImagePath) {
     form.append('segmented_image_path', segmentedImagePath);

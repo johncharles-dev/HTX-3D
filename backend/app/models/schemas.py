@@ -8,6 +8,7 @@ from enum import Enum
 class ModelType(str, Enum):
     TRELLIS_IMAGE = "trellis-image-to-3d"
     TRELLIS_TEXT = "trellis-text-to-3d"
+    TRELLIS2_IMAGE = "trellis2-image-to-3d"
     HUNYUAN_IMAGE = "hunyuan-image-to-3d"
     SAM3D_IMAGE = "sam3d-image-to-3d"
     EDITED = "edited"

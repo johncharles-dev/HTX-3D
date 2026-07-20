@@ -155,6 +155,14 @@ RUN UTILS3D_DIR=$(python -c "import utils3d; import os; print(os.path.dirname(ut
     && cp /tmp/utils3d_pt_shim.py "$UTILS3D_DIR/pt.py" \
     && python -c "import utils3d.pt; print('utils3d.pt shim installed')"
 
+# 12. auto_scale metric-depth backbone: UniDepth v2
+# --no-deps protects the pinned torch/hf/transformers above; wandb is imported by unidepth at load.
+# Commit pinned to the version validated against auto_scale.py (UniDepthV2.from_pretrained/.infer).
+RUN pip install --no-cache-dir wandb \
+    && pip install --no-cache-dir --no-deps --no-build-isolation \
+       "unidepth @ git+https://github.com/lpiccinelli-eth/UniDepth.git@8d8cfe4c7ee15297099983607febf0d4f32eb3d6" \
+    && python -c "from unidepth.models import UniDepthV2; print('UniDepth OK')"
+
 # Cleanup build artifacts
 RUN rm -rf /tmp/extensions
 

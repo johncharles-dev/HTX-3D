@@ -1,11 +1,11 @@
-export type ModelType = 'trellis-image-to-3d' | 'trellis-text-to-3d' | 'hunyuan-image-to-3d' | 'sam3d-image-to-3d' | 'edited';
+export type ModelType = 'trellis-image-to-3d' | 'trellis-text-to-3d' | 'trellis2-image-to-3d' | 'hunyuan-image-to-3d' | 'sam3d-image-to-3d' | 'edited';
 export type ExportFormat = 'glb' | 'obj' | 'stl' | 'ply';
 export type TaskStatus = 'queued' | 'processing' | 'extracting' | 'completed' | 'failed' | 'cancelled';
 export type InputMode = 'single' | 'multi';
 export type MultiImageMode = 'stochastic' | 'multidiffusion';
 export type TextMode = 'generate' | 'edit';
 export type QualityPreset = 'draft' | 'standard' | 'high';
-export type EngineName = 'trellis' | 'hunyuan' | 'sam3d';
+export type EngineName = 'trellis' | 'trellis2' | 'hunyuan' | 'sam3d';
 
 // -- TRELLIS Quality Presets --------------------------------
 
@@ -55,6 +55,17 @@ export const MODELS: ModelDef[] = [
     supportsImage: true,
     supportsText: true,
     supportsEdit: true,
+    supportsMultiView: false,
+  },
+  {
+    id: 'trellis2',
+    name: 'TRELLIS.2',
+    desc: 'Microsoft Research — high-detail geometry + 4K PBR (runs on host service)',
+    color: '#FF7043',
+    available: true,
+    supportsImage: true,
+    supportsText: false,
+    supportsEdit: false,
     supportsMultiView: false,
   },
   {

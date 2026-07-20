@@ -135,7 +135,7 @@ export default function App() {
   // Derive selected engines from selected models (for settings panel)
   const selectedEngines: EngineName[] = activeTab === 'text'
     ? ['trellis']
-    : [...new Set(selectedModels.filter((id): id is EngineName => id === 'trellis' || id === 'hunyuan' || id === 'sam3d'))];
+    : [...new Set(selectedModels.filter((id): id is EngineName => id === 'trellis' || id === 'trellis2' || id === 'hunyuan' || id === 'sam3d'))];
 
   // -- Health Check ----------------------------------------
   useEffect(() => {

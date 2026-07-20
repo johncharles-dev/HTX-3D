@@ -15,6 +15,7 @@ from .routers import generate, gallery, segment, logo
 from .services.trellis import TrellisEngine
 from .services.hunyuan import HunyuanEngine
 from .services.sam3d_objects import Sam3DObjectsEngine
+from .services.trellis2 import Trellis2Engine
 from .services.sam3_segmentation import SAM3Service
 from .services.task_manager import TaskManager
 from .dependencies import set_task_manager, get_task_manager, set_sam3_service
@@ -51,6 +52,11 @@ async def lifespan(app: FastAPI):
     tm.register_engine(sam3d)
     logger.info("SAM 3D Objects engine registered (will load on first use)")
 
+    # Register TRELLIS.2 engine (proxy to the host microservice; "load" just health-checks)
+    trellis2 = Trellis2Engine()
+    tm.register_engine(trellis2)
+    logger.info("TRELLIS.2 engine registered (proxies to host microservice)")
+
     # Initialize SAM3 segmentation service (loaded on-demand per session)
     sam3_service = SAM3Service()
     set_sam3_service(sam3_service)
@@ -68,6 +74,8 @@ async def lifespan(app: FastAPI):
         hunyuan.unload()
     if sam3d.loaded:
         sam3d.unload()
+    if trellis2.loaded:
+        trellis2.unload()
     if sam3_service.loaded:
         sam3_service.unload()
 
