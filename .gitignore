@@ -57,3 +57,11 @@ evaluation/benchmark_v2/data/
 evaluation/benchmark_v2/outputs/
 **/.ipynb_checkpoints/
 
+# Benchmark image artifacts (regenerable from scripts; kept on disk, not in git)
+evaluation/trellis2_benchmark/renders/
+evaluation/trellis2_benchmark/montages/
+evaluation/manual_eval/blind_montages/
+
+
+# Claude Code local config — keep out of the project
+.claude/

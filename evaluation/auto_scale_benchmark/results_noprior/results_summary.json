@@ -1,0 +1,126 @@
+{
+  "overall": {
+    "n": 70,
+    "longest_mape": 71.75247681571987,
+    "longest_median_pct": 43.98149389272547,
+    "middle_mape": 80.23080080811903,
+    "shortest_mape": 85.10271574870606,
+    "mean_iou": 0.5348301308923329,
+    "frac_within_20pct": 0.34285714285714286,
+    "frac_within_50pct": 0.5571428571428572
+  },
+  "high_gt_only": {
+    "n": 30,
+    "longest_mape": 63.682577931596164,
+    "longest_median_pct": 29.84454985231799,
+    "middle_mape": 60.5138482504943,
+    "shortest_mape": 67.8335999283636,
+    "mean_iou": 0.5562209810241036,
+    "frac_within_20pct": 0.36666666666666664,
+    "frac_within_50pct": 0.5666666666666667
+  },
+  "per_pipeline": {
+    "trellis_rembg": {
+      "n": 14,
+      "longest_mape": 36.67348009709725,
+      "longest_median_pct": 18.567514613453636,
+      "middle_mape": 72.21917857103533,
+      "shortest_mape": 75.05858042860214,
+      "mean_iou": 0.5444924163585408,
+      "frac_within_20pct": 0.5714285714285714,
+      "frac_within_50pct": 0.7142857142857143
+    },
+    "trellis_sam3": {
+      "n": 14,
+      "longest_mape": 56.885098988088124,
+      "longest_median_pct": 42.88200331320327,
+      "middle_mape": 66.09549402157748,
+      "shortest_mape": 76.4508445477505,
+      "mean_iou": 0.5406392581205424,
+      "frac_within_20pct": 0.2857142857142857,
+      "frac_within_50pct": 0.6428571428571429
+    },
+    "hunyuan_rembg": {
+      "n": 14,
+      "longest_mape": 109.08695739046256,
+      "longest_median_pct": 66.12811771093632,
+      "middle_mape": 107.56058538223836,
+      "shortest_mape": 103.72186286991214,
+      "mean_iou": 0.5201297936916534,
+      "frac_within_20pct": 0.21428571428571427,
+      "frac_within_50pct": 0.35714285714285715
+    },
+    "hunyuan_sam3": {
+      "n": 14,
+      "longest_mape": 98.36257517142933,
+      "longest_median_pct": 62.98382060690035,
+      "middle_mape": 72.58252768170793,
+      "shortest_mape": 84.113145679962,
+      "mean_iou": 0.5184062374468653,
+      "frac_within_20pct": 0.21428571428571427,
+      "frac_within_50pct": 0.42857142857142855
+    },
+    "sam3d_sam3": {
+      "n": 14,
+      "longest_mape": 57.75427243152217,
+      "longest_median_pct": 37.95956572255051,
+      "middle_mape": 82.69621838403597,
+      "shortest_mape": 86.16914521730347,
+      "mean_iou": 0.5504829488440627,
+      "frac_within_20pct": 0.42857142857142855,
+      "frac_within_50pct": 0.6428571428571429
+    }
+  },
+  "per_pipeline_high_gt": {
+    "trellis_rembg": {
+      "n": 6,
+      "longest_mape": 33.5113601103161,
+      "longest_median_pct": 18.567514613453636,
+      "middle_mape": 40.957916668987465,
+      "shortest_mape": 54.75575048928877,
+      "mean_iou": 0.5685204485232417,
+      "frac_within_20pct": 0.6666666666666666,
+      "frac_within_50pct": 0.6666666666666666
+    },
+    "trellis_sam3": {
+      "n": 6,
+      "longest_mape": 55.509746499553074,
+      "longest_median_pct": 22.55027599441793,
+      "middle_mape": 49.72398723525234,
+      "shortest_mape": 48.94980096597649,
+      "mean_iou": 0.5601294208281181,
+      "frac_within_20pct": 0.3333333333333333,
+      "frac_within_50pct": 0.6666666666666666
+    },
+    "hunyuan_rembg": {
+      "n": 6,
+      "longest_mape": 136.3052951058104,
+      "longest_median_pct": 65.1054712112371,
+      "middle_mape": 84.05552551632414,
+      "shortest_mape": 85.499544197807,
+      "mean_iou": 0.5421108361410237,
+      "frac_within_20pct": 0.16666666666666666,
+      "frac_within_50pct": 0.3333333333333333
+    },
+    "hunyuan_sam3": {
+      "n": 6,
+      "longest_mape": 64.48821622834852,
+      "longest_median_pct": 65.47681926045829,
+      "middle_mape": 72.16215499052522,
+      "shortest_mape": 78.39060464725043,
+      "mean_iou": 0.5416528329905524,
+      "frac_within_20pct": 0.16666666666666666,
+      "frac_within_50pct": 0.3333333333333333
+    },
+    "sam3d_sam3": {
+      "n": 6,
+      "longest_mape": 28.598271713952784,
+      "longest_median_pct": 26.12287113978533,
+      "middle_mape": 55.669656841382356,
+      "shortest_mape": 71.5722993414953,
+      "mean_iou": 0.5686913666375816,
+      "frac_within_20pct": 0.5,
+      "frac_within_50pct": 0.8333333333333334
+    }
+  }
+}

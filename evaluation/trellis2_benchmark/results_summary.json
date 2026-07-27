@@ -1,0 +1,166 @@
+{
+  "overall": {
+    "n": 98,
+    "longest_mape": 32.181441362888435,
+    "longest_median_pct": 26.05342607871325,
+    "middle_mape": 42.497706220161554,
+    "shortest_mape": 51.673907392766075,
+    "mean_iou": 0.5391122246225892,
+    "frac_within_20pct": 0.3673469387755102,
+    "frac_within_50pct": 0.8367346938775511
+  },
+  "high_gt_only": {
+    "n": 42,
+    "longest_mape": 25.04053098156033,
+    "longest_median_pct": 20.571104837696243,
+    "middle_mape": 33.944459884250904,
+    "shortest_mape": 49.65620352360886,
+    "mean_iou": 0.561468344893822,
+    "frac_within_20pct": 0.47619047619047616,
+    "frac_within_50pct": 0.8809523809523809
+  },
+  "per_pipeline": {
+    "trellis_rembg": {
+      "n": 14,
+      "longest_mape": 26.71397958340587,
+      "longest_median_pct": 23.809194161092705,
+      "middle_mape": 55.44434595060202,
+      "shortest_mape": 56.93855627558293,
+      "mean_iou": 0.5444924163585408,
+      "frac_within_20pct": 0.42857142857142855,
+      "frac_within_50pct": 0.8571428571428571
+    },
+    "trellis_sam3": {
+      "n": 14,
+      "longest_mape": 31.635466151439005,
+      "longest_median_pct": 25.73206770623445,
+      "middle_mape": 31.94657575303675,
+      "shortest_mape": 39.88402493263369,
+      "mean_iou": 0.5406392581205424,
+      "frac_within_20pct": 0.35714285714285715,
+      "frac_within_50pct": 0.8571428571428571
+    },
+    "hunyuan_rembg": {
+      "n": 14,
+      "longest_mape": 40.63128879597945,
+      "longest_median_pct": 33.60324943323094,
+      "middle_mape": 44.26294920275658,
+      "shortest_mape": 61.34979373012146,
+      "mean_iou": 0.5201297936916534,
+      "frac_within_20pct": 0.2857142857142857,
+      "frac_within_50pct": 0.7142857142857143
+    },
+    "hunyuan_sam3": {
+      "n": 14,
+      "longest_mape": 33.47272030409242,
+      "longest_median_pct": 24.401388005541982,
+      "middle_mape": 38.409496471193236,
+      "shortest_mape": 53.11122428754287,
+      "mean_iou": 0.5184062374468653,
+      "frac_within_20pct": 0.35714285714285715,
+      "frac_within_50pct": 0.8571428571428571
+    },
+    "sam3d_sam3": {
+      "n": 14,
+      "longest_mape": 30.236707022944472,
+      "longest_median_pct": 18.945076060896582,
+      "middle_mape": 39.4858668561016,
+      "shortest_mape": 49.244832443661764,
+      "mean_iou": 0.5504829488440627,
+      "frac_within_20pct": 0.5,
+      "frac_within_50pct": 0.8571428571428571
+    },
+    "trellis2_rembg": {
+      "n": 14,
+      "longest_mape": 28.905666138579623,
+      "longest_median_pct": 25.332418758591075,
+      "middle_mape": 46.138855050135454,
+      "shortest_mape": 52.22687978823013,
+      "mean_iou": 0.5547553571512142,
+      "frac_within_20pct": 0.35714285714285715,
+      "frac_within_50pct": 0.8571428571428571
+    },
+    "trellis2_sam3": {
+      "n": 14,
+      "longest_mape": 33.67426154377825,
+      "longest_median_pct": 25.894894964359235,
+      "middle_mape": 41.79585425730521,
+      "shortest_mape": 48.96204029158967,
+      "mean_iou": 0.5448795607452462,
+      "frac_within_20pct": 0.2857142857142857,
+      "frac_within_50pct": 0.8571428571428571
+    }
+  },
+  "per_pipeline_high_gt": {
+    "trellis_rembg": {
+      "n": 6,
+      "longest_mape": 19.484552729288044,
+      "longest_median_pct": 18.15247888166636,
+      "middle_mape": 24.386713157002536,
+      "shortest_mape": 37.724768504417064,
+      "mean_iou": 0.5685204485232417,
+      "frac_within_20pct": 0.6666666666666666,
+      "frac_within_50pct": 1.0
+    },
+    "trellis_sam3": {
+      "n": 6,
+      "longest_mape": 21.385578245512324,
+      "longest_median_pct": 20.302603122764033,
+      "middle_mape": 16.29921657789132,
+      "shortest_mape": 26.19606501720648,
+      "mean_iou": 0.5601294208281181,
+      "frac_within_20pct": 0.5,
+      "frac_within_50pct": 1.0
+    },
+    "hunyuan_rembg": {
+      "n": 6,
+      "longest_mape": 35.081034252661475,
+      "longest_median_pct": 26.72796915279027,
+      "middle_mape": 24.845251682018056,
+      "shortest_mape": 54.31256293656778,
+      "mean_iou": 0.5421108361410237,
+      "frac_within_20pct": 0.3333333333333333,
+      "frac_within_50pct": 0.6666666666666666
+    },
+    "hunyuan_sam3": {
+      "n": 6,
+      "longest_mape": 27.613723336442046,
+      "longest_median_pct": 21.9839744252939,
+      "middle_mape": 32.2028948586779,
+      "shortest_mape": 51.435911796664534,
+      "mean_iou": 0.5416528329905524,
+      "frac_within_20pct": 0.3333333333333333,
+      "frac_within_50pct": 0.8333333333333334
+    },
+    "sam3d_sam3": {
+      "n": 6,
+      "longest_mape": 19.381073205495486,
+      "longest_median_pct": 16.87801804170018,
+      "middle_mape": 43.84134614851022,
+      "shortest_mape": 57.59726107401632,
+      "mean_iou": 0.5686913666375816,
+      "frac_within_20pct": 0.6666666666666666,
+      "frac_within_50pct": 1.0
+    },
+    "trellis2_rembg": {
+      "n": 6,
+      "longest_mape": 24.616834543512113,
+      "longest_median_pct": 22.620990988413375,
+      "middle_mape": 56.56403203460908,
+      "shortest_mape": 61.16487084842611,
+      "mean_iou": 0.5824535659409126,
+      "frac_within_20pct": 0.5,
+      "frac_within_50pct": 0.8333333333333334
+    },
+    "trellis2_sam3": {
+      "n": 6,
+      "longest_mape": 27.720920558010807,
+      "longest_median_pct": 24.470590240595676,
+      "middle_mape": 39.471764731047266,
+      "shortest_mape": 59.16198448796374,
+      "mean_iou": 0.5667199431953235,
+      "frac_within_20pct": 0.3333333333333333,
+      "frac_within_50pct": 0.8333333333333334
+    }
+  }
+}
