@@ -1,0 +1,128 @@
+{
+ "01_scdf_ambulance": {
+  "A": "trellis2_rembg",
+  "B": "hunyuan_sam3",
+  "C": "trellis_sam3",
+  "D": "trellis2_sam3",
+  "E": "trellis_rembg",
+  "F": "sam3d_sam3",
+  "G": "hunyuan_rembg"
+ },
+ "02_scdf_fire_engine": {
+  "A": "trellis2_sam3",
+  "B": "trellis2_rembg",
+  "C": "hunyuan_rembg",
+  "D": "trellis_sam3",
+  "E": "sam3d_sam3",
+  "F": "trellis_rembg",
+  "G": "hunyuan_sam3"
+ },
+ "03_terrex_apc": {
+  "A": "trellis_sam3",
+  "B": "hunyuan_rembg",
+  "C": "trellis2_sam3",
+  "D": "trellis2_rembg",
+  "E": "trellis_rembg",
+  "F": "hunyuan_sam3",
+  "G": "sam3d_sam3"
+ },
+ "04_police_motorcycle": {
+  "A": "sam3d_sam3",
+  "B": "hunyuan_sam3",
+  "C": "trellis2_sam3",
+  "D": "trellis_sam3",
+  "E": "trellis_rembg",
+  "F": "hunyuan_rembg",
+  "G": "trellis2_rembg"
+ },
+ "05_bomb_disposal_robot": {
+  "A": "hunyuan_rembg",
+  "B": "trellis_sam3",
+  "C": "trellis2_sam3",
+  "D": "sam3d_sam3",
+  "E": "trellis_rembg",
+  "F": "trellis2_rembg",
+  "G": "hunyuan_sam3"
+ },
+ "06_sbs_double_decker_bus": {
+  "A": "trellis2_rembg",
+  "B": "sam3d_sam3",
+  "C": "hunyuan_sam3",
+  "D": "trellis_sam3",
+  "E": "hunyuan_rembg",
+  "F": "trellis_rembg",
+  "G": "trellis2_sam3"
+ },
+ "07_security_guard_house": {
+  "A": "hunyuan_sam3",
+  "B": "trellis_sam3",
+  "C": "trellis_rembg",
+  "D": "trellis2_rembg",
+  "E": "hunyuan_rembg",
+  "F": "trellis2_sam3",
+  "G": "sam3d_sam3"
+ },
+ "08_police_patrol_car": {
+  "A": "trellis2_sam3",
+  "B": "hunyuan_sam3",
+  "C": "trellis_rembg",
+  "D": "sam3d_sam3",
+  "E": "hunyuan_rembg",
+  "F": "trellis_sam3",
+  "G": "trellis2_rembg"
+ },
+ "09_himars_launcher": {
+  "A": "trellis_rembg",
+  "B": "trellis_sam3",
+  "C": "hunyuan_rembg",
+  "D": "trellis2_rembg",
+  "E": "sam3d_sam3",
+  "F": "trellis2_sam3",
+  "G": "hunyuan_sam3"
+ },
+ "10_coast_guard_boat": {
+  "A": "sam3d_sam3",
+  "B": "trellis2_sam3",
+  "C": "trellis2_rembg",
+  "D": "trellis_rembg",
+  "E": "hunyuan_rembg",
+  "F": "hunyuan_sam3",
+  "G": "trellis_sam3"
+ },
+ "11_apics_red_car_booth": {
+  "A": "sam3d_sam3",
+  "B": "hunyuan_sam3",
+  "C": "trellis_rembg",
+  "D": "trellis2_rembg",
+  "E": "trellis2_sam3",
+  "F": "hunyuan_rembg",
+  "G": "trellis_sam3"
+ },
+ "12_apics_boom_gate": {
+  "A": "trellis_sam3",
+  "B": "trellis2_rembg",
+  "C": "trellis_rembg",
+  "D": "hunyuan_sam3",
+  "E": "hunyuan_rembg",
+  "F": "trellis2_sam3",
+  "G": "sam3d_sam3"
+ },
+ "13_apics_booth_barrier": {
+  "A": "hunyuan_rembg",
+  "B": "trellis2_sam3",
+  "C": "trellis_rembg",
+  "D": "trellis_sam3",
+  "E": "trellis2_rembg",
+  "F": "hunyuan_sam3",
+  "G": "sam3d_sam3"
+ },
+ "14_apics_kiosks_passport": {
+  "A": "sam3d_sam3",
+  "B": "trellis2_sam3",
+  "C": "hunyuan_sam3",
+  "D": "trellis_rembg",
+  "E": "trellis_sam3",
+  "F": "hunyuan_rembg",
+  "G": "trellis2_rembg"
+ }
+}

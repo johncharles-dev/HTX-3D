@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Blinded scoring — HTX-3D manual evaluation</title>
+<style>
+  :root{
+    --bg:#12141a; --panel:#1b1e26; --line:#2c313d; --fg:#e8eaf0; --dim:#9aa2b4;
+    --accent:#4da3ff; --warn:#ffb454; --good:#5ec98a; --bad:#ff6b6b;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:transparent;color:var(--fg);
+       font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+  #bgfill{position:fixed;inset:0;background:var(--bg);z-index:-2}
+  #gl{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:-1;
+      pointer-events:none}
+  header{position:sticky;top:0;z-index:20;background:rgba(18,20,26,.97);
+         border-bottom:1px solid var(--line);padding:10px 16px;
+         display:flex;gap:13px;align-items:center;flex-wrap:wrap;backdrop-filter:blur(8px)}
+  h1{font-size:15px;margin:0;font-weight:650;letter-spacing:.2px;white-space:nowrap}
+  .sp{flex:1}
+  button{background:var(--panel);color:var(--fg);border:1px solid var(--line);
+         border-radius:7px;padding:7px 12px;font:inherit;font-size:14px;cursor:pointer}
+  button:hover{border-color:var(--accent)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#06121f;font-weight:600}
+  button.on{background:#1d3a2a;border-color:var(--good);color:var(--good)}
+  .objnav{display:flex;gap:4px;flex-wrap:wrap}
+  .objnav b{display:grid;place-items:center;width:29px;height:29px;border-radius:6px;
+            border:1px solid var(--line);font-size:12px;font-weight:600;cursor:pointer;
+            background:var(--panel);color:var(--dim)}
+  .objnav b.done{background:#1d3a2a;border-color:var(--good);color:var(--good)}
+  .objnav b.part{background:#3a2f1a;border-color:var(--warn);color:var(--warn)}
+  .objnav b.cur{outline:2px solid var(--accent);outline-offset:1px;color:var(--fg)}
+  main{padding:16px;max-width:1800px;margin:0 auto}
+  .title{font-size:20px;font-weight:650;margin:4px 0 14px}
+  .title small{color:var(--dim);font-weight:400;font-size:14px;margin-left:8px}
+  .ref{display:inline-block;background:var(--panel);border:1px solid var(--line);
+       border-radius:11px;padding:12px;margin-bottom:18px}
+  .ref img{width:420px;max-width:100%;border-radius:8px;background:#fff;
+           cursor:zoom-in;display:block}
+  .ref .cap{color:var(--dim);font-size:12.5px;margin-top:8px;max-width:420px}
+  kbd{background:#151821;border:1px solid var(--line);border-radius:4px;
+      padding:1px 5px;font-size:12px;font-family:inherit;color:var(--fg)}
+  .grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(340px,1fr))}
+  .card{border:1px solid var(--line);border-radius:11px;overflow:hidden;
+        display:flex;flex-direction:column;background:transparent}
+  .card.filled{border-color:#2f5c42}
+  .chead{display:flex;align-items:center;gap:9px;padding:8px 12px;background:var(--panel);
+         border-bottom:1px solid var(--line)}
+  .slot{font-size:17px;font-weight:700}
+  .slot .pipe{font-size:14px;font-weight:600;color:var(--accent);margin-left:9px}
+  .slot .pipe em{font-style:normal;color:var(--dim);font-weight:400}
+  body.revealed .chead{background:#191d29}
+  #reveal.live{background:#4a1f22;border-color:var(--bad);color:#ffb3b3}
+  .chead .sp{flex:1}
+  .chead button{padding:3px 9px;font-size:12px}
+  .view{height:310px;position:relative;cursor:grab;background:transparent}
+  .view:active{cursor:grabbing}
+  .view .msg{position:absolute;inset:0;display:grid;place-items:center;
+             color:var(--dim);font-size:13px;pointer-events:none}
+  .view img{width:100%;height:100%;object-fit:contain}
+  .ctl{background:var(--panel);border-top:1px solid var(--line);padding:10px 12px;
+       display:flex;flex-direction:column;gap:8px}
+  .row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .row .lab{width:62px;color:var(--dim);font-size:13px}
+  .sc{width:31px;height:31px;border-radius:6px;border:1px solid var(--line);
+      background:#151821;color:var(--dim);cursor:pointer;font-size:13px;padding:0}
+  .sc.on{background:var(--accent);border-color:var(--accent);color:#06121f;font-weight:700}
+  .defs{display:flex;gap:5px;flex-wrap:wrap}
+  .df{font-size:11.5px;padding:4px 8px;border-radius:20px;border:1px solid var(--line);
+      background:#151821;color:var(--dim);cursor:pointer;user-select:none}
+  .df.on{background:#4a1f22;border-color:var(--bad);color:#ffb3b3}
+  .ctl input[type=text]{width:100%;background:#151821;border:1px solid var(--line);
+       color:var(--fg);border-radius:6px;padding:6px 8px;font:inherit;font-size:13px}
+  dialog{border:none;background:transparent;max-width:96vw;max-height:96vh;padding:0}
+  dialog::backdrop{background:rgba(0,0,0,.9)}
+  dialog img{max-width:96vw;max-height:96vh;border-radius:8px}
+  #rub{background:var(--panel);border:1px solid var(--line);border-radius:11px;
+       padding:0 16px;margin-bottom:18px}
+  #rub summary{cursor:pointer;padding:13px 0;font-weight:600}
+  #rub table{border-collapse:collapse;margin:0 0 14px;font-size:13.5px;width:100%;max-width:840px}
+  #rub td{border-top:1px solid var(--line);padding:5px 10px 5px 0;vertical-align:top}
+  #rub td:first-child{width:26px;font-weight:700;color:var(--accent)}
+  #rub h4{margin:12px 0 5px;font-size:13px;color:var(--dim);text-transform:uppercase;letter-spacing:.6px}
+  .bar{height:3px;background:var(--line);border-radius:2px;overflow:hidden;width:120px}
+  .bar i{display:block;height:100%;background:var(--good);width:0}
+  .pill{font-size:12.5px;color:var(--dim);white-space:nowrap}
+  footer{padding:26px 16px 60px;text-align:center;color:var(--dim);font-size:13px}
+</style>
+</head>
+<body>
+<div id="bgfill"></div>
+<canvas id="gl"></canvas>
+
+<header>
+  <h1>Blinded scoring</h1>
+  <a href="live.html" style="color:var(--dim);font-size:13px;text-decoration:none;border:1px solid var(--line);padding:6px 10px;border-radius:7px">Live compare →</a>
+  <div class="objnav" id="nav"></div>
+  <div class="bar"><i id="bar"></i></div>
+  <span class="pill" id="prog">0 / 98</span>
+  <div class="sp"></div>
+  <button id="reveal" title="Show real pipeline names — ends blinding">🔒 Blinded</button>
+  <button id="sync" title="Rotate all seven together">Sync views: off</button>
+  <button id="resetall">Reset views</button>
+  <button id="prev">←</button>
+  <button id="next">→</button>
+  <button class="primary" id="exp">Export CSV</button>
+</header>
+
+<main>
+  <details id="rub">
+    <summary>Controls &amp; scoring rubric — click to expand</summary>
+    <h4>controls</h4>
+    <table>
+      <tr><td>·</td><td><b>Drag</b> to rotate · <b>scroll</b> to zoom · <b>right-drag</b> to pan. Each engine emits its model in its own orientation, so turn them to a comparable view before judging.</td></tr>
+      <tr><td>·</td><td><b>Sync views</b> keeps whatever alignment you set: line the models up by hand, switch sync on (nothing moves), then rotating any one turns them all by the same amount from their own pose.</td></tr>
+      <tr><td>·</td><td>Hold <kbd>Shift</kbd> while dragging to re-adjust one model without moving the others.</td></tr>
+      <tr><td>·</td><td><kbd>←</kbd> <kbd>→</kbd> change object · <kbd>R</kbd> reset views · click the photo to enlarge. Scores save automatically in this browser.</td></tr>
+    </table>
+    <h4>geometry 1–5 · structure &amp; proportion only, ignore colour</h4>
+    <table>
+      <tr><td>5</td><td>All major structures present, correct proportions, thin parts (mirrors, antennas, arms, railings) intact</td></tr>
+      <tr><td>4</td><td>Correct overall shape, minor detail loss</td></tr>
+      <tr><td>3</td><td>Recognisable, but notable structures missing, merged, or blobby</td></tr>
+      <tr><td>2</td><td>Distorted or partly collapsed; identifiable only from context</td></tr>
+      <tr><td>1</td><td>Unrecognisable — flat sheet, blob, or wrong object</td></tr>
+    </table>
+    <h4>texture 1–5 · colour, markings, surface detail vs the input photo</h4>
+    <table>
+      <tr><td>5</td><td>Colours and markings accurate, sharp, correctly placed</td></tr>
+      <tr><td>4</td><td>Correct colours, some blur or smearing</td></tr>
+      <tr><td>3</td><td>Approximate colours; markings smeared, stretched, or misplaced</td></tr>
+      <tr><td>2</td><td>Mostly wrong colours, or heavy bleeding across surfaces</td></tr>
+      <tr><td>1</td><td>No meaningful texture (flat grey / noise)</td></tr>
+    </table>
+    <h4>rules</h4>
+    <table>
+      <tr><td>1</td><td>Score every slot, including the obviously bad ones — skipping biases the means.</td></tr>
+      <tr><td>2</td><td>Judge against the input photo, not against the other renders.</td></tr>
+      <tr><td>3</td><td>Rotate before judging geometry — the back of every object is hallucinated, so check it.</td></tr>
+      <tr><td>4</td><td>First impression. Don't go back and even out earlier objects.</td></tr>
+      <tr><td>5</td><td>Don't open blind_key.csv until you've exported.</td></tr>
+    </table>
+  </details>
+
+  <div class="title" id="title"></div>
+  <div class="ref">
+    <img id="refimg" alt="input photograph">
+    <div class="cap">Input photograph — every model below was generated from this single image</div>
+  </div>
+  <div class="grid" id="grid"></div>
+</main>
+
+<footer>
+  Blinded · seed 1337 · models served under slot letters only
+</footer>
+
+<dialog id="zoom"><img id="zoomimg" alt=""></dialog>
+
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js" } }
+</script>
+<script src="objects.js"></script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from './vendor/jsm/loaders/GLTFLoader.js';
+import { OrbitControls } from './vendor/jsm/controls/OrbitControls.js';
+
+const OBJECTS = window.__OBJECTS__;
+const SLOTS = ["A","B","C","D","E","F","G"];
+const DEFECTS = [
+  ["floaters","floaters"], ["holes","holes"], ["flat_collapse","flat collapse"],
+  ["janus_duplicate","duplicate/janus"], ["front_only_texture","front-only texture"],
+];
+const KEYST = "htx3d_manual_scores_v1";
+let data = JSON.parse(localStorage.getItem(KEYST) || "{}");
+
+/* Reveal mode — presentation only. Off by default; blinding is the whole point
+   of the scoring pass, so this is deliberately explicit and does not persist
+   beyond the browser session. */
+const PIPE_LABEL = {
+  trellis2_rembg: ["TRELLIS.2", "rembg"],
+  trellis2_sam3:  ["TRELLIS.2", "SAM 3"],
+  trellis_rembg:  ["TRELLIS 1", "rembg"],
+  trellis_sam3:   ["TRELLIS 1", "SAM 3"],
+  hunyuan_rembg:  ["Hunyuan3D", "rembg"],
+  hunyuan_sam3:   ["Hunyuan3D", "SAM 3"],
+  sam3d_sam3:     ["SAM 3D",    "SAM 3"],
+};
+const PIPE_ORDER = Object.keys(PIPE_LABEL);
+let KEY = null;
+let revealed = sessionStorage.getItem("htx3d_reveal") === "1";
+let idx = 0, syncing = false, shiftHeld = false;
+addEventListener("keydown", e => { if (e.key === "Shift") shiftHeld = true; });
+addEventListener("keyup",   e => { if (e.key === "Shift") shiftHeld = false; });
+addEventListener("blur",    () => { shiftHeld = false; });
+
+const $ = s => document.querySelector(s);
+const save = () => localStorage.setItem(KEYST, JSON.stringify(data));
+const rec = (o,s) => (data[o+"|"+s] ||= {g:null,t:null,d:{},n:""});
+const complete = r => r && r.g && r.t;
+
+/* ---------- renderer (one context, scissored into each card) ---------- */
+let renderer = null, webgl = true;
+try {
+  renderer = new THREE.WebGLRenderer({canvas:$("#gl"), antialias:true, alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.15;
+} catch(e){ webgl = false; console.warn("WebGL unavailable, falling back to stills", e); }
+
+const loader = new GLTFLoader();
+let views = [];
+
+function makeView(el){
+  const scene = new THREE.Scene();
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x333844, 2.2));
+  const key = new THREE.DirectionalLight(0xffffff, 2.0); key.position.set(2,3,4);
+  scene.add(key);
+  const fill = new THREE.DirectionalLight(0xffffff, 0.7); fill.position.set(-3,1,-2);
+  scene.add(fill);
+  const camera = new THREE.PerspectiveCamera(38, 1, 0.01, 100);
+  camera.position.set(0, 0.35, 2.4);
+  const controls = new OrbitControls(camera, el);
+  controls.enableDamping = true; controls.dampingFactor = 0.09;
+  controls.minDistance = 0.6; controls.maxDistance = 8;
+  const v = {el, scene, camera, controls, root:null, base:null};
+  controls.addEventListener("change", () => {
+    if (!syncing) return;
+    // Shift-drag adjusts this model alone and re-baselines it, so the next
+    // synced rotation continues from the alignment you just set.
+    if (shiftHeld) v.base = poseOf(v);
+    else propagate(v);
+  });
+  return v;
+}
+
+/* Sync rotates every model by the SAME DELTA from its own aligned pose,
+   rather than snapping them all to one absolute camera. Baselines are captured
+   when sync is switched on, so whatever alignment you set by hand is preserved. */
+function poseOf(v){
+  const off = new THREE.Vector3().subVectors(v.camera.position, v.controls.target);
+  const s = new THREE.Spherical().setFromVector3(off);
+  return {theta:s.theta, phi:s.phi, radius:s.radius, target:v.controls.target.clone()};
+}
+
+function captureBaselines(){ for (const v of views) v.base = poseOf(v); }
+
+function propagate(src){
+  if (propagate.busy) return;
+  if (!src.base) captureBaselines();
+  const cur = poseOf(src);
+  const dTheta = cur.theta - src.base.theta;
+  const dPhi   = cur.phi   - src.base.phi;
+  const rRatio = src.base.radius ? cur.radius / src.base.radius : 1;
+  const dTarget = new THREE.Vector3().subVectors(cur.target, src.base.target);
+
+  propagate.busy = true;
+  for (const v of views){
+    if (v === src) continue;
+    if (!v.base) v.base = poseOf(v);
+    const s = new THREE.Spherical(
+      Math.max(0.05, v.base.radius * rRatio),
+      Math.min(Math.PI - 0.01, Math.max(0.01, v.base.phi + dPhi)),
+      v.base.theta + dTheta
+    );
+    v.controls.target.copy(v.base.target).add(dTarget);
+    v.camera.position.copy(v.controls.target).add(new THREE.Vector3().setFromSpherical(s));
+    v.camera.lookAt(v.controls.target);
+    v.controls.update();
+  }
+  propagate.busy = false;
+}
+
+function disposeRoot(v){
+  if (!v.root) return;
+  v.root.traverse(o => {
+    if (o.geometry) o.geometry.dispose();
+    const mats = Array.isArray(o.material) ? o.material : (o.material ? [o.material] : []);
+    for (const m of mats){
+      for (const k of Object.keys(m)) if (m[k] && m[k].isTexture) m[k].dispose();
+      m.dispose();
+    }
+  });
+  v.scene.remove(v.root); v.root = null;
+}
+
+function frameModel(v, obj){
+  const box = new THREE.Box3().setFromObject(obj);
+  const size = box.getSize(new THREE.Vector3());
+  const ctr  = box.getCenter(new THREE.Vector3());
+  const s = 1 / Math.max(size.x, size.y, size.z, 1e-6);
+  obj.scale.setScalar(s);
+  obj.position.sub(ctr.multiplyScalar(s));
+  v.controls.target.set(0,0,0);
+  v.camera.position.set(0.9, 0.5, 1.8);
+  v.camera.lookAt(0,0,0);
+  v.controls.update();
+  v.home = {p:v.camera.position.clone(), t:v.controls.target.clone()};
+}
+
+function loadInto(v, url, msgEl){
+  disposeRoot(v);
+  msgEl.textContent = "loading…";
+  loader.load(url, gltf => {
+    v.root = gltf.scene;
+    v.scene.add(v.root);
+    frameModel(v, v.root);
+    if (syncing) v.base = poseOf(v);
+    msgEl.textContent = "";
+  }, xhr => {
+    if (xhr.total) msgEl.textContent = `loading ${Math.round(100*xhr.loaded/xhr.total)}%`;
+  }, err => { msgEl.textContent = "failed to load"; console.error(url, err); });
+}
+
+function renderLoop(){
+  requestAnimationFrame(renderLoop);
+  if (!webgl || !renderer) return;
+  const w = innerWidth, h = innerHeight;
+  if (renderer.domElement.width !== Math.floor(w*renderer.getPixelRatio()) ||
+      renderer.domElement.height !== Math.floor(h*renderer.getPixelRatio())){
+    renderer.setSize(w, h, false);
+  }
+  renderer.setScissorTest(true);
+  for (const v of views){
+    const r = v.el.getBoundingClientRect();
+    if (r.bottom < 0 || r.top > h || r.right < 0 || r.left > w) continue;
+    const bottom = h - r.bottom;
+    renderer.setViewport(r.left, bottom, r.width, r.height);
+    renderer.setScissor(r.left, bottom, r.width, r.height);
+    v.camera.aspect = r.width / r.height;
+    v.camera.updateProjectionMatrix();
+    v.controls.update();
+    renderer.render(v.scene, v.camera);
+  }
+  renderer.setScissorTest(false);
+}
+renderLoop();
+
+/* ---------- UI ---------- */
+function objState(o){
+  const n = SLOTS.filter(s => complete(data[o+"|"+s])).length;
+  return n === 7 ? "done" : n > 0 ? "part" : "";
+}
+
+function renderNav(){
+  $("#nav").innerHTML = "";
+  OBJECTS.forEach((o,i) => {
+    const b = document.createElement("b");
+    b.textContent = String(i+1).padStart(2,"0");
+    b.className = objState(o) + (i === idx ? " cur" : "");
+    b.title = o;
+    b.onclick = () => { idx = i; draw(); };
+    $("#nav").appendChild(b);
+  });
+  const done = OBJECTS.flatMap(o => SLOTS.map(s => complete(data[o+"|"+s]))).filter(Boolean).length;
+  $("#prog").textContent = `${done} / ${OBJECTS.length*7}`;
+  $("#bar").style.width = `${100*done/(OBJECTS.length*7)}%`;
+}
+
+function zoom(src){ $("#zoomimg").src = src; $("#zoom").showModal(); }
+$("#zoom").onclick = () => $("#zoom").close();
+
+function draw(){
+  const o = OBJECTS[idx];
+  $("#title").innerHTML = `${o.replace(/_/g," ")} <small>object ${idx+1} of ${OBJECTS.length}</small>`;
+  const ref = `blind_panels/${o}__INPUT.png`;
+  $("#refimg").src = ref;
+  $("#refimg").onclick = () => zoom(ref);
+
+  for (const v of views) { disposeRoot(v); v.controls.dispose(); }
+  views = [];
+  const g = $("#grid"); g.innerHTML = "";
+
+  // In reveal mode, order cards by pipeline instead of slot letter so the same
+  // engine sits in the same position on every object — much easier to follow live.
+  let order = SLOTS;
+  if (revealed && KEY && KEY[o]){
+    order = [...SLOTS].sort((a,b) =>
+      PIPE_ORDER.indexOf(KEY[o][a]) - PIPE_ORDER.indexOf(KEY[o][b]));
+  }
+
+  order.forEach(s => {
+    const r = rec(o,s);
+    const card = document.createElement("div");
+    card.className = "card" + (complete(r) ? " filled" : "");
+
+    const head = document.createElement("div");
+    head.className = "chead";
+    let lab = `<span class="slot">${s}`;
+    if (revealed && KEY && KEY[o]){
+      const [eng, seg] = PIPE_LABEL[KEY[o][s]] || [KEY[o][s], ""];
+      lab += `<span class="pipe">${eng} <em>· ${seg}</em></span>`;
+    }
+    head.innerHTML = lab + `</span><span class="sp"></span>`;
+    const rb = document.createElement("button");
+    rb.textContent = "reset";
+    head.appendChild(rb);
+    card.appendChild(head);
+
+    const view = document.createElement("div");
+    view.className = "view";
+    const msg = document.createElement("div");
+    msg.className = "msg";
+    view.appendChild(msg);
+    card.appendChild(view);
+
+    const ctl = document.createElement("div");
+    ctl.className = "ctl";
+    [["g","geometry"],["t","texture"]].forEach(([k,label]) => {
+      const row = document.createElement("div"); row.className = "row";
+      const lb = document.createElement("span"); lb.className = "lab"; lb.textContent = label;
+      row.appendChild(lb);
+      for (let val = 1; val <= 5; val++){
+        const b = document.createElement("button");
+        b.className = "sc" + (r[k] === val ? " on" : "");
+        b.textContent = val;
+        b.onclick = () => {
+          r[k] = (r[k] === val ? null : val);
+          save();
+          card.classList.toggle("filled", !!complete(r));
+          row.querySelectorAll(".sc").forEach((x,i2) => x.classList.toggle("on", r[k] === i2+1));
+          renderNav();
+        };
+        row.appendChild(b);
+      }
+      ctl.appendChild(row);
+    });
+    const defs = document.createElement("div"); defs.className = "defs";
+    DEFECTS.forEach(([key,label]) => {
+      const d = document.createElement("span");
+      d.className = "df" + (r.d[key] ? " on" : "");
+      d.textContent = label;
+      d.onclick = () => { r.d[key] = !r.d[key]; d.classList.toggle("on", !!r.d[key]); save(); };
+      defs.appendChild(d);
+    });
+    ctl.appendChild(defs);
+    const nt = document.createElement("input");
+    nt.type = "text"; nt.placeholder = "notes (optional)"; nt.value = r.n || "";
+    nt.oninput = e => { r.n = e.target.value; save(); };
+    ctl.appendChild(nt);
+    card.appendChild(ctl);
+    g.appendChild(card);
+
+    if (webgl){
+      const v = makeView(view);
+      views.push(v);
+      loadInto(v, `blind_models/${o}__${s}.glb`, msg);
+      rb.onclick = () => {
+        if (!v.home) return;
+        v.camera.position.copy(v.home.p);
+        v.controls.target.copy(v.home.t);
+        v.controls.update();
+        if (syncing) v.base = poseOf(v);
+      };
+    } else {
+      const im = document.createElement("img");
+      im.src = `blind_panels/${o}__${s}.png`;
+      im.onclick = () => zoom(im.src);
+      view.appendChild(im);
+      msg.textContent = "";
+      rb.style.display = "none";
+    }
+  });
+  renderNav();
+  scrollTo({top:0,behavior:"smooth"});
+}
+
+function csv(){
+  const head = ["object_id","slot","geometry_1to5","texture_1to5",
+                ...DEFECTS.map(d => d[0]), "notes"];
+  const rows = [head.join(",")];
+  OBJECTS.forEach(o => SLOTS.forEach(s => {
+    const r = data[o+"|"+s] || {d:{}};
+    const cells = [o, s, r.g ?? "", r.t ?? "",
+      ...DEFECTS.map(d => (r.d && r.d[d[0]]) ? "1" : ""),
+      (r.n || "").replace(/"/g,'""')];
+    rows.push(cells.map(c => /[",]/.test(String(c)) ? `"${c}"` : c).join(","));
+  }));
+  return rows.join("\n");
+}
+
+$("#exp").onclick = () => {
+  const done = OBJECTS.flatMap(o => SLOTS.map(s => complete(data[o+"|"+s]))).filter(Boolean).length;
+  const total = OBJECTS.length*7;
+  if (done < total && !confirm(
+      `${done} of ${total} rows scored. Export anyway?\n\nPartial sheets analyse fine — the report states coverage.`)) return;
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv()], {type:"text/csv"}));
+  a.download = "scores_cj.csv";
+  a.click();
+};
+$("#sync").onclick = e => {
+  syncing = !syncing;
+  // Capture each model's CURRENT pose as its baseline, so switching sync on
+  // never moves anything — it only makes future rotation apply to all.
+  if (syncing) captureBaselines();
+  e.target.textContent = "Sync views: " + (syncing ? "on" : "off");
+  e.target.classList.toggle("on", syncing);
+};
+$("#resetall").onclick = () => {
+  views.forEach(v => {
+    if (!v.home) return;
+    v.camera.position.copy(v.home.p);
+    v.controls.target.copy(v.home.t);
+    v.controls.update();
+  });
+  if (syncing) captureBaselines();
+};
+$("#prev").onclick = () => { if (idx > 0){ idx--; draw(); } };
+$("#next").onclick = () => { if (idx < OBJECTS.length-1){ idx++; draw(); } };
+document.onkeydown = e => {
+  if (e.target.tagName === "INPUT") return;
+  if (e.key === "ArrowLeft")  $("#prev").click();
+  if (e.key === "ArrowRight") $("#next").click();
+  if (e.key === "r" || e.key === "R") $("#resetall").click();
+};
+
+async function setReveal(on){
+  if (on && !KEY){
+    try { KEY = await fetch("key.json").then(r => r.json()); }
+    catch(e){ alert("Could not load key.json — names unavailable."); return; }
+  }
+  revealed = on;
+  sessionStorage.setItem("htx3d_reveal", on ? "1" : "0");
+  document.body.classList.toggle("revealed", on);
+  $("#reveal").textContent = on ? "🔓 Revealed" : "🔒 Blinded";
+  $("#reveal").classList.toggle("live", on);
+  draw();
+}
+
+$("#reveal").onclick = () => {
+  if (revealed){ setReveal(false); return; }
+  const done = OBJECTS.flatMap(o => SLOTS.map(s => complete(data[o+"|"+s]))).filter(Boolean).length;
+  const total = OBJECTS.length * 7;
+  const msg = done >= total
+    ? "Reveal pipeline names?\n\nAll rows are scored, so the blinded pass is already banked. Safe to reveal."
+    : `Reveal pipeline names?\n\nOnly ${done} of ${total} rows are scored. Once you can see which engine is which, `
+      + `anything you score afterwards is NO LONGER BLIND and cannot honestly be presented as a blinded evaluation.\n\n`
+      + `Use this for the demo — not during scoring.`;
+  if (confirm(msg)) setReveal(true);
+};
+
+if (revealed) setReveal(true); else draw();
+</script>
+</body>
+</html>

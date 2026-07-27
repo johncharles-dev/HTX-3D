@@ -61,6 +61,9 @@ evaluation/benchmark_v2/outputs/
 evaluation/trellis2_benchmark/renders/
 evaluation/trellis2_benchmark/montages/
 evaluation/manual_eval/blind_montages/
+evaluation/manual_eval/blind_panels/
+evaluation/manual_eval/_serve/blind_models/
+evaluation/manual_eval/_serve/vendor/
 
 
 # Claude Code local config — keep out of the project

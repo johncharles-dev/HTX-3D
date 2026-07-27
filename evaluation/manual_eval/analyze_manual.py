@@ -57,11 +57,11 @@ def load_key() -> dict[tuple[str, str], str]:
         return {(r["object_id"], r["slot"]): r["pipeline"] for r in csv.DictReader(f)}
 
 
-def load_scores(key) -> tuple[list[dict], list[str]]:
-    files = sorted(p for p in SCRIPT_DIR.glob("scores_*.csv")
+def load_scores(key, pattern: str = "scores_*.csv") -> tuple[list[dict], list[str]]:
+    files = sorted(p for p in SCRIPT_DIR.glob(pattern)
                    if p.stem != "scores_TEMPLATE")
     if not files:
-        raise SystemExit("no scores_*.csv found (copy scores_TEMPLATE.csv first)")
+        raise SystemExit(f"no {pattern} found (copy scores_TEMPLATE.csv first)")
     recs, warnings = [], []
     for p in files:
         rater = p.stem.replace("scores_", "")
@@ -137,18 +137,35 @@ def spearman(a, b):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--boot", type=int, default=20000)
+    ap.add_argument("--pattern", default="scores_*.csv",
+                    help="which score sheets to analyse; use 'vlm_scores_*.csv' "
+                         "to analyse the model-based pass SEPARATELY. Human and "
+                         "VLM scores must never be pooled.")
+    ap.add_argument("--out", default=None, help="output .md path")
     args = ap.parse_args()
 
     rng = random.Random(0)
     key = load_key()
-    recs, warnings = load_scores(key)
+    recs, warnings = load_scores(key, args.pattern)
+    is_vlm = "vlm" in args.pattern
+    out_path = Path(args.out) if args.out else (
+        SCRIPT_DIR / ("vlm_judge_report.md" if is_vlm else "manual_eval_report.md"))
     raters = sorted({r["rater"] for r in recs})
     objs = sorted({r["object_id"] for r in recs})
     pipes = [p for p in PIPELINES if any(r["pipeline"] == p for r in recs)]
 
-    L: list[str] = ["# Manual (human) evaluation — blinded montage scoring\n"]
-    L.append(f"Raters: **{len(raters)}** ({', '.join(raters)}) · "
-             f"objects scored: **{len(objs)}/14** · pipelines: **{len(pipes)}**\n")
+    if is_vlm:
+        L = ["# VLM-as-judge evaluation — blinded montage scoring\n"]
+        L.append("> ⚠ **These scores were produced by a vision-language model, "
+                 "not by human raters.** They are NOT the manual evaluation and "
+                 "must not be pooled with, or presented as, human judgements. "
+                 "They are unvalidated against a human subset, so treat them as "
+                 "an automated screen, not as perceptual ground truth.\n")
+    else:
+        L = ["# Manual (human) evaluation — blinded montage scoring\n"]
+    L.append(f"{'Judges' if is_vlm else 'Raters'}: **{len(raters)}** "
+             f"({', '.join(raters)}) · objects scored: **{len(objs)}/14** · "
+             f"pipelines: **{len(pipes)}**\n")
 
     # ---- 1. coverage -------------------------------------------------------
     expected = len(objs) * len(pipes) * len(raters)
@@ -276,9 +293,9 @@ def main():
         else:
             L.append("_Not enough overlapping judgements to compute agreement._\n")
 
-    REPORT_PATH.write_text("\n".join(L))
+    out_path.write_text("\n".join(L))
     print("\n".join(L))
-    print(f"\n✓ written to {REPORT_PATH}")
+    print(f"\n✓ written to {out_path}")
 
 
 if __name__ == "__main__":

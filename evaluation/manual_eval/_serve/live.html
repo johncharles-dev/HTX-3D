@@ -1,0 +1,686 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Live engine comparison — HTX-3D</title>
+<style>
+  :root{
+    --bg:#12141a; --panel:#1b1e26; --line:#2c313d; --fg:#e8eaf0; --dim:#9aa2b4;
+    --accent:#4da3ff; --warn:#ffb454; --good:#5ec98a; --bad:#ff6b6b;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:transparent;color:var(--fg);
+       font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+  #bgfill{position:fixed;inset:0;background:var(--bg);z-index:-2}
+  #gl{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:-1;pointer-events:none}
+  header{position:sticky;top:0;z-index:20;background:rgba(18,20,26,.97);
+         border-bottom:1px solid var(--line);padding:10px 16px;
+         display:flex;gap:12px;align-items:center;flex-wrap:wrap;backdrop-filter:blur(8px)}
+  h1{font-size:15px;margin:0;font-weight:650;white-space:nowrap}
+  .sp{flex:1}
+  button{background:var(--panel);color:var(--fg);border:1px solid var(--line);
+         border-radius:7px;padding:7px 12px;font:inherit;font-size:14px;cursor:pointer}
+  button:hover:not(:disabled){border-color:var(--accent)}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#06121f;font-weight:600}
+  button.on{background:#1d3a2a;border-color:var(--good);color:var(--good)}
+  main{padding:16px;max-width:1800px;margin:0 auto}
+  .top{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+  #drop{width:380px;min-height:230px;border:2px dashed var(--line);border-radius:12px;
+        display:grid;place-items:center;text-align:center;padding:16px;cursor:pointer;
+        background:var(--panel);color:var(--dim);transition:.15s}
+  #drop:hover,#drop.hot{border-color:var(--accent);color:var(--fg)}
+  #drop img{max-width:100%;max-height:300px;border-radius:8px;display:block}
+  #drop .ph b{display:block;color:var(--fg);font-size:16px;margin-bottom:4px}
+  .settings{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+            padding:14px 16px;min-width:340px;flex:1}
+  .settings h3{margin:0 0 10px;font-size:13px;color:var(--dim);
+               text-transform:uppercase;letter-spacing:.6px}
+  .fld{display:flex;align-items:center;gap:10px;margin-bottom:9px;font-size:14px}
+  .fld label{width:132px;color:var(--dim)}
+  .fld input[type=number],.fld select{background:#151821;border:1px solid var(--line);
+       color:var(--fg);border-radius:6px;padding:5px 8px;font:inherit;font-size:13.5px;width:130px}
+  .fld input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent)}
+  .engs{display:flex;gap:7px;flex-wrap:wrap;margin-top:4px}
+  .eng{font-size:13px;padding:6px 11px;border-radius:20px;border:1px solid var(--line);
+       background:#151821;color:var(--dim);cursor:pointer;user-select:none}
+  .eng.on{background:#123049;border-color:var(--accent);color:#cfe6ff}
+  .grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(360px,1fr))}
+  .card{border:1px solid var(--line);border-radius:11px;overflow:hidden;
+        display:flex;flex-direction:column;background:transparent}
+  .card.done{border-color:#2f5c42}
+  .card.failed{border-color:var(--bad)}
+  .chead{display:flex;align-items:center;gap:9px;padding:9px 12px;background:var(--panel);
+         border-bottom:1px solid var(--line)}
+  .nm{font-size:16px;font-weight:700}
+  .nm em{font-style:normal;font-weight:400;color:var(--dim);font-size:13.5px;margin-left:6px}
+  .chip{font-size:11.5px;padding:3px 9px;border-radius:20px;border:1px solid var(--line);
+        background:#151821;color:var(--dim);white-space:nowrap}
+  .chip.run{background:#3a2f1a;border-color:var(--warn);color:var(--warn)}
+  .chip.ok{background:#1d3a2a;border-color:var(--good);color:var(--good)}
+  .chip.err{background:#4a1f22;border-color:var(--bad);color:#ffb3b3}
+  .view{height:330px;position:relative;cursor:grab;background:transparent}
+  .view:active{cursor:grabbing}
+  .view .msg{position:absolute;inset:0;display:grid;place-items:center;
+             color:var(--dim);font-size:13px;padding:14px;text-align:center;pointer-events:none}
+  .cfoot{background:var(--panel);border-top:1px solid var(--line);padding:7px 12px;
+         font-size:12px;color:var(--dim);display:flex;gap:12px;flex-wrap:wrap}
+  kbd{background:#151821;border:1px solid var(--line);border-radius:4px;
+      padding:1px 5px;font-size:12px;font-family:inherit;color:var(--fg)}
+  .hint{color:var(--dim);font-size:13px;margin:0 0 14px}
+  a{color:var(--accent)}
+  /* --- SAM 3 segmentation panel --- */
+  #segpanel{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+            padding:12px 14px;margin-bottom:18px}
+  .segbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:11px}
+  .segbar b{font-size:14px}
+  .segbar button{padding:5px 10px;font-size:13px}
+  .segbar button.on{background:#123049;border-color:var(--accent);color:#cfe6ff}
+  .segbar input{background:#151821;border:1px solid var(--line);color:var(--fg);
+                border-radius:6px;padding:5px 8px;font:inherit;font-size:13px;width:150px}
+  #segwrap{position:relative;display:inline-block;line-height:0;
+           border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#0d0f14}
+  #segimg{max-width:100%;max-height:460px;display:block;cursor:crosshair}
+  #rubber{position:absolute;border:2px dashed var(--accent);background:rgba(77,163,255,.14);
+          display:none;pointer-events:none}
+  .dot{position:absolute;width:13px;height:13px;border-radius:50%;transform:translate(-50%,-50%);
+       border:2px solid #fff;pointer-events:none;box-shadow:0 0 4px rgba(0,0,0,.7)}
+  .dot.pos{background:#2ecc71} .dot.neg{background:#ff5c5c}
+  #masklist{margin-top:10px}
+</style>
+</head>
+<body>
+<div id="bgfill"></div>
+<canvas id="gl"></canvas>
+
+<header>
+  <h1>Live engine comparison</h1>
+  <a href="index.html" style="color:var(--dim);font-size:13px;text-decoration:none;border:1px solid var(--line);padding:6px 10px;border-radius:7px">← Blinded scoring</a>
+  <span class="chip" id="overall">waiting for an image</span>
+  <div class="sp"></div>
+  <button id="sync" title="Rotate all models together">Sync views: off</button>
+  <button id="resetall">Reset views</button>
+  <button class="primary" id="go" disabled>Generate on all engines</button>
+</header>
+
+<main>
+  <div class="top">
+    <div id="drop">
+      <div class="ph">
+        <b>Drop an image here</b>
+        or click to choose · JPG / PNG / WEBP
+      </div>
+      <input type="file" id="file" accept="image/*" hidden>
+    </div>
+
+    <div class="settings">
+      <h3>pipelines</h3>
+      <div class="engs" id="engs"></div>
+      <p class="hint" style="margin:9px 0 0">
+        SAM 3 variants need a cutout — use the segmentation panel below the image.
+      </p>
+
+      <h3 style="margin-top:16px">settings</h3>
+      <div class="fld">
+        <label for="seed">Seed</label>
+        <input type="number" id="seed" value="42">
+        <label style="width:auto"><input type="checkbox" id="rand"> randomise</label>
+      </div>
+      <div class="fld">
+        <label for="tex">Texture size</label>
+        <select id="tex"><option>1024</option><option>2048</option></select>
+      </div>
+      <div class="fld">
+        <label for="simp">Mesh simplify</label>
+        <input type="number" id="simp" value="0.95" step="0.01" min="0" max="1">
+      </div>
+      <div class="fld">
+        <label for="faces">Target faces</label>
+        <input type="number" id="faces" value="50000" step="10000" min="0">
+      </div>
+      <p class="hint" style="margin:10px 0 0">
+        Engines run one at a time on the shared GPU; each model appears as soon as
+        it finishes. SAM 3D works best on a pre-segmented cutout — on a raw photo
+        it falls back to using the whole frame.
+      </p>
+    </div>
+  </div>
+
+  <div id="segpanel" style="display:none">
+    <div class="segbar">
+      <b>SAM 3 cutout</b>
+      <span class="chip" id="segstat">not segmented</span>
+      <span class="sp"></span>
+      <button data-tool="pos" class="on">Point +</button>
+      <button data-tool="neg">Point −</button>
+      <button data-tool="box">Box</button>
+      <input type="text" id="prompt" placeholder="or type: ambulance">
+      <button id="ptext">Text</button>
+      <button id="pundo">Undo</button>
+      <button id="preset">Reset</button>
+      <button class="primary" id="pconfirm" disabled>Use this mask</button>
+    </div>
+    <div id="segwrap"><img id="segimg" alt="segmentation preview"><div id="rubber"></div></div>
+    <div class="engs" id="masklist"></div>
+    <p class="hint" style="margin:10px 0 0">
+      <b>Point +</b> click the object · <b>Point −</b> click what to exclude ·
+      <b>Box</b> drag around it · or type a text prompt. Then <b>Use this mask</b>.
+      One cutout is shared by every SAM 3 variant.
+    </p>
+  </div>
+
+  <p class="hint">
+    Drag to rotate · scroll to zoom · right-drag to pan.
+    <b>Sync views</b> preserves each model's alignment: line them up by hand, switch
+    sync on, then rotating one turns them all by the same amount. Hold <kbd>Shift</kbd>
+    to adjust one alone. <kbd>R</kbd> resets.
+  </p>
+
+  <div class="grid" id="grid"></div>
+</main>
+
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from './vendor/jsm/loaders/GLTFLoader.js';
+import { OrbitControls } from './vendor/jsm/controls/OrbitControls.js';
+
+/* The same 7 conditions as the benchmark: engine x segmentation front-end.
+   rembg  = raw photo, engine strips the background itself
+   SAM 3  = SAM 3 cutout (one segmentation pass, reused by every sam3 variant) */
+const PIPELINES = [
+  {id:"trellis_rembg",  engine:"trellis",  seg:"rembg", name:"TRELLIS 1", note:"rembg"},
+  {id:"trellis_sam3",   engine:"trellis",  seg:"sam3",  name:"TRELLIS 1", note:"SAM 3"},
+  {id:"trellis2_rembg", engine:"trellis2", seg:"rembg", name:"TRELLIS.2", note:"rembg"},
+  {id:"trellis2_sam3",  engine:"trellis2", seg:"sam3",  name:"TRELLIS.2", note:"SAM 3"},
+  {id:"hunyuan_rembg",  engine:"hunyuan",  seg:"rembg", name:"Hunyuan3D", note:"rembg"},
+  {id:"hunyuan_sam3",   engine:"hunyuan",  seg:"sam3",  name:"Hunyuan3D", note:"SAM 3"},
+  {id:"sam3d_sam3",     engine:"sam3d",    seg:"sam3",  name:"SAM 3D",    note:"SAM 3"},
+];
+let selected = new Set(["trellis_rembg","trellis2_rembg","hunyuan_rembg"]);
+let file = null, syncing = false, shiftHeld = false, views = [], cards = {};
+
+addEventListener("keydown", e => { if (e.key === "Shift") shiftHeld = true;
+  if ((e.key === "r"||e.key === "R") && e.target.tagName !== "INPUT") $("#resetall").click(); });
+addEventListener("keyup", e => { if (e.key === "Shift") shiftHeld = false; });
+addEventListener("blur", () => { shiftHeld = false; });
+
+const $ = s => document.querySelector(s);
+
+/* ---------------- three.js: one context, scissored per card ---------------- */
+let renderer = null, webgl = true;
+try {
+  renderer = new THREE.WebGLRenderer({canvas:$("#gl"), antialias:true, alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.15;
+} catch(e){ webgl = false; }
+const loader = new GLTFLoader();
+
+function makeView(el){
+  const scene = new THREE.Scene();
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x333844, 2.2));
+  const k = new THREE.DirectionalLight(0xffffff, 2.0); k.position.set(2,3,4); scene.add(k);
+  const f = new THREE.DirectionalLight(0xffffff, 0.7); f.position.set(-3,1,-2); scene.add(f);
+  const camera = new THREE.PerspectiveCamera(38, 1, 0.01, 100);
+  camera.position.set(0.9, 0.5, 1.8);
+  const controls = new OrbitControls(camera, el);
+  controls.enableDamping = true; controls.dampingFactor = 0.09;
+  controls.minDistance = 0.6; controls.maxDistance = 8;
+  const v = {el, scene, camera, controls, root:null, base:null, home:null};
+  controls.addEventListener("change", () => {
+    if (!syncing) return;
+    if (shiftHeld) v.base = poseOf(v); else propagate(v);
+  });
+  views.push(v);
+  return v;
+}
+function poseOf(v){
+  const off = new THREE.Vector3().subVectors(v.camera.position, v.controls.target);
+  const s = new THREE.Spherical().setFromVector3(off);
+  return {theta:s.theta, phi:s.phi, radius:s.radius, target:v.controls.target.clone()};
+}
+const captureBaselines = () => views.forEach(v => v.base = poseOf(v));
+function propagate(src){
+  if (propagate.busy) return;
+  if (!src.base) captureBaselines();
+  const cur = poseOf(src);
+  const dT = cur.theta - src.base.theta, dP = cur.phi - src.base.phi;
+  const rR = src.base.radius ? cur.radius / src.base.radius : 1;
+  const dTar = new THREE.Vector3().subVectors(cur.target, src.base.target);
+  propagate.busy = true;
+  for (const v of views){
+    if (v === src || !v.root) continue;
+    if (!v.base) v.base = poseOf(v);
+    const s = new THREE.Spherical(
+      Math.max(0.05, v.base.radius * rR),
+      Math.min(Math.PI - 0.01, Math.max(0.01, v.base.phi + dP)),
+      v.base.theta + dT);
+    v.controls.target.copy(v.base.target).add(dTar);
+    v.camera.position.copy(v.controls.target).add(new THREE.Vector3().setFromSpherical(s));
+    v.camera.lookAt(v.controls.target);
+    v.controls.update();
+  }
+  propagate.busy = false;
+}
+function frameModel(v, obj){
+  const box = new THREE.Box3().setFromObject(obj);
+  const size = box.getSize(new THREE.Vector3());
+  const ctr = box.getCenter(new THREE.Vector3());
+  const s = 1 / Math.max(size.x, size.y, size.z, 1e-6);
+  obj.scale.setScalar(s);
+  obj.position.sub(ctr.multiplyScalar(s));
+  v.controls.target.set(0,0,0);
+  v.camera.position.set(0.9, 0.5, 1.8);
+  v.controls.update();
+  v.home = {p:v.camera.position.clone(), t:v.controls.target.clone()};
+  if (syncing) v.base = poseOf(v);
+}
+function loadGlb(v, url, msgEl){
+  msgEl.textContent = "downloading model…";
+  loader.load(url, g => {
+    if (v.root) v.scene.remove(v.root);
+    v.root = g.scene; v.scene.add(v.root); frameModel(v, v.root);
+    msgEl.textContent = "";
+  }, xhr => { if (xhr.total) msgEl.textContent = `downloading ${Math.round(100*xhr.loaded/xhr.total)}%`; },
+     err => { msgEl.textContent = "could not load model"; console.error(err); });
+}
+(function loop(){
+  requestAnimationFrame(loop);
+  if (!webgl || !renderer) return;
+  const w = innerWidth, h = innerHeight;
+  if (renderer.domElement.width !== Math.floor(w*renderer.getPixelRatio()) ||
+      renderer.domElement.height !== Math.floor(h*renderer.getPixelRatio())) renderer.setSize(w,h,false);
+  renderer.setScissorTest(true);
+  for (const v of views){
+    if (!v.root) continue;
+    const r = v.el.getBoundingClientRect();
+    if (r.bottom < 0 || r.top > h || r.right < 0 || r.left > w) continue;
+    const b = h - r.bottom;
+    renderer.setViewport(r.left, b, r.width, r.height);
+    renderer.setScissor(r.left, b, r.width, r.height);
+    v.camera.aspect = r.width / r.height; v.camera.updateProjectionMatrix();
+    v.controls.update();
+    renderer.render(v.scene, v.camera);
+  }
+  renderer.setScissorTest(false);
+})();
+
+/* ---------------- upload ---------------- */
+const drop = $("#drop"), fileInput = $("#file");
+drop.onclick = () => fileInput.click();
+drop.ondragover = e => { e.preventDefault(); drop.classList.add("hot"); };
+drop.ondragleave = () => drop.classList.remove("hot");
+drop.ondrop = e => {
+  e.preventDefault(); drop.classList.remove("hot");
+  const f = [...e.dataTransfer.files].find(x => x.type.startsWith("image/"));
+  if (f) setFile(f);
+};
+fileInput.onchange = e => { if (e.target.files[0]) setFile(e.target.files[0]); };
+function setFile(f){
+  file = f;
+  const img = new Image();
+  img.onload = () => { drop.innerHTML = ""; drop.appendChild(img); drop.appendChild(fileInput); };
+  img.src = URL.createObjectURL(f);
+  $("#go").disabled = selected.size === 0;
+  $("#overall").textContent = f.name;
+  // new image invalidates any existing cutout
+  seg = {sid:null, points:[], labels:[], masks:[], mi:0, path:null, tool:"pos", busy:false};
+  $("#masklist").innerHTML = "";
+  initSegPanel();
+}
+
+/* ---------------- engine pills ---------------- */
+function renderEngines(){
+  const box = $("#engs"); box.innerHTML = "";
+  PIPELINES.forEach(p => {
+    const el = document.createElement("span");
+    el.className = "eng" + (selected.has(p.id) ? " on" : "");
+    el.innerHTML = `${p.name} <em style="font-style:normal;opacity:.62">· ${p.note}</em>`;
+    el.title = p.seg === "sam3" ? "Needs a SAM 3 prompt" : "Engine removes the background itself";
+    el.onclick = () => {
+      selected.has(p.id) ? selected.delete(p.id) : selected.add(p.id);
+      renderEngines();
+      $("#go").disabled = !file || selected.size === 0;
+    };
+    box.appendChild(el);
+  });
+}
+renderEngines();
+
+/* ---------------- SAM 3 segmentation (text / point / box) ----------------
+   One cutout, confirmed once, reused by every sam3 variant — the same control
+   the benchmark used. Mirrors the main tool's SegmentationWorkspace. */
+let seg = {sid:null, points:[], labels:[], masks:[], mi:0, path:null, tool:"pos", busy:false};
+
+const post = async (url, body, json=true) => {
+  const opt = json
+    ? {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)}
+    : {method:"POST", body};
+  const r = await fetch(url, opt);
+  if (!r.ok) throw new Error((await r.json().catch(()=>({}))).detail || `${url}: ${r.status}`);
+  return r.json();
+};
+
+function segStatus(txt, cls=""){
+  const el = $("#segstat"); el.textContent = txt; el.className = "chip" + (cls ? " "+cls : "");
+}
+
+async function segStart(){
+  const fd = new FormData(); fd.append("image", file);
+  const s = await post("/api/segment/start", fd, false);
+  seg.sid = s.session_id; seg.points = []; seg.labels = []; seg.masks = []; seg.mi = 0; seg.path = null;
+  $("#pconfirm").disabled = true;
+  return s.session_id;
+}
+
+function showOverlay(){
+  $("#segimg").src = `/api/segment/overlay/${seg.sid}?t=${Date.now()}`;
+}
+
+function drawDots(){
+  [...document.querySelectorAll("#segwrap .dot")].forEach(d => d.remove());
+  const img = $("#segimg");
+  seg.points.forEach(([x,y], i) => {
+    const d = document.createElement("div");
+    d.className = "dot " + (seg.labels[i] ? "pos" : "neg");
+    d.style.left = (x * img.clientWidth) + "px";
+    d.style.top  = (y * img.clientHeight) + "px";
+    $("#segwrap").appendChild(d);
+  });
+}
+
+function renderMasks(){
+  const box = $("#masklist"); box.innerHTML = "";
+  if (seg.masks.length < 2) return;
+  seg.masks.forEach((m,i) => {
+    const el = document.createElement("span");
+    el.className = "eng" + (i === seg.mi ? " on" : "");
+    el.textContent = `mask ${i+1} · ${m.score.toFixed(2)}`;
+    el.onclick = () => { seg.mi = i; renderMasks(); };
+    box.appendChild(el);
+  });
+}
+
+async function applyResult(res){
+  seg.masks = res.masks || []; seg.mi = 0;
+  if (!seg.masks.length){ segStatus("no mask found", "err"); $("#pconfirm").disabled = true; }
+  else { segStatus(`${seg.masks.length} mask${seg.masks.length>1?"s":""} · pick & confirm`, "run");
+         $("#pconfirm").disabled = false; }
+  showOverlay(); renderMasks(); drawDots();
+}
+
+async function sendPoints(){
+  if (!seg.points.length){ await segReset(); return; }
+  seg.busy = true; segStatus("segmenting…", "run");
+  try {
+    await applyResult(await post("/api/segment/points",
+      {session_id:seg.sid, points:seg.points, labels:seg.labels}));
+  } catch(e){ segStatus(String(e.message||e), "err"); }
+  seg.busy = false;
+}
+
+async function segReset(){
+  if (!seg.sid) return;
+  try { await fetch(`/api/segment/reset?session_id=${encodeURIComponent(seg.sid)}`, {method:"POST"}); } catch {}
+  seg.points = []; seg.labels = []; seg.masks = []; seg.mi = 0;
+  $("#segimg").src = URL.createObjectURL(file);
+  $("#pconfirm").disabled = true; segStatus("not segmented");
+  renderMasks(); drawDots();
+}
+
+function initSegPanel(){
+  $("#segpanel").style.display = "";
+  $("#segimg").src = URL.createObjectURL(file);
+  segStatus("starting session…", "run");
+  segStart().then(() => segStatus("click the object, or type a prompt"))
+            .catch(e => segStatus(String(e.message||e), "err"));
+
+  const img = $("#segimg"), wrap = $("#segwrap"), rub = $("#rubber");
+  const norm = ev => {
+    const r = img.getBoundingClientRect();
+    return [Math.min(1,Math.max(0,(ev.clientX-r.left)/r.width)),
+            Math.min(1,Math.max(0,(ev.clientY-r.top)/r.height))];
+  };
+
+  img.onclick = async ev => {
+    if (seg.tool === "box" || seg.busy || !seg.sid) return;
+    const [x,y] = norm(ev);
+    seg.points.push([x,y]); seg.labels.push(seg.tool === "pos" ? 1 : 0);
+    drawDots(); await sendPoints();
+  };
+
+  let start = null;
+  wrap.onmousedown = ev => {
+    if (seg.tool !== "box" || !seg.sid) return;
+    start = norm(ev); rub.style.display = "block";
+    rub.style.left = (start[0]*img.clientWidth)+"px"; rub.style.top = (start[1]*img.clientHeight)+"px";
+    rub.style.width = "0px"; rub.style.height = "0px";
+    ev.preventDefault();
+  };
+  wrap.onmousemove = ev => {
+    if (!start) return;
+    const [x,y] = norm(ev);
+    rub.style.left = (Math.min(x,start[0])*img.clientWidth)+"px";
+    rub.style.top  = (Math.min(y,start[1])*img.clientHeight)+"px";
+    rub.style.width  = (Math.abs(x-start[0])*img.clientWidth)+"px";
+    rub.style.height = (Math.abs(y-start[1])*img.clientHeight)+"px";
+  };
+  wrap.onmouseup = async ev => {
+    if (!start) return;
+    const [x,y] = norm(ev); const s = start; start = null; rub.style.display = "none";
+    const w = Math.abs(x-s[0]), h = Math.abs(y-s[1]);
+    if (w < 0.02 || h < 0.02) return;
+    segStatus("segmenting…", "run");
+    try {
+      await applyResult(await post("/api/segment/box",
+        {session_id:seg.sid, box:[(x+s[0])/2, (y+s[1])/2, w, h], label:true}));
+    } catch(e){ segStatus(String(e.message||e), "err"); }
+  };
+
+  document.querySelectorAll(".segbar [data-tool]").forEach(b => {
+    b.onclick = () => {
+      seg.tool = b.dataset.tool;
+      document.querySelectorAll(".segbar [data-tool]").forEach(x => x.classList.toggle("on", x === b));
+      img.style.cursor = seg.tool === "box" ? "crosshair" : "pointer";
+    };
+  });
+
+  $("#ptext").onclick = async () => {
+    const p = ($("#prompt").value || "").trim();
+    if (!p || !seg.sid) return;
+    segStatus("segmenting…", "run");
+    try { await applyResult(await post("/api/segment/text", {session_id:seg.sid, prompt:p})); }
+    catch(e){ segStatus(String(e.message||e), "err"); }
+  };
+  $("#prompt").onkeydown = e => { if (e.key === "Enter") $("#ptext").click(); };
+  $("#pundo").onclick = async () => {
+    if (!seg.points.length) return;
+    seg.points.pop(); seg.labels.pop(); drawDots(); await sendPoints();
+  };
+  $("#preset").onclick = segReset;
+  $("#pconfirm").onclick = async () => {
+    if (!seg.sid || !seg.masks.length) return;
+    segStatus("building cutout…", "run");
+    try {
+      const c = await post("/api/segment/confirm", {session_id:seg.sid, mask_index:seg.mi});
+      seg.path = c.segmented_image_path;
+      segStatus("cutout ready ✓", "ok");
+      $("#pconfirm").disabled = true;
+      seg.sid = null;   // backend cleans the session up on confirm
+    } catch(e){ segStatus(String(e.message||e), "err"); }
+  };
+  addEventListener("resize", drawDots);
+}
+
+/* Fallback: if the user typed a prompt but never confirmed, do it automatically. */
+async function segment(){
+  if (seg.path) return seg.path;
+  const p = ($("#prompt").value || "").trim();
+  if (!p) throw new Error("No SAM 3 cutout — segment the object first (panel above)");
+  const sid = seg.sid || await segStart();
+  const t = await post("/api/segment/text", {session_id:sid, prompt:p});
+  if (!t.masks || !t.masks.length) throw new Error(`SAM 3 found nothing matching "${p}"`);
+  const c = await post("/api/segment/confirm", {session_id:sid, mask_index:0});
+  seg.path = c.segmented_image_path; seg.sid = null;
+  segStatus("cutout ready ✓", "ok");
+  return seg.path;
+}
+
+/* ---------------- generation ---------------- */
+function buildCards(){
+  views = []; cards = {};
+  const g = $("#grid"); g.innerHTML = "";
+  PIPELINES.filter(p => selected.has(p.id)).forEach(e => {
+    const card = document.createElement("div"); card.className = "card";
+    const head = document.createElement("div"); head.className = "chead";
+    head.innerHTML = `<span class="nm">${e.name}<em>· ${e.note}</em></span><span class="sp"></span>`;
+    const chip = document.createElement("span"); chip.className = "chip"; chip.textContent = "queued";
+    head.appendChild(chip); card.appendChild(head);
+    const view = document.createElement("div"); view.className = "view";
+    const msg = document.createElement("div"); msg.className = "msg"; msg.textContent = "waiting…";
+    view.appendChild(msg); card.appendChild(view);
+    const foot = document.createElement("div"); foot.className = "cfoot";
+    foot.innerHTML = `<span class="t">—</span><span class="sz"></span>`;
+    card.appendChild(foot);
+    g.appendChild(card);
+    cards[e.id] = {card, chip, msg, foot, view, v: webgl ? makeView(view) : null, t0: Date.now()};
+  });
+}
+
+async function generate(){
+  if (!file || !selected.size) return;
+  $("#go").disabled = true;
+  buildCards();
+  const list = PIPELINES.filter(p => selected.has(p.id));
+
+  // One SAM 3 pass up front, shared by every sam3 variant.
+  let segPath = null;
+  if (list.some(p => p.seg === "sam3")){
+    $("#overall").textContent = "running SAM 3 segmentation…";
+    for (const p of list.filter(x => x.seg === "sam3")) cards[p.id].msg.textContent = "segmenting…";
+    try { segPath = await segment(); }
+    catch(err){
+      for (const p of list.filter(x => x.seg === "sam3")){
+        const c = cards[p.id];
+        c.chip.textContent = "no mask"; c.chip.className = "chip err";
+        c.card.classList.add("failed"); c.finished = true;
+        c.msg.textContent = String(err.message || err);
+      }
+    }
+  }
+
+  $("#overall").textContent = `submitting ${list.length} jobs…`;
+
+  const jobs = [];
+  for (const e of list){
+    const c = cards[e.id];
+    if (e.seg === "sam3" && !segPath) continue;   // segmentation failed above
+    try {
+      const fd = new FormData();
+      fd.append("image", file);
+      fd.append("engine", e.engine);
+      if (e.seg === "sam3") fd.append("segmented_image_path", segPath);
+      fd.append("seed", $("#seed").value || "42");
+      fd.append("randomize_seed", $("#rand").checked ? "true" : "false");
+      fd.append("formats", "glb");
+      fd.append("mesh_simplify", $("#simp").value || "0.95");
+      fd.append("texture_size", $("#tex").value || "1024");
+      // NOTE: target_face_count is NOT sent to Hunyuan. Its decimation path
+      // (hunyuan.py _decimate_mesh) saves via pymeshlab, which cannot write GLB,
+      // so any Hunyuan run with target_face_count > 0 fails with
+      // "Unknown format for save: glb". Hunyuan uses its own 40k cap instead.
+      const faces = parseInt($("#faces").value || "0", 10);
+      if (faces > 0 && e.engine !== "hunyuan") fd.append("target_face_count", String(faces));
+      // engine defaults matching the main tool
+      fd.append("ss_steps","12"); fd.append("ss_guidance","7.5");
+      fd.append("slat_steps","12"); fd.append("slat_guidance","3");
+      if (e.engine === "hunyuan"){
+        fd.append("num_inference_steps","30"); fd.append("guidance_scale","5");
+        fd.append("octree_resolution","256"); fd.append("texture","true");
+        fd.append("remove_floaters","true");
+      }
+      if (e.engine === "sam3d"){
+        fd.append("sam3d_stage1_steps","25"); fd.append("sam3d_stage2_steps","25");
+        fd.append("sam3d_texture_baking","true"); fd.append("sam3d_vertex_color","false");
+      }
+      const res = await fetch("/api/generate/image", {method:"POST", body:fd});
+      if (!res.ok) throw new Error((await res.json().catch(()=>({}))).detail || res.statusText);
+      const {task_id} = await res.json();
+      c.t0 = Date.now();
+      jobs.push({e, task_id});
+      c.chip.textContent = "queued"; c.msg.textContent = "queued on GPU…";
+    } catch(err){
+      c.chip.textContent = "submit failed"; c.chip.className = "chip err";
+      c.card.classList.add("failed"); c.msg.textContent = String(err.message || err);
+    }
+  }
+
+  if (!jobs.length){ $("#go").disabled = false; $("#overall").textContent = "all submissions failed"; return; }
+
+  const timer = setInterval(() => {
+    for (const j of jobs){
+      const c = cards[j.e.id];
+      if (c.finished) continue;
+      c.foot.querySelector(".t").textContent = `${((Date.now()-c.t0)/1000).toFixed(0)}s`;
+    }
+  }, 500);
+
+  const pending = new Set(jobs.map(j => j.task_id));
+  while (pending.size){
+    await new Promise(r => setTimeout(r, 1500));
+    for (const j of jobs){
+      if (!pending.has(j.task_id)) continue;
+      const c = cards[j.e.id];
+      let t;
+      try { t = await fetch(`/api/task/${j.task_id}`).then(r => r.json()); }
+      catch { continue; }
+      if (t.status === "completed"){
+        pending.delete(j.task_id); c.finished = true;
+        const glb = (t.exports || []).find(x => x.format === "glb");
+        c.chip.textContent = `done ${((Date.now()-c.t0)/1000).toFixed(0)}s`;
+        c.chip.className = "chip ok"; c.card.classList.add("done");
+        if (glb){
+          if (glb.size_bytes) c.foot.querySelector(".sz").textContent =
+            `${(glb.size_bytes/1048576).toFixed(1)} MB`;
+          if (c.v) loadGlb(c.v, glb.url, c.msg);
+          else c.msg.innerHTML = `<a href="${glb.url}" download>download GLB</a>`;
+        } else c.msg.textContent = "completed, but no GLB returned";
+      } else if (t.status === "failed" || t.status === "cancelled"){
+        pending.delete(j.task_id); c.finished = true;
+        c.chip.textContent = t.status; c.chip.className = "chip err";
+        c.card.classList.add("failed");
+        c.msg.textContent = t.error || t.detail || "generation failed";
+      } else {
+        c.chip.textContent = t.status || "processing";
+        c.chip.className = "chip run";
+        c.msg.textContent = (t.status === "queued") ? "queued on GPU…" : "generating…";
+      }
+    }
+    $("#overall").textContent = pending.size
+      ? `${jobs.length - pending.size}/${jobs.length} done · ${pending.size} running`
+      : `all ${jobs.length} complete`;
+  }
+  clearInterval(timer);
+  $("#go").disabled = false;
+}
+
+$("#go").onclick = generate;
+$("#sync").onclick = e => {
+  syncing = !syncing;
+  if (syncing) captureBaselines();
+  e.target.textContent = "Sync views: " + (syncing ? "on" : "off");
+  e.target.classList.toggle("on", syncing);
+};
+$("#resetall").onclick = () => {
+  views.forEach(v => { if (!v.home) return;
+    v.camera.position.copy(v.home.p); v.controls.target.copy(v.home.t); v.controls.update(); });
+  if (syncing) captureBaselines();
+};
+</script>
+</body>
+</html>
