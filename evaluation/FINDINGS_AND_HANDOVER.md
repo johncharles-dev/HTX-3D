@@ -96,6 +96,38 @@ absent from the entire model literature.
 Hunyuan's 2× convention does not bias results — auto-scale rescales from the
 bounding box — but it matters to anyone importing raw GLBs.
 
+### 1.5 The `sam3` condition tests framing, not mask quality, for two engines
+
+For **TRELLIS 1** (`trellis.py:168-196`) and **Hunyuan3D** (`hunyuan.py:203`) the
+SAM 3 cutout is **not fed to the engine as a mask**. The alpha channel is read
+only to compute a bounding box; the *original RGB photo* is then cropped to that
+box + 10% and the engine's own internal rembg performs the segmentation. The code
+comment gives the reason: "TRELLIS was trained with rembg-style alpha — SAM3
+binary masks produce wrong depth estimation (elongated shapes)."
+
+So for those two engines the condition compares **rembg on the whole photo**
+against **rembg on a crop around the target** — SAM 3 acts as a locator, not a
+segmenter. TRELLIS.2 and SAM 3D differ: they consume the RGBA and use the alpha
+as a real mask.
+
+Measured difference between the two variants of the same engine, same object:
+
+| | TRELLIS Δ | TRELLIS.2 Δ | Hunyuan Δ |
+|---|---:|---:|---:|
+| Clean, well-framed (ambulance, motorcycle, fire engine, bus) | 0.0–2.2 pp | 0.1–0.6 pp | 0.1–1.3 pp |
+| Small in frame / cluttered (Terrex, boat, patrol car) | 0.0–7.7 pp | 0.4–21.2 pp | 10.1–37.1 pp |
+| APICS car booth (heavily cluttered) | **51.0 pp** | **37.5 pp** | 3.9 pp |
+
+**Near-identical output on a clean single-object photo is correct behaviour**, not
+a fault: if the object already fills the frame, cropping to its bounding box
+changes almost nothing.
+
+This is also the honest form of the "segmentation matters" claim — it matters
+**conditionally**, and the condition is whether the object is already isolated in
+the frame. Report it that way rather than as a general statement, and state
+plainly that for two of four engines the comparison is about framing rather than
+mask quality.
+
 ---
 
 ## 2 · Corrections to earlier claims
