@@ -6,6 +6,11 @@ Pipelines are 4 engines × 2 segmentation front-ends (SAM 3D runs only with SAM 
 `rembg` = raw photograph, engine removes the background itself; `SAM 3` = SAM 3
 cutout fed to the engine.
 
+> **Companion document:** `FINDINGS_AND_HANDOVER.md` records how these results
+> were produced, findings about the auto-scale algorithm itself, corrections to
+> earlier claims, known bugs, research-integrity notes, and reproduction steps.
+> Read it before extending or handing over this work.
+
 ---
 
 ## 1 · Conclusions

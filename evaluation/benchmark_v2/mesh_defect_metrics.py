@@ -19,6 +19,7 @@ Needs trimesh — not present in the host python:
     ~/miniconda3/envs/3D/bin/python mesh_defect_metrics.py
 """
 
+import argparse
 import csv
 import os
 import warnings
@@ -138,7 +139,18 @@ def measure(glb: Path, gt: dict | None) -> dict:
     return row
 
 
+# Multi-object scenes where the rembg front-end cannot isolate the intended
+# target, and whose ground truth is estimated rather than published. Excluded
+# from the reported aggregate; still written to the per-row CSV.
+EXCLUDE_DEFAULT = "apics"
+
+
 def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--exclude", default=EXCLUDE_DEFAULT,
+                    help="substring of object_id to exclude from aggregates "
+                         "(default: 'apics'; pass '' to include everything)")
+    args = ap.parse_args()
     gt = load_gt()
     rows: list[dict] = []
     for obj in sorted(gt):
@@ -167,10 +179,18 @@ def main() -> None:
         w.writerows(rows)
 
     # ---- aggregate ----
-    L = ["# Mesh defect metrics — 7 pipelines × 14 objects\n",
+    ex = args.exclude
+    agg_rows = [r for r in rows if not (ex and ex in r["object_id"])]
+    n_obj = len({r["object_id"] for r in agg_rows})
+    dropped = sorted({r["object_id"] for r in rows if ex and ex in r["object_id"]})
+    L = [f"# Mesh defect metrics — 7 pipelines × {n_obj} objects\n",
          "Ground-truth-free, computed from the GLBs alone. Orientation-independent",
          "(bbox axes are sorted), so unlike the SSIM/PSNR/LPIPS columns these are",
          "unaffected by the fixed-camera pose bug.\n",
+         (f"Excluded from these aggregates ({len(dropped)} objects, still present in "
+          f"`mesh_defects.csv`): {', '.join(dropped)}. Multi-object scenes where "
+          "background removal cannot isolate the intended target, with estimated "
+          "rather than published ground truth.\n" if dropped else ""),
          "`aspect_ratio` = predicted (shortest/longest) ÷ true (shortest/longest).",
          "1.00 = correct proportions; 0.02 = 50× flatter than the real object.\n",
          "## Per-pipeline means\n",
@@ -182,7 +202,7 @@ def main() -> None:
         return [r[k] for r in rs if isinstance(r.get(k), (int, float))]
 
     for pipe in PIPELINES:
-        rs = [r for r in rows if r["pipeline"] == pipe and "error" not in r]
+        rs = [r for r in agg_rows if r["pipeline"] == pipe and "error" not in r]
         if not rs:
             continue
         ar = num(rs, "aspect_ratio")
@@ -197,8 +217,8 @@ def main() -> None:
     L.append("\n## aspect_ratio per object (bold = ≤0.5, i.e. >2× too flat)\n")
     L.append("| Object | true aspect | " + " | ".join(LABEL[p] for p in PIPELINES) + " |")
     L.append("|---|--:|" + "--:|" * len(PIPELINES))
-    for obj in sorted(gt):
-        rs = {r["pipeline"]: r for r in rows if r["object_id"] == obj}
+    for obj in sorted({r["object_id"] for r in agg_rows}):
+        rs = {r["pipeline"]: r for r in agg_rows if r["object_id"] == obj}
         first = next((r for r in rs.values() if r.get("gt_aspect")), None)
         cells = []
         for p in PIPELINES:

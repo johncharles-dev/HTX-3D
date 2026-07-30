@@ -1,8 +1,10 @@
-# Mesh defect metrics — 7 pipelines × 14 objects
+# Mesh defect metrics — 7 pipelines × 10 objects
 
 Ground-truth-free, computed from the GLBs alone. Orientation-independent
 (bbox axes are sorted), so unlike the SSIM/PSNR/LPIPS columns these are
 unaffected by the fixed-camera pose bug.
+
+Excluded from these aggregates (4 objects, still present in `mesh_defects.csv`): 11_apics_red_car_booth, 12_apics_boom_gate, 13_apics_booth_barrier, 14_apics_kiosks_passport. Multi-object scenes where background removal cannot isolate the intended target, with estimated rather than published ground truth.
 
 `aspect_ratio` = predicted (shortest/longest) ÷ true (shortest/longest).
 1.00 = correct proportions; 0.02 = 50× flatter than the real object.
@@ -11,13 +13,13 @@ unaffected by the fixed-camera pose bug.
 
 | Pipeline | components | floater face frac | boundary loops | degenerate | aspect_ratio (median) | mean \|log aspect err\| | n ≤0.5 (too flat) |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| TRELLIS.2 · rembg | 156.6 | 0.139 | 16 | 3 | 1.44 | 0.44 | 0/14 |
-| TRELLIS.2 · SAM 3 | 176.6 | 0.074 | 11 | 3 | 1.17 | 0.35 | 1/14 |
-| TRELLIS 1 · rembg | 9.2 | 0.103 | 3 | 1 | 1.32 | 0.41 | 0/14 |
-| TRELLIS 1 · SAM 3 | 8.3 | 0.078 | 2 | 1 | 1.21 | 0.34 | 0/14 |
-| Hunyuan3D · rembg | 12.3 | 0.032 | 0 | 1 | 0.96 | 0.97 | 4/14 |
-| Hunyuan3D · SAM 3 | 10.5 | 0.086 | 0 | 0 | 0.98 | 0.67 | 2/14 |
-| SAM 3D · SAM 3 | 4.3 | 0.035 | 1 | 0 | 1.24 | 0.38 | 2/14 |
+| TRELLIS.2 · rembg | 184.9 | 0.118 | 11 | 3 | 1.44 | 0.40 | 0/10 |
+| TRELLIS.2 · SAM 3 | 189.6 | 0.073 | 7 | 2 | 1.42 | 0.36 | 0/10 |
+| TRELLIS 1 · rembg | 9.4 | 0.073 | 3 | 0 | 1.20 | 0.34 | 0/10 |
+| TRELLIS 1 · SAM 3 | 9.7 | 0.058 | 3 | 0 | 1.21 | 0.30 | 0/10 |
+| Hunyuan3D · rembg | 16.3 | 0.044 | 0 | 2 | 0.90 | 0.85 | 3/10 |
+| Hunyuan3D · SAM 3 | 12.3 | 0.101 | 0 | 0 | 1.03 | 0.60 | 1/10 |
+| SAM 3D · SAM 3 | 5.4 | 0.048 | 2 | 0 | 1.33 | 0.31 | 0/10 |
 
 ## aspect_ratio per object (bold = ≤0.5, i.e. >2× too flat)
 
@@ -33,7 +35,3 @@ unaffected by the fixed-camera pose bug.
 | 08_police_patrol_car | 0.3052 | 1.05 | 1.04 | 1.09 | 1.11 | **0.41** | 1.02 | 1.27 |
 | 09_himars_launcher | 0.3429 | 1.37 | 1.35 | 1.31 | 1.30 | 1.09 | 1.04 | 1.39 |
 | 10_coast_guard_boat | 0.1667 | 1.88 | 1.88 | 2.69 | 2.18 | 1.90 | 1.71 | 1.96 |
-| 11_apics_red_car_booth | 0.8 | 0.51 | **0.43** | 0.56 | 0.50 | **0.01** | **0.12** | **0.43** |
-| 12_apics_boom_gate | 0.3 | 1.78 | 1.02 | 2.27 | 1.61 | 1.17 | 0.52 | **0.40** |
-| 13_apics_booth_barrier | 0.4 | 1.33 | 1.30 | 1.70 | 1.38 | 0.88 | 0.87 | 1.55 |
-| 14_apics_kiosks_passport | 0.5 | 1.88 | 0.85 | 1.63 | 0.81 | 1.08 | 1.49 | 0.95 |
