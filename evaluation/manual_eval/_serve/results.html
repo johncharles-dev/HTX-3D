@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HTX-3D — generation &amp; evaluation results</title>
+<style>
+  :root{
+    --bg:#0f1218; --panel:#181c24; --line:#2a3040; --fg:#eceff5; --dim:#9aa3b5;
+    --accent:#4da3ff; --good:#5ec98a; --warn:#ffb454; --bad:#ff6b6b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+       font:17px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
+  header{position:sticky;top:0;z-index:30;background:rgba(15,18,24,.97);
+         border-bottom:1px solid var(--line);padding:12px 24px;
+         display:flex;gap:14px;align-items:center;flex-wrap:wrap;backdrop-filter:blur(10px)}
+  header b{font-size:16px}
+  header .sp{flex:1}
+  header a{color:var(--dim);text-decoration:none;font-size:15px;
+           border:1px solid var(--line);padding:7px 13px;border-radius:8px}
+  header a:hover,header a.on{border-color:var(--accent);color:var(--fg)}
+  main{max-width:1500px;margin:0 auto;padding:28px 24px 90px}
+  h1{font-size:34px;line-height:1.25;margin:8px 0 6px;letter-spacing:-.4px}
+  .sub{color:var(--dim);font-size:17px;margin:0 0 34px}
+  h2{font-size:25px;margin:52px 0 8px;letter-spacing:-.2px}
+  h2 .n{color:var(--accent);font-size:17px;margin-right:11px;font-weight:600}
+  .lede{color:var(--dim);margin:0 0 20px;max-width:96ch}
+  .cards{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:18px 20px}
+  .card.hero{border-color:#5a2f33;background:#20161a}
+  .card h3{margin:0 0 8px;font-size:18px}
+  .card p{margin:0;color:var(--dim);font-size:15.5px}
+  .card .big{font-size:32px;font-weight:700;letter-spacing:-1px;display:block;margin-bottom:2px}
+  .bad{color:var(--bad)} .good{color:var(--good)} .warn{color:var(--warn)}
+  .wrap{overflow-x:auto;background:var(--panel);border:1px solid var(--line);
+        border-radius:13px;margin:18px 0}
+  table{border-collapse:collapse;width:100%;font-size:15.5px;min-width:620px}
+  th,td{padding:11px 15px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+  th{color:var(--dim);font-weight:600;font-size:13.5px;text-transform:uppercase;letter-spacing:.5px}
+  td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+  tr:last-child td{border-bottom:none}
+  tr.hl td{background:#20161a}
+  .fig{background:var(--panel);border:1px solid var(--line);border-radius:13px;
+       padding:14px;margin:20px 0}
+  .fig img{width:100%;border-radius:8px;display:block;background:#fff;cursor:zoom-in}
+  .fig figcaption{color:var(--dim);font-size:14.5px;margin-top:11px}
+  .two{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(400px,1fr))}
+  .objgrid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
+  .obj{background:var(--panel);border:1px solid var(--line);border-radius:11px;
+       overflow:hidden;cursor:pointer;transition:.14s}
+  .obj:hover{border-color:var(--accent);transform:translateY(-2px)}
+  .obj img{width:100%;aspect-ratio:1;object-fit:contain;background:#fff;display:block}
+  .obj div{padding:8px 10px;font-size:13px;color:var(--dim);line-height:1.35}
+  .obj b{color:var(--fg);display:block;font-size:13.5px}
+  dialog{border:none;background:var(--panel);border-radius:14px;padding:0;
+         max-width:97vw;max-height:96vh;color:var(--fg)}
+  dialog::backdrop{background:rgba(0,0,0,.92)}
+  .dhead{display:flex;gap:14px;align-items:center;padding:14px 18px;
+         border-bottom:1px solid var(--line)}
+  .dhead b{font-size:18px}
+  dialog img{max-width:96vw;max-height:78vh;display:block}
+  dialog button{background:#222834;color:var(--fg);border:1px solid var(--line);
+                border-radius:8px;padding:7px 13px;font:inherit;cursor:pointer}
+  ul.tight{margin:10px 0 0;padding-left:22px;color:var(--dim)}
+  ul.tight li{margin-bottom:7px}
+  ul.tight b{color:var(--fg)}
+  .note{border-left:3px solid var(--accent);padding:2px 0 2px 16px;color:var(--dim);
+        margin:18px 0;max-width:96ch}
+  footer{border-top:1px solid var(--line);color:var(--dim);font-size:14px;
+         padding:26px 24px;text-align:center}
+</style>
+</head>
+<body>
+<header>
+  <b>HTX-3D</b>
+  <a href="results.html" class="on">Results</a>
+  <a href="index.html">Model browser (3D)</a>
+  <a href="live.html">Live generation</a>
+  <div class="sp"></div>
+  <span style="color:var(--dim);font-size:14px">7 pipelines · 14 objects · RTX 5090</span>
+</header>
+
+<main>
+  <h1>Image-to-3D engine evaluation</h1>
+  <p class="sub">
+    Four engines × two segmentation front-ends, on fourteen Singapore
+    public-service objects. Measured on dimensional accuracy against
+    manufacturer specifications, generation cost, and mesh integrity.
+  </p>
+
+  <h2><span class="n">01</span>What we found</h2>
+  <div class="cards">
+    <div class="card hero">
+      <h3 class="bad">Hunyuan3D · rembg is the weakest</h3>
+      <p>The only ranking claim that survives significance testing — and three
+      independent measurements agree: highest dimensional error, 4 of 14 objects
+      reconstructed more than twice too flat, and the only engine whose geometry
+      collapses to a flat sheet.</p>
+    </div>
+    <div class="card">
+      <h3>The top three are tied</h3>
+      <p>TRELLIS 1, TRELLIS.2 and SAM 3D are <b>not statistically separable</b>
+      on dimensional accuracy at n=14. Only 2 of 21 pipeline pairs reach p&lt;0.05,
+      both against Hunyuan·rembg.</p>
+    </div>
+    <div class="card">
+      <h3>They fail differently</h3>
+      <p>TRELLIS 1 is fastest at 10 s. SAM 3D is topologically cleanest —
+      4 mesh components against TRELLIS.2's 157. TRELLIS.2 carries the most
+      detail and the most even texture. Pick on the axis you need.</p>
+    </div>
+    <div class="card">
+      <h3>Segmentation matters</h3>
+      <p>On cluttered multi-object photographs, background removal alone does not
+      isolate the target — it hands the engine the whole scene. Errors there reach
+      90–141%. SAM 3 fixes it.</p>
+    </div>
+  </div>
+
+  <h2><span class="n">02</span>Dimensional accuracy</h2>
+  <p class="lede">
+    Error on each object's longest real-world dimension, against manufacturer or
+    published-standard figures. Confidence intervals are paired bootstrap, 20,000
+    draws resampling objects. <b>This is the only track with true ground truth.</b>
+  </p>
+  <div class="wrap">
+    <table>
+      <thead><tr>
+        <th>Pipeline</th><th class="n">Error (14 objects)</th><th class="n">95% CI</th>
+        <th class="n">High-confidence (n=6)</th><th class="n">Within ±20%</th>
+      </tr></thead>
+      <tbody>
+        <tr><td>TRELLIS 1 · rembg</td><td class="n"><b>26.7%</b></td><td class="n">19.9 – 34.5</td><td class="n">19.5%</td><td class="n">43%</td></tr>
+        <tr><td>TRELLIS.2 · rembg</td><td class="n">28.9%</td><td class="n">19.5 – 41.1</td><td class="n">24.6%</td><td class="n">36%</td></tr>
+        <tr><td>SAM 3D · SAM 3</td><td class="n">30.2%</td><td class="n">17.6 – 47.3</td><td class="n"><b>19.4%</b></td><td class="n"><b>50%</b></td></tr>
+        <tr><td>TRELLIS 1 · SAM 3</td><td class="n">31.6%</td><td class="n">21.1 – 45.1</td><td class="n">21.4%</td><td class="n">36%</td></tr>
+        <tr><td>Hunyuan3D · SAM 3</td><td class="n">33.5%</td><td class="n">19.3 – 53.1</td><td class="n">27.6%</td><td class="n">36%</td></tr>
+        <tr><td>TRELLIS.2 · SAM 3</td><td class="n">33.7%</td><td class="n">21.6 – 50.8</td><td class="n">27.7%</td><td class="n">29%</td></tr>
+        <tr class="hl"><td>Hunyuan3D · rembg</td><td class="n bad">40.6%</td><td class="n">24.6 – 60.3</td><td class="n bad">35.1%</td><td class="n">29%</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note">
+    Those intervals overlap heavily, and that is the point. Reporting
+    26.7% against 30.2% as a ranking would not survive a paired test — so we
+    don't. Only Hunyuan·rembg separates from the field.
+  </div>
+  <figure class="fig">
+    <img src="figures/figure_mape_with_ci.png" alt="dimensional error with confidence intervals">
+    <figcaption>
+      Every interval except Hunyuan3D·rembg's overlaps with every other. A paired
+      Wilcoxon test across all 21 pipeline pairs finds significance in only two,
+      both against Hunyuan3D·rembg (p = 0.030 and 0.049).
+    </figcaption>
+  </figure>
+  <div class="two">
+    <figure class="fig"><img src="charts/per_pipeline.png" alt="error by pipeline, all vs high-confidence">
+      <figcaption>Same data split by ground-truth confidence: grey = all 14 objects,
+        blue = the 6 with manufacturer specifications.</figcaption></figure>
+    <figure class="fig"><img src="charts/per_object.png" alt="error by object">
+      <figcaption>Per-object breakdown — no pipeline wins everywhere.</figcaption></figure>
+  </div>
+
+  <h2><span class="n">03</span>Cost per model</h2>
+  <div class="wrap">
+    <table>
+      <thead><tr><th>Engine</th><th class="n">Generation time</th><th class="n">Peak VRAM</th><th class="n">Mean faces</th></tr></thead>
+      <tbody>
+        <tr><td>TRELLIS 1</td><td class="n good">10.4 s</td><td class="n">—</td><td class="n">21,500</td></tr>
+        <tr><td>SAM 3D</td><td class="n">19.7 s</td><td class="n">—</td><td class="n">17,100</td></tr>
+        <tr><td>TRELLIS.2</td><td class="n">24 s</td><td class="n">7.8 / 32 GB</td><td class="n">~50,000</td></tr>
+        <tr><td>Hunyuan3D</td><td class="n bad">74.9 s</td><td class="n">—</td><td class="n">38,400</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="lede">Hunyuan3D is 4–7× slower than every alternative while also being
+  the least accurate. TRELLIS.2 was capped at 1024 texture / 50k faces for a fair
+  comparison; it natively supports 4K and a million faces.</p>
+
+  <h2><span class="n">04</span>Mesh integrity</h2>
+  <p class="lede">
+    Computed from the meshes alone — no ground truth, no renders, and
+    independent of camera angle. <b>Proportion accuracy</b> compares each mesh's
+    thickness-to-length ratio against the real object's; 1.00 is correct, 0.02
+    means fifty times too flat.
+  </p>
+  <div class="wrap">
+    <table>
+      <thead><tr>
+        <th>Pipeline</th><th class="n">Mesh pieces</th><th class="n">Open boundaries</th>
+        <th class="n">Proportion accuracy</th><th class="n">Objects &gt;2× too flat</th>
+      </tr></thead>
+      <tbody>
+        <tr><td>SAM 3D · SAM 3</td><td class="n good">4.3</td><td class="n good">1.2</td><td class="n">1.24</td><td class="n">2 / 14</td></tr>
+        <tr><td>TRELLIS 1 · SAM 3</td><td class="n">8.3</td><td class="n">2.4</td><td class="n">1.21</td><td class="n good">0 / 14</td></tr>
+        <tr><td>TRELLIS 1 · rembg</td><td class="n">9.2</td><td class="n">2.6</td><td class="n">1.32</td><td class="n good">0 / 14</td></tr>
+        <tr><td>Hunyuan3D · SAM 3</td><td class="n">10.5</td><td class="n">0.0</td><td class="n">0.98</td><td class="n">2 / 14</td></tr>
+        <tr class="hl"><td>Hunyuan3D · rembg</td><td class="n">12.3</td><td class="n">0.0</td><td class="n">0.96</td><td class="n bad">4 / 14</td></tr>
+        <tr><td>TRELLIS.2 · rembg</td><td class="n warn">156.6</td><td class="n warn">16.1</td><td class="n">1.44</td><td class="n good">0 / 14</td></tr>
+        <tr><td>TRELLIS.2 · SAM 3</td><td class="n warn">176.6</td><td class="n">10.8</td><td class="n">1.17</td><td class="n">1 / 14</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="lede">
+    Three different failure modes, which is why no single ranking is honest.
+    Hunyuan produces sealed shells with badly wrong proportions. TRELLIS.2
+    produces the most detailed meshes but scattered across 150+ disconnected
+    pieces — real detail, but it needs cleanup. SAM 3D is the only engine
+    delivering assets that are close to import-ready.
+  </p>
+
+  <h2><span class="n">05</span>The clearest failure</h2>
+  <p class="lede">
+    Every model was re-rendered from four angles. A collapsed mesh gives it away
+    immediately: seen edge-on it is a <b>line</b>. Four models fall below 1% of
+    frame from an opposite viewpoint — all four are Hunyuan, and they are exactly
+    the four that the proportion metric flagged independently.
+  </p>
+  <figure class="fig">
+    <img src="figures/figure_flat_collapse_orbit.png" alt="four-view orbit comparison">
+    <figcaption>
+      Police motorcycle, four viewpoints. Hunyuan3D produced a flat billboard —
+      a hairline at 0° and 180°, a plane at 90° and 270°. The three pipelines
+      below hold a coherent motorcycle from every angle. Two unrelated
+      measurements — mesh proportions against the spec sheet, and silhouette
+      area in these renders — identify the same four failures.
+    </figcaption>
+  </figure>
+
+  <h2><span class="n">06</span>Every generation</h2>
+  <p class="lede">
+    All 98 models. Click any object for the seven-pipeline comparison, or open the
+    <a href="index.html">3D browser</a> to rotate them yourself.
+  </p>
+  <div class="objgrid" id="objgrid"></div>
+
+  <h2><span class="n">07</span>What we did not measure</h2>
+  <ul class="tight">
+    <li><b>No ground-truth 3D meshes exist for these objects</b>, so Chamfer
+      distance and F-score — the standard geometric metrics in this literature —
+      are unavailable. Geometry is assessed indirectly. The fix is to run the same
+      pipelines on a scanned dataset for comparable numbers.</li>
+    <li><b>Perceptual quality.</b> A blinded human scoring pass is built and
+      pending; visual-quality statements here are observational.</li>
+    <li><b>Sample size.</b> 14 objects, single seed. Intervals are wide and the
+      high-confidence column rests on 6 objects with published dimensions.</li>
+    <li><b>Four image metrics were dropped rather than reported:</b> SSIM, PSNR and
+      LPIPS measured against the source photograph came out near-identical for
+      every pipeline — they were registering background and framing mismatch, not
+      reconstruction quality. Watertightness was 0% everywhere. Reporting them
+      would have implied precision we do not have.</li>
+  </ul>
+</main>
+
+<footer>Dimensional ground truth from manufacturer and published standards · all timings on one RTX 5090</footer>
+
+<dialog id="dlg">
+  <div class="dhead"><b id="dtitle"></b><span class="sp" style="flex:1"></span>
+    <button onclick="document.getElementById('dlg').close()">Close</button></div>
+  <img id="dimg" alt="">
+</dialog>
+
+<script src="objects_full.js"></script>
+<script>
+const dlg = document.getElementById('dlg');
+function show(src, title){
+  document.getElementById('dimg').src = src;
+  document.getElementById('dtitle').textContent = title;
+  dlg.showModal();
+}
+dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
+document.querySelectorAll('.fig img').forEach(im => {
+  im.onclick = () => show(im.src, im.alt);
+});
+const grid = document.getElementById('objgrid');
+(window.__OBJFULL__ || []).forEach(o => {
+  const el = document.createElement('div');
+  el.className = 'obj';
+  el.innerHTML =
+    `<img src="orbit/${o.id}__sam3d_sam3__yaw090.png" alt="${o.name}" loading="lazy">` +
+    `<div><b>${o.name}</b>${o.gt} m${o.conf === 'low' ? ' · estimated' : ''}</div>`;
+  el.onclick = () => show(`montages/${o.id}.png`,
+    `${o.name} — INPUT · TRELLIS.2 rembg · TRELLIS.2 SAM 3 · TRELLIS 1 rembg · TRELLIS 1 SAM 3 · Hunyuan rembg · Hunyuan SAM 3 · SAM 3D`);
+  grid.appendChild(el);
+});
+</script>
+</body>
+</html>
