@@ -196,6 +196,32 @@ metric, which is what the Hunyuan conclusion now rests on.
 
 ---
 
+## 5a · Gallery now records the segmentation front-end (2026-07-30)
+
+`task_manager._save_to_gallery` writes `"segmentation": "sam3" | "rembg"` for
+`image` and `multi_image` tasks, derived from whether the router pointed
+`image_path` at a SAM 3 cutout while `original_image_path` kept the raw upload.
+
+**Why it was needed.** `input_image.png` is saved as RGB with alpha stripped
+(`task_manager.py:371`), so after the fact a SAM 3 generation is indistinguishable
+from a rembg one. Before this change the harvester labelled every run `*_rembg`,
+which would have silently corrupted the rembg-vs-SAM 3 comparison. Verified after
+deployment: a rembg run records `rembg`, a SAM 3 run records `sam3`.
+
+**Deliberately NOT done: preserving alpha on the saved input.** It looks like the
+obvious companion fix, but `auto_scale.get_object_mask()` tries the alpha channel
+*first* (`auto_scale.py:36-39`). Preserving alpha would switch every SAM 3
+generation from a rembg mask to a SAM 3 mask, changing the estimated dimensions
+and breaking comparability with the existing 70 benchmark rows, which were all
+scored with rembg masks as a stated fairness control. Confirmed after the change
+that `mask_source` remains `rembg` for both modes.
+
+**Entries created before 2026-07-30 have no `segmentation` field** and their mode
+is unrecoverable. `harvest_generations.py` marks those `seg_verified=NO-CHECK-ME`
+rather than guessing silently.
+
+---
+
 ## 6 · Known bugs
 
 **Hunyuan + `target_face_count` fails.** `app/services/hunyuan.py:686`

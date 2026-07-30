@@ -45,9 +45,10 @@ ENGINE_FROM_MODEL = {
     "sam3d-image-to-3d": "sam3d",
 }
 
-FIELDS = ["object_id", "display_name", "pipeline", "engine", "seg_mode", "task_id",
-          "image_md5", "image_file", "gen_time_s", "auto_longest_m", "auto_confidence",
-          "longest_m", "middle_m", "shortest_m", "gt_confidence", "gt_source"]
+FIELDS = ["object_id", "display_name", "pipeline", "engine", "seg_mode", "seg_verified",
+          "task_id", "image_md5", "image_file", "gen_time_s", "auto_longest_m",
+          "auto_confidence", "longest_m", "middle_m", "shortest_m",
+          "gt_confidence", "gt_source"]
 
 
 def md5(path: Path, chunk=1 << 20) -> str:
@@ -58,17 +59,28 @@ def md5(path: Path, chunk=1 << 20) -> str:
     return h.hexdigest()
 
 
-def seg_mode(img: Path) -> str:
-    """'sam3' if the stored input carries a real (non-opaque) alpha channel."""
+def seg_mode(entry: dict, img: Path) -> tuple[str, bool]:
+    """Return (mode, trustworthy).
+
+    The gallery records `segmentation` directly since 2026-07-30. For entries
+    written before that it is unrecoverable: input_image.png is saved as RGB with
+    alpha stripped (task_manager.py:371), so a SAM 3 run looks identical to a
+    rembg one. Older entries fall back to an alpha check that will essentially
+    always say "rembg" — flagged untrustworthy so the operator can correct it.
+    """
+    rec = entry.get("segmentation")
+    if rec in ("rembg", "sam3"):
+        return rec, True
     try:
         from PIL import Image
         im = Image.open(img)
         if im.mode in ("RGBA", "LA") or "transparency" in im.info:
             a = im.convert("RGBA").split()[-1]
-            return "sam3" if a.getextrema()[0] < 255 else "rembg"
+            if a.getextrema()[0] < 255:
+                return "sam3", True
     except Exception:
         pass
-    return "rembg"
+    return "rembg", False
 
 
 def cmd_scan(args) -> None:
@@ -99,7 +111,7 @@ def cmd_scan(args) -> None:
             continue
         a = it.get("auto_scale") or {}
         dims = a.get("dimensions_m") or {}
-        sm = seg_mode(img)
+        sm, trusted = seg_mode(it, img)
         rows.append({
             "object_id": "", "display_name": "",
             "pipeline": f"{eng}_{sm}", "engine": eng, "seg_mode": sm,
@@ -109,6 +121,7 @@ def cmd_scan(args) -> None:
             "auto_confidence": a.get("confidence") or "",
             "longest_m": "", "middle_m": "", "shortest_m": "",
             "gt_confidence": "", "gt_source": "",
+            "seg_verified": "yes" if trusted else "NO-CHECK-ME",
         })
 
     # same photo => same object; pre-fill a placeholder id so grouping is visible
@@ -126,11 +139,16 @@ def cmd_scan(args) -> None:
         w = csv.DictWriter(f, fieldnames=FIELDS)
         w.writeheader(); w.writerows(rows)
 
+    unver = [r for r in rows if r["seg_verified"] != "yes"]
     print(f"{len(rows)} generations, {len(by_hash)} distinct input images "
           f"({skipped} skipped in range: not an image-to-3D task, or files missing)")
     for i, (h, g) in enumerate(sorted(by_hash.items(), key=lambda kv: -len(kv[1])), 1):
         pipes = ", ".join(sorted({r['pipeline'] for r in g}))
         print(f"  OBJ{i:02d}  {len(g)} runs  [{pipes}]  ({g[0]['image_file']}, {h[:8]})")
+    if unver:
+        print(f"\n  !! {len(unver)} run(s) predate the gallery `segmentation` field "
+              f"(added 2026-07-30). Their seg_mode is a GUESS — check the "
+              f"seg_verified column and correct seg_mode/pipeline by hand.")
     print(f"\n-> {out}")
     print("Now fill in object_id / display_name, and longest/middle/shortest_m + "
           "gt_source for any object with a PUBLISHED spec. Leave GT blank otherwise.")

@@ -426,6 +426,17 @@ class TaskManager:
             "generation_time_seconds": result.get("generation_time_seconds"),
             "created_at": task.get("created_at", ""),
         }
+        # Which segmentation front-end fed the engine. The router points
+        # image_path at the SAM 3 cutout when one was supplied and leaves
+        # original_image_path on the raw upload (generate.py:100-111), so the two
+        # differ exactly when SAM 3 was used. Recorded here because it is
+        # otherwise unrecoverable: input_image.png is written as RGB with alpha
+        # stripped, so a SAM 3 run is indistinguishable from a rembg one
+        # afterwards. Evaluation needs this to label pipelines correctly.
+        if task_type in ("image", "multi_image"):
+            _img = task["params"].get("image_path")
+            _orig = task["params"].get("original_image_path")
+            entry["segmentation"] = "sam3" if (_img and _orig and _img != _orig) else "rembg"
         # Add source info for edited/retexture/quick_adjust tasks
         if task_type in ("retexture", "quick_adjust"):
             entry["source_model"] = "hunyuan-image-to-3d"
@@ -488,6 +499,40 @@ class TaskManager:
             "exports": [{"format": "glb", "filename": "model.glb", "path": glb_path, "size_bytes": size_bytes}],
             "has_video": False,
             "has_thumbnail": has_thumbnail,
+            "generation_time_seconds": None,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "label": label,
+        }
+        self._gallery_index.insert(0, entry)
+        self._save_gallery_index()
+        return entry
+
+    def save_baked_to_gallery(self, mesh, formats: list[str], label: str = "Logo",
+                              source_model: str | None = None, seed: int = 0) -> dict:
+        """Save a baked (logo) mesh to the gallery in all requested formats.
+
+        Unlike save_edited_to_gallery (GLB only), this writes each format the
+        source model offered so OBJ/PLY carry the baked texture too. STL is
+        geometry only and cannot hold the logo — it is written for parity.
+        """
+        import uuid
+        from datetime import datetime, timezone
+        from .logo_bake import write_baked_formats
+        task_id = uuid.uuid4().hex[:12]
+        item_dir = os.path.join(GALLERY_DIR, task_id)
+        os.makedirs(item_dir, exist_ok=True)
+        exports = write_baked_formats(mesh, item_dir, formats or ["glb"])
+        if not exports:
+            raise ValueError("No formats could be exported for the baked model")
+        entry = {
+            "task_id": task_id,
+            "type": "edited",
+            "model": "edited",
+            "seed": seed,
+            "source_model": source_model,
+            "exports": exports,
+            "has_video": False,
+            "has_thumbnail": False,
             "generation_time_seconds": None,
             "created_at": datetime.now(timezone.utc).isoformat(),
             "label": label,
