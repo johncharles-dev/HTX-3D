@@ -58,29 +58,5 @@ window.__OBJFULL__ = [
   "name": "PCG White Shark / patrol craft",
   "gt": 15.0,
   "conf": "medium"
- },
- {
-  "id": "11_apics_red_car_booth",
-  "name": "APICS car booth",
-  "gt": 2.5,
-  "conf": "low"
- },
- {
-  "id": "12_apics_boom_gate",
-  "name": "Boom gate + housing",
-  "gt": 5.0,
-  "conf": "low"
- },
- {
-  "id": "13_apics_booth_barrier",
-  "name": "Booth + barrier combo",
-  "gt": 5.0,
-  "conf": "low"
- },
- {
-  "id": "14_apics_kiosks_passport",
-  "name": "Passport kiosk pair",
-  "gt": 2.0,
-  "conf": "low"
  }
 ];

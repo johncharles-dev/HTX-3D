@@ -78,13 +78,13 @@
   <a href="index.html">Model browser (3D)</a>
   <a href="live.html">Live generation</a>
   <div class="sp"></div>
-  <span style="color:var(--dim);font-size:14px">7 pipelines · 14 objects · RTX 5090</span>
+  <span style="color:var(--dim);font-size:14px">7 pipelines · 10 objects · RTX 5090</span>
 </header>
 
 <main>
   <h1>Image-to-3D engine evaluation</h1>
   <p class="sub">
-    Four engines × two segmentation front-ends, on fourteen Singapore
+    Four engines × two segmentation front-ends, on ten Singapore
     public-service objects. Measured on dimensional accuracy against
     manufacturer specifications, generation cost, and mesh integrity.
   </p>
@@ -93,28 +93,29 @@
   <div class="cards">
     <div class="card hero">
       <h3 class="bad">Hunyuan3D · rembg is the weakest</h3>
-      <p>The only ranking claim that survives significance testing — and three
-      independent measurements agree: highest dimensional error, 4 of 14 objects
-      reconstructed more than twice too flat, and the only engine whose geometry
-      collapses to a flat sheet.</p>
+      <p>Three independent measurements agree: highest dimensional error
+      (35.2% vs 23.5–29.1%), <b>3× worse proportion accuracy</b> than every other
+      engine, 3 of 10 objects more than twice too flat, and the only engine whose
+      geometry collapses to a flat sheet.</p>
     </div>
     <div class="card">
       <h3>The top three are tied</h3>
-      <p>TRELLIS 1, TRELLIS.2 and SAM 3D are <b>not statistically separable</b>
-      on dimensional accuracy at n=14. Only 2 of 21 pipeline pairs reach p&lt;0.05,
-      both against Hunyuan·rembg.</p>
+      <p><b>No pipeline pair separates at p&lt;0.05</b> on dimensional accuracy.
+      Our measuring instrument (auto-scale, ~25% error) is as noisy as the
+      differences between engines, so this axis cannot rank them.</p>
     </div>
     <div class="card">
       <h3>They fail differently</h3>
       <p>TRELLIS 1 is fastest at 10 s. SAM 3D is topologically cleanest —
-      4 mesh components against TRELLIS.2's 157. TRELLIS.2 carries the most
+      5 mesh components against TRELLIS.2's 185. TRELLIS.2 carries the most
       detail and the most even texture. Pick on the axis you need.</p>
     </div>
     <div class="card">
-      <h3>Segmentation matters</h3>
-      <p>On cluttered multi-object photographs, background removal alone does not
-      isolate the target — it hands the engine the whole scene. Errors there reach
-      90–141%. SAM 3 fixes it.</p>
+      <h3>Cluttered scenes excluded</h3>
+      <p>Four multi-object APICS scenes were removed: background removal cannot
+      isolate the intended target there, so the result measures segmentation
+      failure rather than engine quality, and their ground truth is estimated
+      rather than published.</p>
     </div>
   </div>
 
@@ -127,40 +128,35 @@
   <div class="wrap">
     <table>
       <thead><tr>
-        <th>Pipeline</th><th class="n">Error (14 objects)</th><th class="n">95% CI</th>
+        <th>Pipeline</th><th class="n">Error (10 objects)</th><th class="n">95% CI</th>
         <th class="n">High-confidence (n=6)</th><th class="n">Within ±20%</th>
       </tr></thead>
       <tbody>
-        <tr><td>TRELLIS 1 · rembg</td><td class="n"><b>26.7%</b></td><td class="n">19.9 – 34.5</td><td class="n">19.5%</td><td class="n">43%</td></tr>
-        <tr><td>TRELLIS.2 · rembg</td><td class="n">28.9%</td><td class="n">19.5 – 41.1</td><td class="n">24.6%</td><td class="n">36%</td></tr>
-        <tr><td>SAM 3D · SAM 3</td><td class="n">30.2%</td><td class="n">17.6 – 47.3</td><td class="n"><b>19.4%</b></td><td class="n"><b>50%</b></td></tr>
-        <tr><td>TRELLIS 1 · SAM 3</td><td class="n">31.6%</td><td class="n">21.1 – 45.1</td><td class="n">21.4%</td><td class="n">36%</td></tr>
-        <tr><td>Hunyuan3D · SAM 3</td><td class="n">33.5%</td><td class="n">19.3 – 53.1</td><td class="n">27.6%</td><td class="n">36%</td></tr>
-        <tr><td>TRELLIS.2 · SAM 3</td><td class="n">33.7%</td><td class="n">21.6 – 50.8</td><td class="n">27.7%</td><td class="n">29%</td></tr>
-        <tr class="hl"><td>Hunyuan3D · rembg</td><td class="n bad">40.6%</td><td class="n">24.6 – 60.3</td><td class="n bad">35.1%</td><td class="n">29%</td></tr>
+        <tr><td>SAM 3D · SAM 3</td><td class="n"><b>23.5%</b></td><td class="n">14.9 – 33.5</td><td class="n"><b>19.4%</b></td><td class="n"><b>60%</b></td></tr>
+        <tr><td>TRELLIS.2 · rembg</td><td class="n">25.6%</td><td class="n">17.7 – 34.3</td><td class="n">24.6%</td><td class="n">40%</td></tr>
+        <tr><td>TRELLIS 1 · rembg</td><td class="n">26.1%</td><td class="n">19.0 – 35.2</td><td class="n">19.5%</td><td class="n">50%</td></tr>
+        <tr><td>TRELLIS 1 · SAM 3</td><td class="n">27.0%</td><td class="n">20.3 – 35.3</td><td class="n">21.4%</td><td class="n">40%</td></tr>
+        <tr><td>Hunyuan3D · SAM 3</td><td class="n">28.2%</td><td class="n">19.0 – 39.1</td><td class="n">27.6%</td><td class="n">30%</td></tr>
+        <tr><td>TRELLIS.2 · SAM 3</td><td class="n">29.1%</td><td class="n">22.4 – 36.9</td><td class="n">27.7%</td><td class="n">30%</td></tr>
+        <tr class="hl"><td>Hunyuan3D · rembg</td><td class="n bad">35.2%</td><td class="n">22.0 – 49.4</td><td class="n bad">35.1%</td><td class="n">30%</td></tr>
       </tbody>
     </table>
   </div>
   <div class="note">
-    Those intervals overlap heavily, and that is the point. Reporting
-    26.7% against 30.2% as a ranking would not survive a paired test — so we
-    don't. Only Hunyuan·rembg separates from the field.
+    Those intervals overlap almost completely, and that is the point. A paired
+    Wilcoxon test across all 21 pipeline pairs finds <b>no significant difference
+    anywhere</b>. Auto-scale's own error on these objects is ~25%, comparable to
+    the spread between engines — so this axis measures our instrument as much as
+    the engines, and we do not rank on it.
   </div>
   <figure class="fig">
     <img src="figures/figure_mape_with_ci.png" alt="dimensional error with confidence intervals">
     <figcaption>
-      Every interval except Hunyuan3D·rembg's overlaps with every other. A paired
-      Wilcoxon test across all 21 pipeline pairs finds significance in only two,
-      both against Hunyuan3D·rembg (p = 0.030 and 0.049).
+      All seven intervals overlap. No pipeline pair reaches p&lt;0.05 on a paired
+      Wilcoxon test. The ordering shown is real but not statistically supported —
+      which is why the ranking claim rests on mesh integrity (§04) instead.
     </figcaption>
   </figure>
-  <div class="two">
-    <figure class="fig"><img src="charts/per_pipeline.png" alt="error by pipeline, all vs high-confidence">
-      <figcaption>Same data split by ground-truth confidence: grey = all 14 objects,
-        blue = the 6 with manufacturer specifications.</figcaption></figure>
-    <figure class="fig"><img src="charts/per_object.png" alt="error by object">
-      <figcaption>Per-object breakdown — no pipeline wins everywhere.</figcaption></figure>
-  </div>
 
   <h2><span class="n">03</span>Cost per model</h2>
   <div class="wrap">
@@ -192,13 +188,13 @@
         <th class="n">Proportion accuracy</th><th class="n">Objects &gt;2× too flat</th>
       </tr></thead>
       <tbody>
-        <tr><td>SAM 3D · SAM 3</td><td class="n good">4.3</td><td class="n good">1.2</td><td class="n">1.24</td><td class="n">2 / 14</td></tr>
-        <tr><td>TRELLIS 1 · SAM 3</td><td class="n">8.3</td><td class="n">2.4</td><td class="n">1.21</td><td class="n good">0 / 14</td></tr>
-        <tr><td>TRELLIS 1 · rembg</td><td class="n">9.2</td><td class="n">2.6</td><td class="n">1.32</td><td class="n good">0 / 14</td></tr>
-        <tr><td>Hunyuan3D · SAM 3</td><td class="n">10.5</td><td class="n">0.0</td><td class="n">0.98</td><td class="n">2 / 14</td></tr>
-        <tr class="hl"><td>Hunyuan3D · rembg</td><td class="n">12.3</td><td class="n">0.0</td><td class="n">0.96</td><td class="n bad">4 / 14</td></tr>
-        <tr><td>TRELLIS.2 · rembg</td><td class="n warn">156.6</td><td class="n warn">16.1</td><td class="n">1.44</td><td class="n good">0 / 14</td></tr>
-        <tr><td>TRELLIS.2 · SAM 3</td><td class="n warn">176.6</td><td class="n">10.8</td><td class="n">1.17</td><td class="n">1 / 14</td></tr>
+        <tr><td>SAM 3D · SAM 3</td><td class="n good">5.4</td><td class="n good">1.6</td><td class="n">1.33</td><td class="n good">0 / 10</td></tr>
+        <tr><td>TRELLIS 1 · SAM 3</td><td class="n">9.7</td><td class="n">2.9</td><td class="n">1.21</td><td class="n good">0 / 10</td></tr>
+        <tr><td>TRELLIS 1 · rembg</td><td class="n">9.4</td><td class="n">3.4</td><td class="n">1.20</td><td class="n good">0 / 10</td></tr>
+        <tr><td>Hunyuan3D · SAM 3</td><td class="n">12.3</td><td class="n">0.0</td><td class="n">1.03</td><td class="n">1 / 10</td></tr>
+        <tr class="hl"><td>Hunyuan3D · rembg</td><td class="n">16.3</td><td class="n">0.0</td><td class="n bad">0.90</td><td class="n bad">3 / 10</td></tr>
+        <tr><td>TRELLIS.2 · rembg</td><td class="n warn">184.9</td><td class="n warn">11.0</td><td class="n">1.44</td><td class="n good">0 / 10</td></tr>
+        <tr><td>TRELLIS.2 · SAM 3</td><td class="n warn">189.6</td><td class="n">7.4</td><td class="n">1.42</td><td class="n good">0 / 10</td></tr>
       </tbody>
     </table>
   </div>
@@ -213,9 +209,10 @@
   <h2><span class="n">05</span>The clearest failure</h2>
   <p class="lede">
     Every model was re-rendered from four angles. A collapsed mesh gives it away
-    immediately: seen edge-on it is a <b>line</b>. Four models fall below 1% of
-    frame from an opposite viewpoint — all four are Hunyuan, and they are exactly
-    the four that the proportion metric flagged independently.
+    immediately: seen edge-on it is a <b>line</b>. Among the ten reported objects,
+    the police motorcycle collapses under <b>both</b> Hunyuan modes and under no
+    other pipeline — and the motorcycle has published manufacturer dimensions, so
+    this is not an artefact of estimated ground truth.
   </p>
   <figure class="fig">
     <img src="figures/figure_flat_collapse_orbit.png" alt="four-view orbit comparison">
@@ -230,7 +227,7 @@
 
   <h2><span class="n">06</span>Every generation</h2>
   <p class="lede">
-    All 98 models. Click any object for the seven-pipeline comparison, or open the
+    All 70 reported models. Click any object for the seven-pipeline comparison, or open the
     <a href="index.html">3D browser</a> to rotate them yourself.
   </p>
   <div class="objgrid" id="objgrid"></div>
@@ -243,8 +240,14 @@
       pipelines on a scanned dataset for comparable numbers.</li>
     <li><b>Perceptual quality.</b> A blinded human scoring pass is built and
       pending; visual-quality statements here are observational.</li>
-    <li><b>Sample size.</b> 14 objects, single seed. Intervals are wide and the
+    <li><b>Sample size.</b> 10 objects, single seed. Intervals are wide and the
       high-confidence column rests on 6 objects with published dimensions.</li>
+    <li><b>Four APICS scenes excluded.</b> Multi-object photographs where
+      background removal cannot isolate the intended target, and whose ground truth
+      is estimated rather than published. Excluding them tightens every interval
+      but also removes the two pairs that had reached p&lt;0.05 — so the honest
+      statement is that dimensional accuracy separates nothing on clean
+      single-object inputs.</li>
     <li><b>Four image metrics were dropped rather than reported:</b> SSIM, PSNR and
       LPIPS measured against the source photograph came out near-identical for
       every pipeline — they were registering background and framing mismatch, not

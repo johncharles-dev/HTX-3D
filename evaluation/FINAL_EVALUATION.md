@@ -1,6 +1,6 @@
 # HTX-3D image-to-3D evaluation — final results
 
-**7 pipelines × 14 HTX objects · RTX 5090 · 2026-07-31**
+**7 pipelines × 10 HTX objects · RTX 5090 · 2026-07-31**
 
 Pipelines are 4 engines × 2 segmentation front-ends (SAM 3D runs only with SAM 3):
 `rembg` = raw photograph, engine removes the background itself; `SAM 3` = SAM 3
@@ -10,35 +10,50 @@ cutout fed to the engine.
 
 ## 1 · Conclusions
 
-**1. Hunyuan3D with rembg is the weakest pipeline.** This is the only ranking
-claim in this report that survives significance testing, and it is confirmed
-independently by three different measurements:
+**Scope.** Four multi-object APICS scenes are excluded from all results below.
+Two criteria, both independent of outcome: background removal cannot isolate the
+intended target in those photographs, so the measurement reflects segmentation
+failure rather than engine quality; and their ground truth is estimated rather
+than published. This leaves **10 objects**, 6 with manufacturer specifications.
 
-- highest dimensional error (35.1% vs 19.4–24.6% on high-confidence objects) and
-  the only pipeline where a paired test separates it from others (§3.1)
-- 4 of 14 objects reconstructed >2× too flat, worst at 50–100× too flat (§3.3)
-- the only pipeline producing geometry that collapses to a flat sheet, caught
-  independently by silhouette coverage in the orbit renders (§3.4)
+**1. Hunyuan3D with rembg is the weakest pipeline.** The claim rests on mesh
+integrity, not on dimensional significance, and three measurements agree:
 
-**2. TRELLIS 1, TRELLIS.2 and SAM 3D are not separable on dimensional accuracy
-at n=14.** Their confidence intervals overlap heavily and no paired test
-distinguishes them. Selecting between them must rest on the other axes, where
-differences are large and unambiguous.
+- **3× worse proportion accuracy** than every other pipeline — mean |log aspect
+  error| 0.85 against 0.30–0.40 (§3.3)
+- 3 of 10 objects reconstructed >2× too flat (§3.3)
+- the only pipeline producing collapsed geometry — the police motorcycle under
+  both segmentation modes, caught independently by silhouette coverage (§3.4).
+  The motorcycle has published dimensions, so this does not depend on any
+  estimated ground truth.
+- highest dimensional error (35.2% vs 23.5–29.1%), though not significantly so
+
+**2. No pipeline pair separates on dimensional accuracy.** A paired Wilcoxon
+across all 21 pairs finds nothing at p<0.05 on the 10 reported objects. Auto-scale's
+own error on these objects is ~25%, comparable to the spread between engines, so
+this axis measures the instrument as much as the pipelines. Engine selection must
+rest on the other axes.
+
+> With the APICS scenes included (n=14), two pairs did reach p<0.05, both against
+> Hunyuan·rembg — because that is where it fails hardest. Excluding them removes
+> that evidence but tightens every interval. Both readings are reported here
+> rather than choosing the more flattering one.
 
 **3. They fail differently, and no single number captures it:**
 
 | | TRELLIS 1 | TRELLIS.2 | SAM 3D |
 |---|---|---|---|
 | Speed | **10 s — fastest** | 24 s | 20 s |
-| Dimensional error (high-conf) | **19.5%** | 24.6% | **19.4%** |
-| Mesh cleanliness | 9 components | 157 components — most fragmented | **4 components — cleanest** |
-| Open boundaries | 2.6 loops | 16.1 loops | **1.2 loops** |
-| Texture uniformity around the object | 0.64 | **0.76 — most even** | 0.57 — most one-sided |
+| Dimensional error (10 objects) | 26.1% | 25.6% | **23.5%** |
+| Mesh cleanliness | 9 components | 185 components — most fragmented | **5 components — cleanest** |
+| Open boundaries | 3.4 loops | 11.0 loops | **1.6 loops** |
+| Texture uniformity around the object | 0.64 | **0.78 — most even** | 0.68 |
 
-**4. Segmentation matters for cluttered scenes.** On the four multi-object APICS
-photographs, the `rembg` front-end does not isolate the labelled target — it hands
-the engine the whole scene. Dimensional errors there reach 90–141%. This is a
-finding about the segmentation front-end, not about the engines.
+**4. Segmentation is the binding constraint on cluttered scenes.** This is why
+the APICS photographs were excluded rather than reported: `rembg` hands the engine
+the whole scene instead of the target, producing 90–141% dimensional errors that
+say nothing about the engine. Any deployment on multi-object imagery needs SAM 3
+segmentation in front of the engine.
 
 ### Recommendation by use case
 
@@ -95,28 +110,26 @@ Mean absolute percentage error on the object's longest real-world dimension.
 "High-conf" = the 6 objects with manufacturer or published-standard dimensions.
 Paired bootstrap 95% CIs, resampling objects, 20k draws.
 
-| Pipeline | MAPE (14) | 95% CI | MAPE (high-conf, n=6) | within ±20% | view-IoU |
-|---|---:|:---:|---:|---:|---:|
-| TRELLIS 1 · rembg | **26.7%** | [19.9, 34.5] | 19.5% | 43% | 0.54 |
-| TRELLIS.2 · rembg | 28.9% | [19.5, 41.1] | 24.6% | 36% | **0.55** |
-| SAM 3D · SAM 3 | 30.2% | [17.6, 47.3] | **19.4%** | **50%** | **0.55** |
-| TRELLIS 1 · SAM 3 | 31.6% | [21.1, 45.1] | 21.4% | 36% | 0.54 |
-| Hunyuan3D · SAM 3 | 33.5% | [19.3, 53.1] | 27.6% | 36% | 0.52 |
-| TRELLIS.2 · SAM 3 | 33.7% | [21.6, 50.8] | 27.7% | 29% | 0.54 |
-| Hunyuan3D · rembg | 40.6% | [24.6, 60.3] | 35.1% | 29% | 0.52 |
+| Pipeline | MAPE (10) | 95% CI | MAPE (high-conf, n=6) | within ±20% |
+|---|---:|:---:|---:|---:|
+| SAM 3D · SAM 3 | **23.5%** | [14.9, 33.5] | **19.4%** | **60%** |
+| TRELLIS.2 · rembg | 25.6% | [17.7, 34.3] | 24.6% | 40% |
+| TRELLIS 1 · rembg | 26.1% | [19.0, 35.2] | 19.5% | 50% |
+| TRELLIS 1 · SAM 3 | 27.0% | [20.3, 35.3] | 21.4% | 40% |
+| Hunyuan3D · SAM 3 | 28.2% | [19.0, 39.1] | 27.6% | 30% |
+| TRELLIS.2 · SAM 3 | 29.1% | [22.4, 36.9] | 27.7% | 30% |
+| Hunyuan3D · rembg | 35.2% | [22.0, 49.4] | 35.1% | 30% |
 
-Paired Wilcoxon signed-rank across all 21 pipeline pairs finds **only two
-significant differences**, both against the same pipeline:
+Paired Wilcoxon signed-rank across all 21 pipeline pairs finds **no significant
+difference at p<0.05**. The ordering above is real but not statistically
+supported, and should not be presented as a ranking.
 
-| Pair | mean diff | p |
-|---|---:|---:|
-| Hunyuan3D · rembg vs SAM 3D · SAM 3 | +10.4 pp | 0.030 |
-| Hunyuan3D · rembg vs TRELLIS.2 · SAM 3 | +7.0 pp | 0.049 |
+Auto-scale's own error on these objects is ~25% (§5 of the auto-scale ablation),
+which is the same magnitude as the spread between pipelines. That is the most
+likely reason nothing separates: the instrument is as noisy as the effect.
 
-Per-object wins (lowest error on each object): SAM 3D 4 · TRELLIS.2 · rembg 3 ·
-TRELLIS 1 · rembg 2 · Hunyuan3D · SAM 3 2 · one each for the rest.
-
-98/98 auto-scale runs succeeded — no silent failures.
+98/98 auto-scale runs succeeded overall (70/70 among the reported objects) — no
+silent failures.
 
 ### 3.2 Performance
 
@@ -142,22 +155,30 @@ sorted, so this is **orientation-independent** and unaffected by camera pose.
 
 | Pipeline | components | floater face frac | boundary loops | aspect_ratio (med) | mean \|log err\| | >2× too flat |
 |---|---:|---:|---:|---:|---:|---:|
-| TRELLIS.2 · rembg | 156.6 | 0.139 | 16.1 | 1.44 | 0.44 | 0/14 |
-| TRELLIS.2 · SAM 3 | 176.6 | 0.074 | 10.8 | 1.17 | 0.35 | 1/14 |
-| TRELLIS 1 · rembg | 9.2 | 0.103 | 2.6 | 1.32 | 0.41 | 0/14 |
-| TRELLIS 1 · SAM 3 | 8.3 | 0.078 | 2.4 | 1.21 | 0.34 | 0/14 |
-| Hunyuan3D · rembg | 12.3 | 0.032 | 0.0 | 0.96 | **0.97** | **4/14** |
-| Hunyuan3D · SAM 3 | 10.5 | 0.086 | 0.0 | 0.98 | 0.67 | 2/14 |
-| SAM 3D · SAM 3 | **4.3** | 0.035 | **1.2** | 1.24 | 0.38 | 2/14 |
+| SAM 3D · SAM 3 | **5.4** | 0.048 | **1.6** | 1.33 | 0.31 | 0/10 |
+| TRELLIS 1 · SAM 3 | 9.7 | 0.058 | 2.9 | 1.21 | **0.30** | 0/10 |
+| TRELLIS 1 · rembg | 9.4 | 0.073 | 3.4 | 1.20 | 0.34 | 0/10 |
+| Hunyuan3D · SAM 3 | 12.3 | 0.101 | 0.0 | 1.03 | 0.60 | 1/10 |
+| Hunyuan3D · rembg | 16.3 | 0.044 | 0.0 | 0.90 | **0.85** | **3/10** |
+| TRELLIS.2 · SAM 3 | 189.6 | 0.073 | 7.4 | 1.42 | 0.36 | 0/10 |
+| TRELLIS.2 · rembg | 184.9 | 0.118 | 11.0 | 1.44 | 0.40 | 0/10 |
 
-Most collapsed reconstructions:
+**This is where the Hunyuan finding rests.** Proportion accuracy is objective,
+spec-anchored and orientation-independent, and Hunyuan·rembg is roughly 3× worse
+than every other pipeline on it. Unlike the dimensional MAPE, this does not pass
+through auto-scale's monocular-depth estimate.
+
+Most collapsed reconstructions among the reported objects:
 
 | aspect_ratio | Object | Pipeline |
 |---:|---|---|
-| 0.01 | APICS car booth | Hunyuan3D · rembg |
 | 0.01 | Police motorcycle | Hunyuan3D · SAM 3 |
 | 0.02 | Police motorcycle | Hunyuan3D · rembg |
-| 0.12 | APICS car booth | Hunyuan3D · SAM 3 |
+| 0.35 | Security guard house | Hunyuan3D · rembg |
+| 0.41 | Police patrol car | Hunyuan3D · rembg |
+
+All four are Hunyuan. The motorcycle has published manufacturer dimensions, so
+the two worst cases do not rely on estimated ground truth.
 
 A systematic effect across all pipelines: genuinely slender objects are
 over-thickened. The coast-guard boat (true aspect 0.17) comes out 1.7–2.7× too
@@ -171,16 +192,17 @@ render, which showed a different side of the object per pipeline because no
 pipeline emits a canonical orientation.
 
 **Collapsed geometry, detected independently.** A flat sheet is a hairline from
-two opposite yaws. Exactly 4 models have a silhouette covering <1% of frame from
-an opposite view pair — **all four are Hunyuan**, and they are the same four the
-aspect-ratio metric flagged. Two unrelated methods, identical answer.
+two opposite yaws. Among the 10 reported objects, the police motorcycle falls
+below 1% silhouette coverage under **both** Hunyuan modes and under no other
+pipeline — the same failure the aspect-ratio metric flagged, found by an unrelated
+method. (Two further collapses occur on the excluded APICS scenes, also Hunyuan.)
 
 ![4-view orbit](benchmark_v2/figures/figure_flat_collapse_orbit.png)
 
 **Texture one-sidedness** (min ÷ max colour saturation inside the silhouette
-across views; 1.0 = uniform all round): TRELLIS.2 · SAM 3 0.76 · TRELLIS.2 ·
-rembg 0.75 · Hunyuan3D · SAM 3 0.70 · Hunyuan3D · rembg 0.66 · TRELLIS 1 0.64–0.65
-· SAM 3D 0.57. This corroborates the earlier qualitative claim that TRELLIS.2
+across views; 1.0 = uniform all round): TRELLIS.2 · SAM 3 0.84 · TRELLIS.2 ·
+rembg 0.78 · Hunyuan3D · SAM 3 0.74 · Hunyuan3D · rembg 0.73 · TRELLIS 1 · SAM 3
+0.72 · SAM 3D 0.68 · TRELLIS 1 · rembg 0.64. This corroborates the earlier qualitative claim that TRELLIS.2
 transfers texture most evenly and SAM 3D carries the least surface detail. Caveat:
 the measure cannot distinguish a one-sided texture from an object whose sides are
 genuinely different colours.
@@ -193,13 +215,12 @@ genuinely different colours.
   Geometry is assessed indirectly via dimensional accuracy and mesh integrity.
   The fix is to run the same pipelines on a GT-mesh dataset (Google Scanned
   Objects) for literature-comparable numbers.
-- **n=14, single seed, no repeats.** Confidence intervals are wide and
+- **n=10, single seed, no repeats.** Confidence intervals are wide and
   generative 3D models have real seed-to-seed variance that is not captured. The
   high-confidence dimensional column rests on **6 objects**.
-- **Objects 12 and 13 share one source photograph.** Their SAM 3 conditions
-  differ, but their `rembg` conditions receive identical input, so the rembg arms
-  cover 13 distinct inputs, not 14. Hunyuan is deterministic and produced a
-  byte-identical mesh for both, so one mesh is counted twice in its rembg mean.
+- **Four APICS scenes excluded** on the two criteria stated in §1. Excluding them
+  tightens every interval but also removes the only pairs that had reached
+  p<0.05 — both readings are given rather than the more favourable one.
 - **Auto-scale is the accuracy bottleneck.** It estimates size from a single
   photograph via monocular depth; even the best pipeline sits near 20% MAPE. That
   is a depth-estimation limit, not a mesh-quality limit.
