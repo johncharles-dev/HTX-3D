@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Batch generation — HTX-3D</title>
+<style>
+  :root{
+    --bg:#12141a; --panel:#1b1e26; --line:#2c313d; --fg:#e8eaf0; --dim:#9aa2b4;
+    --accent:#4da3ff; --warn:#ffb454; --good:#5ec98a; --bad:#ff6b6b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+       font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+  header{position:sticky;top:0;z-index:30;background:rgba(18,20,26,.97);
+         border-bottom:1px solid var(--line);padding:10px 16px;
+         display:flex;gap:11px;align-items:center;flex-wrap:wrap;backdrop-filter:blur(8px)}
+  header h1{font-size:15px;margin:0;font-weight:650;white-space:nowrap}
+  header a{color:var(--dim);text-decoration:none;font-size:13px;border:1px solid var(--line);
+           padding:6px 10px;border-radius:7px}
+  header a:hover{border-color:var(--accent);color:var(--fg)}
+  .sp{flex:1}
+  button{background:var(--panel);color:var(--fg);border:1px solid var(--line);
+         border-radius:7px;padding:7px 12px;font:inherit;font-size:14px;cursor:pointer}
+  button:hover:not(:disabled){border-color:var(--accent)}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#06121f;font-weight:600}
+  button.on{background:#123049;border-color:var(--accent);color:#cfe6ff}
+  input[type=text],input[type=number],select{background:#151821;border:1px solid var(--line);
+       color:var(--fg);border-radius:6px;padding:5px 8px;font:inherit;font-size:13.5px}
+  main{display:flex;gap:14px;padding:14px;align-items:flex-start}
+  /* queue */
+  #queue{width:300px;flex-shrink:0;background:var(--panel);border:1px solid var(--line);
+         border-radius:12px;padding:12px;position:sticky;top:64px;max-height:calc(100vh - 80px);
+         overflow:auto}
+  #queue h3{margin:0 0 10px;font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.6px}
+  #drop{border:2px dashed var(--line);border-radius:10px;padding:16px;text-align:center;
+        color:var(--dim);cursor:pointer;font-size:13.5px;margin-bottom:11px}
+  #drop:hover,#drop.hot{border-color:var(--accent);color:var(--fg)}
+  .it{display:flex;gap:9px;align-items:center;padding:7px;border-radius:9px;cursor:pointer;
+      border:1px solid transparent;margin-bottom:5px}
+  .it:hover{background:#151821}
+  .it.sel{border-color:var(--accent);background:#12202e}
+  .it img{width:46px;height:46px;object-fit:cover;border-radius:6px;background:#0d0f14;flex-shrink:0}
+  .it .meta{flex:1;min-width:0}
+  .it .nm{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .it .st{font-size:11px;color:var(--dim)}
+  .it .st.ok{color:var(--good)} .it .st.run{color:var(--warn)} .it .st.err{color:var(--bad)}
+  /* work area */
+  #work{flex:1;min-width:0}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+        padding:14px 16px;margin-bottom:14px}
+  .card h3{margin:0 0 11px;font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.6px}
+  .segbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+  .segbar button{padding:5px 10px;font-size:13px}
+  #segwrap{position:relative;display:inline-block;line-height:0;border:1px solid var(--line);
+           border-radius:8px;overflow:hidden;background:#0d0f14;max-width:100%}
+  #segimg{max-width:100%;max-height:520px;display:block;cursor:crosshair}
+  #rubber{position:absolute;border:2px dashed var(--accent);background:rgba(77,163,255,.14);
+          display:none;pointer-events:none}
+  .dot{position:absolute;width:13px;height:13px;border-radius:50%;transform:translate(-50%,-50%);
+       border:2px solid #fff;pointer-events:none;box-shadow:0 0 4px rgba(0,0,0,.7)}
+  .dot.pos{background:#2ecc71} .dot.neg{background:#ff5c5c}
+  .chips{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{font-size:12px;padding:4px 10px;border-radius:20px;border:1px solid var(--line);
+        background:#151821;color:var(--dim);cursor:pointer;user-select:none;white-space:nowrap}
+  .chip.on{background:#123049;border-color:var(--accent);color:#cfe6ff}
+  .chip.ok{background:#1d3a2a;border-color:var(--good);color:var(--good)}
+  .chip.run{background:#3a2f1a;border-color:var(--warn);color:var(--warn)}
+  .chip.err{background:#4a1f22;border-color:var(--bad);color:#ffb3b3}
+  .chip.q{opacity:.65}
+  .fld{display:flex;align-items:center;gap:9px;margin-bottom:8px;font-size:14px;flex-wrap:wrap}
+  .fld label{width:120px;color:var(--dim)}
+  table{border-collapse:collapse;width:100%;font-size:12.5px}
+  th,td{padding:5px 7px;text-align:center;border-bottom:1px solid var(--line);white-space:nowrap}
+  th{color:var(--dim);font-weight:600;font-size:11px;text-transform:uppercase}
+  th:first-child,td:first-child{text-align:left;max-width:190px;overflow:hidden;text-overflow:ellipsis}
+  .hint{color:var(--dim);font-size:13px;margin:9px 0 0}
+  kbd{background:#151821;border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Batch generation</h1>
+  <a href="results.html">Results</a><a href="index.html">Model browser</a><a href="live.html">Live</a>
+  <div class="sp"></div>
+  <span class="chip" id="overall">no images</span>
+  <button id="export">Export manifest</button>
+  <button class="primary" id="run" disabled>Run all</button>
+</header>
+
+<main>
+  <div id="queue">
+    <h3>images</h3>
+    <div id="drop">Drop images here<br>or click to choose<br><span style="font-size:11.5px">several at once</span>
+      <input type="file" id="file" accept="image/*" multiple hidden></div>
+    <div id="list"></div>
+  </div>
+
+  <div id="work">
+    <div class="card" id="setcard">
+      <h3>settings — applied to every image</h3>
+      <div class="fld"><label>Pipelines</label><div class="chips" id="pipes"></div></div>
+      <div class="fld"><label for="seed">Seed</label>
+        <input type="number" id="seed" value="42" style="width:110px">
+        <label style="width:auto;color:var(--dim)"><input type="checkbox" id="rand"> randomise</label>
+        <label style="width:auto;color:var(--dim);margin-left:14px">Texture</label>
+        <select id="tex"><option>1024</option><option>2048</option></select>
+        <label style="width:auto;color:var(--dim);margin-left:14px">Simplify</label>
+        <input type="number" id="simp" value="0.95" step="0.01" min="0" max="1" style="width:90px">
+      </div>
+      <p class="hint">TRELLIS.2 always uses its own texture size (4K / 2K variants); the dropdown
+        applies to the other engines. SAM 3 pipelines only run for images that have a confirmed cutout.</p>
+    </div>
+
+    <div class="card" id="segcard" style="display:none">
+      <h3 id="segtitle">segmentation</h3>
+      <div class="segbar">
+        <button data-tool="pos" class="on">Point +</button>
+        <button data-tool="neg">Point −</button>
+        <button data-tool="box">Box</button>
+        <input type="text" id="prompt" placeholder="or type: bus shelter" style="width:170px">
+        <button id="ptext">Text</button>
+        <button id="pundo">Undo</button>
+        <button id="preset">Reset</button>
+        <span class="sp"></span>
+        <span class="chip" id="segstat">—</span>
+        <button class="primary" id="pconfirm" disabled>Use this mask</button>
+      </div>
+      <div id="segwrap"><img id="segimg" alt=""><div id="rubber"></div></div>
+      <div class="chips" id="masklist" style="margin-top:9px"></div>
+      <p class="hint"><b>Point +</b> click the object · <b>Point −</b> click what to exclude ·
+        <b>Box</b> drag around it · or type a prompt. Then <b>Use this mask</b> and pick the next image.</p>
+    </div>
+
+    <div class="card" id="gridcard" style="display:none">
+      <h3>progress</h3>
+      <div style="overflow-x:auto"><table id="grid"></table></div>
+    </div>
+  </div>
+</main>
+
+<script>
+const PIPELINES = [
+  {id:"trellis_rembg",     engine:"trellis",  seg:"rembg", label:"TRELLIS 1 · rembg"},
+  {id:"trellis_sam3",      engine:"trellis",  seg:"sam3",  label:"TRELLIS 1 · SAM 3"},
+  {id:"trellis2_rembg_4k", engine:"trellis2", seg:"rembg", label:"TRELLIS.2 · rembg 4K", tex:4096},
+  {id:"trellis2_sam3_4k",  engine:"trellis2", seg:"sam3",  label:"TRELLIS.2 · SAM 3 4K", tex:4096},
+  {id:"trellis2_rembg_2k", engine:"trellis2", seg:"rembg", label:"TRELLIS.2 · rembg 2K", tex:2048},
+  {id:"trellis2_sam3_2k",  engine:"trellis2", seg:"sam3",  label:"TRELLIS.2 · SAM 3 2K", tex:2048},
+  {id:"hunyuan_rembg",     engine:"hunyuan",  seg:"rembg", label:"Hunyuan3D · rembg"},
+  {id:"hunyuan_sam3",      engine:"hunyuan",  seg:"sam3",  label:"Hunyuan3D · SAM 3"},
+  {id:"sam3d_sam3",        engine:"sam3d",    seg:"sam3",  label:"SAM 3D · SAM 3"},
+];
+let selectedPipes = new Set(PIPELINES.map(p => p.id));
+const $ = s => document.querySelector(s);
+
+/* one entry per uploaded image */
+let items = [];        // {uid,file,name,url,sid,segPath,points,labels,masks,mi,jobs:{},state}
+let cur = null;        // uid being segmented
+let running = false;
+let uidSeq = 0;
+
+const post = async (url, body, json=true) => {
+  const opt = json ? {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}
+                   : {method:"POST", body};
+  const r = await fetch(url, opt);
+  if (!r.ok) throw new Error((await r.json().catch(()=>({}))).detail || `${url}: ${r.status}`);
+  return r.json();
+};
+
+/* ---------------- queue ---------------- */
+function addFiles(fs){
+  for (const f of fs){
+    if (!f.type.startsWith("image/")) continue;
+    items.push({uid:++uidSeq, file:f, name:f.name.replace(/\.[^.]+$/,""), url:URL.createObjectURL(f),
+                sid:null, segPath:null, points:[], labels:[], masks:[], mi:0, tool:"pos",
+                jobs:{}, state:"needs mask"});
+  }
+  renderList(); renderGrid(); updateRun();
+  if (!cur && items.length) selectItem(items[0].uid);
+}
+const drop = $("#drop"), fileIn = $("#file");
+drop.onclick = () => fileIn.click();
+drop.ondragover = e => { e.preventDefault(); drop.classList.add("hot"); };
+drop.ondragleave = () => drop.classList.remove("hot");
+drop.ondrop = e => { e.preventDefault(); drop.classList.remove("hot"); addFiles(e.dataTransfer.files); };
+fileIn.onchange = e => addFiles(e.target.files);
+
+function renderList(){
+  const L = $("#list"); L.innerHTML = "";
+  items.forEach(it => {
+    const d = document.createElement("div");
+    d.className = "it" + (it.uid === cur ? " sel" : "");
+    const cls = it.state === "cutout ready" ? "ok"
+              : it.state.startsWith("generating") ? "run"
+              : it.state === "failed" ? "err" : "";
+    d.innerHTML = `<img src="${it.url}"><div class="meta">
+        <div class="nm">${it.name}</div><div class="st ${cls}">${it.state}</div></div>`;
+    d.onclick = () => selectItem(it.uid);
+    L.appendChild(d);
+  });
+  $("#overall").textContent = items.length
+    ? `${items.length} images · ${items.filter(i=>i.segPath).length} with cutout` : "no images";
+}
+
+function selectItem(uid){
+  if (running) return;
+  cur = uid; renderList();
+  const it = items.find(i => i.uid === uid);
+  if (!it) return;
+  $("#segcard").style.display = "";
+  $("#segtitle").textContent = `segmentation — ${it.name}`;
+  $("#segimg").src = it.segPath ? `/api/segment/overlay/${it.sid}?t=${Date.now()}` : it.url;
+  $("#prompt").value = "";
+  segStatus(it.segPath ? "cutout ready ✓" : "click the object, or type a prompt",
+            it.segPath ? "ok" : "");
+  $("#pconfirm").disabled = !!it.segPath || !it.masks.length;
+  renderMasks(); drawDots();
+  if (!it.sid && !it.segPath) startSession(it);
+}
+
+/* ---------------- segmentation ---------------- */
+function segStatus(t, cls=""){ const e=$("#segstat"); e.textContent=t; e.className="chip"+(cls?" "+cls:""); }
+async function startSession(it){
+  segStatus("starting session…","run");
+  try {
+    const fd = new FormData(); fd.append("image", it.file);
+    const s = await post("/api/segment/start", fd, false);
+    it.sid = s.session_id;
+    segStatus("click the object, or type a prompt");
+  } catch(e){ segStatus(String(e.message||e),"err"); }
+}
+function it_cur(){ return items.find(i => i.uid === cur); }
+function drawDots(){
+  document.querySelectorAll("#segwrap .dot").forEach(d => d.remove());
+  const it = it_cur(); if (!it) return;
+  const img = $("#segimg");
+  it.points.forEach(([x,y],i) => {
+    const d = document.createElement("div");
+    d.className = "dot " + (it.labels[i] ? "pos":"neg");
+    d.style.left = (x*img.clientWidth)+"px"; d.style.top = (y*img.clientHeight)+"px";
+    $("#segwrap").appendChild(d);
+  });
+}
+function renderMasks(){
+  const box = $("#masklist"); box.innerHTML = "";
+  const it = it_cur(); if (!it || it.masks.length < 2) return;
+  it.masks.forEach((m,i) => {
+    const c = document.createElement("span");
+    c.className = "chip" + (i===it.mi ? " on":"");
+    c.textContent = `mask ${i+1} · ${m.score.toFixed(2)}`;
+    c.onclick = () => { it.mi = i; renderMasks(); };
+    box.appendChild(c);
+  });
+}
+async function applyResult(res){
+  const it = it_cur(); if (!it) return;
+  it.masks = res.masks || []; it.mi = 0;
+  if (!it.masks.length){ segStatus("no mask found","err"); $("#pconfirm").disabled = true; }
+  else { segStatus(`${it.masks.length} mask${it.masks.length>1?"s":""} · confirm`,"run");
+         $("#pconfirm").disabled = false; }
+  $("#segimg").src = `/api/segment/overlay/${it.sid}?t=${Date.now()}`;
+  renderMasks(); drawDots();
+}
+async function sendPoints(){
+  const it = it_cur(); if (!it || !it.sid) return;
+  if (!it.points.length){ await doReset(); return; }
+  segStatus("segmenting…","run");
+  try { await applyResult(await post("/api/segment/points",
+        {session_id:it.sid, points:it.points, labels:it.labels})); }
+  catch(e){ segStatus(String(e.message||e),"err"); }
+}
+async function doReset(){
+  const it = it_cur(); if (!it || !it.sid) return;
+  try { await fetch(`/api/segment/reset?session_id=${encodeURIComponent(it.sid)}`,{method:"POST"}); } catch {}
+  it.points=[]; it.labels=[]; it.masks=[]; it.mi=0;
+  $("#segimg").src = it.url; $("#pconfirm").disabled = true;
+  segStatus("click the object, or type a prompt"); renderMasks(); drawDots();
+}
+(function bindSeg(){
+  const img=$("#segimg"), wrap=$("#segwrap"), rub=$("#rubber");
+  const norm = ev => { const r=img.getBoundingClientRect();
+    return [Math.min(1,Math.max(0,(ev.clientX-r.left)/r.width)),
+            Math.min(1,Math.max(0,(ev.clientY-r.top)/r.height))]; };
+  img.onclick = async ev => {
+    const it=it_cur(); if(!it||!it.sid||it.tool==="box"||it.segPath) return;
+    const [x,y]=norm(ev); it.points.push([x,y]); it.labels.push(it.tool==="pos"?1:0);
+    drawDots(); await sendPoints();
+  };
+  let start=null;
+  wrap.onmousedown = ev => { const it=it_cur();
+    if(!it||it.tool!=="box"||!it.sid||it.segPath) return;
+    start=norm(ev); rub.style.display="block";
+    rub.style.left=(start[0]*img.clientWidth)+"px"; rub.style.top=(start[1]*img.clientHeight)+"px";
+    rub.style.width="0px"; rub.style.height="0px"; ev.preventDefault(); };
+  wrap.onmousemove = ev => { if(!start) return; const [x,y]=norm(ev);
+    rub.style.left=(Math.min(x,start[0])*img.clientWidth)+"px";
+    rub.style.top=(Math.min(y,start[1])*img.clientHeight)+"px";
+    rub.style.width=(Math.abs(x-start[0])*img.clientWidth)+"px";
+    rub.style.height=(Math.abs(y-start[1])*img.clientHeight)+"px"; };
+  wrap.onmouseup = async ev => {
+    if(!start) return; const it=it_cur(); const [x,y]=norm(ev); const s=start;
+    start=null; rub.style.display="none";
+    const w=Math.abs(x-s[0]), h=Math.abs(y-s[1]); if(w<0.02||h<0.02) return;
+    segStatus("segmenting…","run");
+    try { await applyResult(await post("/api/segment/box",
+      {session_id:it.sid, box:[(x+s[0])/2,(y+s[1])/2,w,h], label:true})); }
+    catch(e){ segStatus(String(e.message||e),"err"); }
+  };
+  document.querySelectorAll(".segbar [data-tool]").forEach(b => {
+    b.onclick = () => { const it=it_cur(); if(!it) return; it.tool=b.dataset.tool;
+      document.querySelectorAll(".segbar [data-tool]").forEach(x=>x.classList.toggle("on",x===b)); };
+  });
+  $("#ptext").onclick = async () => {
+    const it=it_cur(); const p=($("#prompt").value||"").trim();
+    if(!it||!it.sid||!p||it.segPath) return;
+    segStatus("segmenting…","run");
+    try { await applyResult(await post("/api/segment/text",{session_id:it.sid,prompt:p})); }
+    catch(e){ segStatus(String(e.message||e),"err"); }
+  };
+  $("#prompt").onkeydown = e => { if(e.key==="Enter") $("#ptext").click(); };
+  $("#pundo").onclick = async () => { const it=it_cur();
+    if(!it||!it.points.length) return; it.points.pop(); it.labels.pop(); drawDots(); await sendPoints(); };
+  $("#preset").onclick = doReset;
+  $("#pconfirm").onclick = async () => {
+    const it=it_cur(); if(!it||!it.sid||!it.masks.length) return;
+    segStatus("building cutout…","run");
+    try {
+      const c = await post("/api/segment/confirm",{session_id:it.sid, mask_index:it.mi});
+      it.segPath = c.segmented_image_path; it.state = "cutout ready";
+      segStatus("cutout ready ✓","ok"); $("#pconfirm").disabled = true;
+      renderList(); updateRun();
+      const nxt = items.find(i => !i.segPath);
+      if (nxt) selectItem(nxt.uid);
+    } catch(e){ segStatus(String(e.message||e),"err"); }
+  };
+  addEventListener("resize", drawDots);
+})();
+
+/* ---------------- pipelines + run ---------------- */
+function renderPipes(){
+  const box=$("#pipes"); box.innerHTML="";
+  PIPELINES.forEach(p => {
+    const c=document.createElement("span");
+    c.className="chip"+(selectedPipes.has(p.id)?" on":"");
+    c.textContent=p.label;
+    c.onclick=()=>{ selectedPipes.has(p.id)?selectedPipes.delete(p.id):selectedPipes.add(p.id);
+                    renderPipes(); renderGrid(); updateRun(); };
+    box.appendChild(c);
+  });
+}
+renderPipes();
+
+function activePipes(it){
+  return PIPELINES.filter(p => selectedPipes.has(p.id) && (p.seg === "rembg" || it.segPath));
+}
+function updateRun(){
+  const total = items.reduce((n,it)=>n+activePipes(it).length,0);
+  $("#run").disabled = running || total === 0;
+  $("#run").textContent = running ? "Running…" : `Run all (${total})`;
+}
+function renderGrid(){
+  if (!items.length){ $("#gridcard").style.display="none"; return; }
+  $("#gridcard").style.display="";
+  const ps = PIPELINES.filter(p=>selectedPipes.has(p.id));
+  const t=$("#grid");
+  t.innerHTML = "<thead><tr><th>object</th>" + ps.map(p=>`<th>${p.label.replace(' · ','<br>')}</th>`).join("") + "</tr></thead>";
+  const tb=document.createElement("tbody");
+  items.forEach(it => {
+    const tr=document.createElement("tr");
+    tr.innerHTML = `<td title="${it.name}">${it.name}</td>` + ps.map(p=>{
+      const j=it.jobs[p.id];
+      if (!j) return `<td><span class="chip q">${p.seg==="sam3"&&!it.segPath?"no cutout":"—"}</span></td>`;
+      const cls = j.status==="completed"?"ok":j.status==="failed"||j.status==="error"?"err":"run";
+      const txt = j.status==="completed"?`${j.secs||""}s`:j.status;
+      return `<td><span class="chip ${cls}">${txt}</span></td>`;
+    }).join("");
+    tb.appendChild(tr);
+  });
+  t.appendChild(tb);
+}
+
+$("#run").onclick = async () => {
+  running = true; updateRun();
+  const queue = [];
+  for (const it of items) for (const p of activePipes(it)) queue.push({it,p});
+  $("#overall").textContent = `submitting ${queue.length} jobs…`;
+
+  for (const {it,p} of queue){
+    try {
+      const fd = new FormData();
+      fd.append("image", it.file);
+      fd.append("engine", p.engine);
+      if (p.seg === "sam3") fd.append("segmented_image_path", it.segPath);
+      fd.append("seed", $("#seed").value || "42");
+      fd.append("randomize_seed", $("#rand").checked ? "true":"false");
+      fd.append("formats","glb");
+      fd.append("mesh_simplify", $("#simp").value || "0.95");
+      fd.append("texture_size", String(p.tex || $("#tex").value || "1024"));
+      fd.append("ss_steps","12"); fd.append("ss_guidance","7.5");
+      fd.append("slat_steps","12"); fd.append("slat_guidance","3");
+      if (p.engine === "hunyuan"){
+        fd.append("num_inference_steps","30"); fd.append("guidance_scale","5");
+        fd.append("octree_resolution","256"); fd.append("texture","true");
+        fd.append("remove_floaters","true");
+      }
+      if (p.engine === "sam3d"){
+        fd.append("sam3d_stage1_steps","25"); fd.append("sam3d_stage2_steps","25");
+        fd.append("sam3d_texture_baking","true"); fd.append("sam3d_vertex_color","false");
+      }
+      const r = await fetch("/api/generate/image",{method:"POST",body:fd});
+      if (!r.ok) throw new Error((await r.json().catch(()=>({}))).detail || r.statusText);
+      const {task_id} = await r.json();
+      it.jobs[p.id] = {task_id, status:"queued"};
+    } catch(e){
+      it.jobs[p.id] = {status:"error", err:String(e.message||e)};
+    }
+    it.state = "generating"; renderList(); renderGrid();
+  }
+
+  // poll everything until nothing is outstanding
+  const pending = () => items.flatMap(it => Object.entries(it.jobs)
+      .filter(([,j]) => j.task_id && j.status!=="completed" && j.status!=="failed" && j.status!=="cancelled")
+      .map(([pid,j]) => ({it,pid,j})));
+  while (pending().length){
+    await new Promise(r=>setTimeout(r,2500));
+    for (const {it,pid,j} of pending()){
+      try {
+        const t = await fetch(`/api/task/${j.task_id}`).then(r=>r.json());
+        j.status = t.status;
+        if (t.status === "completed"){
+          j.secs = t.generation_time_seconds != null ? Number(t.generation_time_seconds).toFixed(0) : "";
+          const g=(t.exports||[]).find(x=>x.format==="glb"); if (g) j.url=g.url;
+        } else if (t.status==="failed"){ j.err = t.error || "failed"; }
+      } catch {}
+    }
+    const done = items.flatMap(it=>Object.values(it.jobs)).filter(j=>j.status==="completed").length;
+    $("#overall").textContent = `${done}/${queue.length} complete · ${pending().length} outstanding`;
+    items.forEach(it => {
+      const js = Object.values(it.jobs);
+      if (js.length && js.every(j=>j.status==="completed")) it.state="done";
+      else if (js.some(j=>j.status==="failed"||j.status==="error")) it.state="failed";
+    });
+    renderList(); renderGrid();
+  }
+  running = false; updateRun();
+  $("#overall").textContent = `all ${queue.length} jobs finished`;
+};
+
+$("#export").onclick = () => {
+  const rows = [["object_name","image_file","pipeline","engine","seg_mode","texture_size",
+                 "task_id","status","gen_time_s","segmented_path"].join(",")];
+  const esc = v => /[",\n]/.test(String(v??"")) ? `"${String(v).replace(/"/g,'""')}"` : (v??"");
+  items.forEach(it => PIPELINES.forEach(p => {
+    const j = it.jobs[p.id]; if (!j) return;
+    rows.push([it.name, it.file.name, p.id, p.engine, p.seg,
+               p.tex || $("#tex").value, j.task_id||"", j.status||"", j.secs||"",
+               p.seg==="sam3" ? (it.segPath||"") : ""].map(esc).join(","));
+  }));
+  if (rows.length === 1){ alert("Nothing generated yet."); return; }
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([rows.join("\n")],{type:"text/csv"}));
+  a.download="batch_manifest.csv"; a.click();
+};
+</script>
+</body>
+</html>

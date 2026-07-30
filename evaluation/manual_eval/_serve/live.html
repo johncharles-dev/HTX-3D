@@ -96,6 +96,7 @@
 
 <header>
   <h1>Live engine comparison</h1>
+  <a href="batch.html" style="color:var(--dim);font-size:13px;text-decoration:none;border:1px solid var(--line);padding:6px 10px;border-radius:7px">Batch ↗</a>
   <a href="results.html" style="color:var(--dim);font-size:13px;text-decoration:none;border:1px solid var(--line);padding:6px 10px;border-radius:7px">Results ↗</a>
   <a href="index.html" style="color:var(--dim);font-size:13px;text-decoration:none;border:1px solid var(--line);padding:6px 10px;border-radius:7px">← Blinded scoring</a>
   <span class="chip" id="overall">waiting for an image</span>
@@ -192,16 +193,22 @@ import { OrbitControls } from './vendor/jsm/controls/OrbitControls.js';
 /* The same 7 conditions as the benchmark: engine x segmentation front-end.
    rembg  = raw photo, engine strips the background itself
    SAM 3  = SAM 3 cutout (one segmentation pass, reused by every sam3 variant) */
+/* `tex` overrides the global texture-size dropdown for that pipeline only.
+   TRELLIS.2 treats a request of <=1024 as "auto" and substitutes 4096
+   (trellis2.py:76-80), so 4096 must be asked for explicitly to be recorded as
+   such, and 2048 passes straight through. */
 const PIPELINES = [
-  {id:"trellis_rembg",  engine:"trellis",  seg:"rembg", name:"TRELLIS 1", note:"rembg"},
-  {id:"trellis_sam3",   engine:"trellis",  seg:"sam3",  name:"TRELLIS 1", note:"SAM 3"},
-  {id:"trellis2_rembg", engine:"trellis2", seg:"rembg", name:"TRELLIS.2", note:"rembg"},
-  {id:"trellis2_sam3",  engine:"trellis2", seg:"sam3",  name:"TRELLIS.2", note:"SAM 3"},
-  {id:"hunyuan_rembg",  engine:"hunyuan",  seg:"rembg", name:"Hunyuan3D", note:"rembg"},
-  {id:"hunyuan_sam3",   engine:"hunyuan",  seg:"sam3",  name:"Hunyuan3D", note:"SAM 3"},
-  {id:"sam3d_sam3",     engine:"sam3d",    seg:"sam3",  name:"SAM 3D",    note:"SAM 3"},
+  {id:"trellis_rembg",     engine:"trellis",  seg:"rembg", name:"TRELLIS 1", note:"rembg"},
+  {id:"trellis_sam3",      engine:"trellis",  seg:"sam3",  name:"TRELLIS 1", note:"SAM 3"},
+  {id:"trellis2_rembg_4k", engine:"trellis2", seg:"rembg", name:"TRELLIS.2", note:"rembg · 4K", tex:4096},
+  {id:"trellis2_sam3_4k",  engine:"trellis2", seg:"sam3",  name:"TRELLIS.2", note:"SAM 3 · 4K", tex:4096},
+  {id:"trellis2_rembg_2k", engine:"trellis2", seg:"rembg", name:"TRELLIS.2", note:"rembg · 2K", tex:2048},
+  {id:"trellis2_sam3_2k",  engine:"trellis2", seg:"sam3",  name:"TRELLIS.2", note:"SAM 3 · 2K", tex:2048},
+  {id:"hunyuan_rembg",     engine:"hunyuan",  seg:"rembg", name:"Hunyuan3D", note:"rembg"},
+  {id:"hunyuan_sam3",      engine:"hunyuan",  seg:"sam3",  name:"Hunyuan3D", note:"SAM 3"},
+  {id:"sam3d_sam3",        engine:"sam3d",    seg:"sam3",  name:"SAM 3D",    note:"SAM 3"},
 ];
-let selected = new Set(["trellis_rembg","trellis2_rembg","hunyuan_rembg"]);
+let selected = new Set(["trellis_rembg","trellis2_rembg_4k","hunyuan_rembg"]);
 let file = null, syncing = false, shiftHeld = false, views = [], cards = {};
 
 addEventListener("keydown", e => { if (e.key === "Shift") shiftHeld = true;
@@ -590,7 +597,7 @@ async function generate(){
       fd.append("randomize_seed", $("#rand").checked ? "true" : "false");
       fd.append("formats", "glb");
       fd.append("mesh_simplify", $("#simp").value || "0.95");
-      fd.append("texture_size", $("#tex").value || "1024");
+      fd.append("texture_size", String(e.tex || $("#tex").value || "1024"));
       // NOTE: target_face_count is NOT sent to Hunyuan. Its decimation path
       // (hunyuan.py _decimate_mesh) saves via pymeshlab, which cannot write GLB,
       // so any Hunyuan run with target_face_count > 0 fails with
@@ -623,11 +630,17 @@ async function generate(){
 
   if (!jobs.length){ $("#go").disabled = false; $("#overall").textContent = "all submissions failed"; return; }
 
+  // Engines share one GPU worker, so most jobs sit queued after submission.
+  // Timing from submission would bill each job for the whole queue wait, so the
+  // clock only runs once the backend reports it has started, and the final value
+  // comes from the backend's own generation_time_seconds.
   const timer = setInterval(() => {
     for (const j of jobs){
       const c = cards[j.e.id];
       if (c.finished) continue;
-      c.foot.querySelector(".t").textContent = `${((Date.now()-c.t0)/1000).toFixed(0)}s`;
+      const el = c.foot.querySelector(".t");
+      if (c.tStart) el.textContent = `${((Date.now()-c.tStart)/1000).toFixed(0)}s`;
+      else el.textContent = `queued ${((Date.now()-c.t0)/1000).toFixed(0)}s`;
     }
   }, 500);
 
@@ -643,7 +656,11 @@ async function generate(){
       if (t.status === "completed"){
         pending.delete(j.task_id); c.finished = true;
         const glb = (t.exports || []).find(x => x.format === "glb");
-        c.chip.textContent = `done ${((Date.now()-c.t0)/1000).toFixed(0)}s`;
+        const secs = (t.generation_time_seconds != null)
+          ? Number(t.generation_time_seconds).toFixed(1)
+          : ((Date.now()-(c.tStart||c.t0))/1000).toFixed(1);
+        c.chip.textContent = `done ${secs}s`;
+        c.foot.querySelector(".t").textContent = `${secs}s gen`;
         c.chip.className = "chip ok"; c.card.classList.add("done");
         if (glb){
           if (glb.size_bytes) c.foot.querySelector(".sz").textContent =
@@ -657,6 +674,7 @@ async function generate(){
         c.card.classList.add("failed");
         c.msg.textContent = t.error || t.detail || "generation failed";
       } else {
+        if (t.status && t.status !== "queued" && !c.tStart) c.tStart = Date.now();
         c.chip.textContent = t.status || "processing";
         c.chip.className = "chip run";
         c.msg.textContent = (t.status === "queued") ? "queued on GPU…" : "generating…";

@@ -199,8 +199,16 @@ class HunyuanEngine(BaseEngine):
                 x_min = max(0, x_min - pad_w)
                 x_max = min(w, x_max + pad_w)
 
-                cropped = original.crop((x_min, y_min, x_max, y_max))
-                logger.info(f"Cropped original to SAM3 bbox ({x_min},{y_min},{x_max},{y_max}) + 10% padding, running rembg")
+                # Composite the SAM 3 target onto white BEFORE cropping — see the
+                # matching comment in trellis.py. Cropping the raw photo to the
+                # mask bbox retains every other object inside that box, which for
+                # wide objects is most of the frame, and rembg then cannot tell
+                # which object was intended.
+                orig_arr = np.array(original)
+                composited = np.where(mask[:, :, None], orig_arr, 255).astype(np.uint8)
+                cropped = Image.fromarray(composited).crop((x_min, y_min, x_max, y_max))
+                logger.info(f"Composited SAM3 target onto white, cropped to bbox "
+                            f"({x_min},{y_min},{x_max},{y_max}) + 10% padding, running rembg")
                 image = self.rembg(cropped)
             else:
                 logger.info("Image has alpha but no original — using as-is, skipping rembg")

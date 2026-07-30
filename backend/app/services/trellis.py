@@ -192,8 +192,21 @@ class TrellisEngine(BaseEngine):
                 x_min = max(0, x_min - pad_w)
                 x_max = min(w, x_max + pad_w)
 
-                image = original.crop((x_min, y_min, x_max, y_max))
-                logger.info(f"Cropped original to SAM3 bbox + padding, letting TRELLIS rembg handle it")
+                # Composite the SAM 3 target onto white BEFORE cropping. Cropping
+                # the raw photo to the mask bbox keeps every other object that
+                # falls inside that box, and TRELLIS's internal rembg then has no
+                # way to know which one was intended. For wide or L-shaped objects
+                # the bbox can be nearly the whole frame — a bus shelter measured
+                # 28.7% mask inside a bbox covering 99.6% of the image, so 71% of
+                # what the engine received was other objects, and they ended up in
+                # the mesh. Blanking non-target pixels leaves rembg nothing else to
+                # find while still handing TRELLIS the soft rembg-style alpha it
+                # was trained on (a hard binary mask distorts its depth estimate).
+                orig_arr = np.array(original)
+                composited = np.where(mask[:, :, None], orig_arr, 255).astype(np.uint8)
+                image = Image.fromarray(composited).crop((x_min, y_min, x_max, y_max))
+                logger.info("Composited SAM3 target onto white, cropped to bbox + padding, "
+                            "letting TRELLIS rembg handle it")
 
         if progress_callback:
             progress_callback("Sampling sparse structure", 0.10)
