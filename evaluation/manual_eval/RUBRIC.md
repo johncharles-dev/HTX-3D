@@ -11,15 +11,26 @@ saved your scores.
 
 ```bash
 cd /home/cj/HTX-3D/evaluation/manual_eval
-cp scores_TEMPLATE.csv scores_<yourname>.csv
+./serve.sh          # prints the URL; open it in a browser
 ```
 
-Open `scores_<yourname>.csv` in LibreOffice/Excel, and open the montages in
-`blind_montages/` in an image viewer. Work through objects 01 → 14 in order.
+Score in the browser — everything saves as you go and **Export CSV** produces
+`scores_<yourname>.csv` for `analyze_manual.py`. Work through objects 01 → 14
+in order.
 
-Each montage shows the **INPUT photograph** (left, red label) followed by seven
-renders labelled **A–G**, all rendered from the same camera under the same
-lighting. Zoom in — the images are 560 px per panel.
+Each object shows the **INPUT photograph** followed by seven models labelled
+**A–G**, one per pipeline, in randomised order.
+
+> **Each pipeline emits its model in its own orientation.** There is no
+> pose-normalisation step, so the models do *not* start from a common viewpoint —
+> one may open facing its photographed front while another faces its
+> hallucinated rear. **Rotate each model to a comparable view before judging it**,
+> or you will be scoring orientation luck rather than quality. Drag to rotate,
+> scroll to zoom. `Sync views` locks them together once you have them aligned.
+
+The rear of every object was invisible in the input photograph and is invented
+by the model, so it is worth turning each one around — that is where collapsed
+and hollow geometry shows up, and a front view hides it.
 
 ## What to score
 
