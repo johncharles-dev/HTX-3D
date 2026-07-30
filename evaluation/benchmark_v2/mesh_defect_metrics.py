@@ -147,14 +147,36 @@ EXCLUDE_DEFAULT = "apics"
 
 def main() -> None:
     ap = argparse.ArgumentParser()
+    ap.add_argument("--outputs", default=None,
+                    help="directory of <object>/<pipeline>/model.glb (default: ./outputs)")
+    ap.add_argument("--gt", default=None,
+                    help="ground_truth.csv path (default: ../auto_scale_benchmark/ground_truth.csv)")
+    ap.add_argument("--out-prefix", default=None,
+                    help="write <prefix>.csv and <prefix>_table.md instead of the defaults")
     ap.add_argument("--exclude", default=EXCLUDE_DEFAULT,
                     help="substring of object_id to exclude from aggregates "
                          "(default: 'apics'; pass '' to include everything)")
     args = ap.parse_args()
-    gt = load_gt()
+    global OUTPUTS, GT_CSV, CSV_OUT, MD_OUT
+    if args.outputs: OUTPUTS = Path(args.outputs)
+    if args.gt:      GT_CSV = Path(args.gt)
+    if args.out_prefix:
+        CSV_OUT = Path(f"{args.out_prefix}.csv")
+        MD_OUT = Path(f"{args.out_prefix}_table.md")
+    if not GT_CSV.exists():
+        print(f"no ground truth at {GT_CSV} — GT-free metrics only")
+    gt = load_gt() if GT_CSV.exists() else {}
     rows: list[dict] = []
-    for obj in sorted(gt):
-        for pipe in PIPELINES:
+    # Always discover from disk: ground truth only supplies dimensions, it does
+    # not define which objects or pipelines exist. Objects without a GT row still
+    # get every metric that needs no ground truth.
+    objects = sorted(d.name for d in OUTPUTS.iterdir() if d.is_dir())
+    found = {p.name for d in OUTPUTS.iterdir() if d.is_dir()
+             for p in d.iterdir() if p.is_dir()}
+    pipelines = ([p for p in PIPELINES if p in found]
+                 + sorted(found - set(PIPELINES)))
+    for obj in objects:
+        for pipe in pipelines:
             glb = OUTPUTS / obj / pipe / "model.glb"
             if not glb.exists():
                 print(f"  missing {obj}/{pipe}")
@@ -201,27 +223,32 @@ def main() -> None:
     def num(rs, k):
         return [r[k] for r in rs if isinstance(r.get(k), (int, float))]
 
-    for pipe in PIPELINES:
+    for pipe in pipelines:
         rs = [r for r in agg_rows if r["pipeline"] == pipe and "error" not in r]
         if not rs:
             continue
         ar = num(rs, "aspect_ratio")
+        le = num(rs, "aspect_log_err")
+        # objects without a ground-truth row have no aspect data; the GT-free
+        # columns are still valid, so show those and dash the rest
+        asp = f"{median(ar):.2f}" if ar else "—"
+        err = f"{mean(le):.2f}" if le else "—"
+        flat = f"{sum(1 for x in ar if x <= 0.5)}/{len(ar)}" if ar else "—"
         L.append(
-            f"| {LABEL[pipe]} | {mean(num(rs,'n_components')):.1f} | "
+            f"| {LABEL.get(pipe, pipe)} | {mean(num(rs,'n_components')):.1f} | "
             f"{mean(num(rs,'floater_face_frac')):.3f} | "
             f"{mean(num(rs,'boundary_loops')):.0f} | "
             f"{mean(num(rs,'degenerate_faces')):.0f} | "
-            f"{median(ar):.2f} | {mean(num(rs,'aspect_log_err')):.2f} | "
-            f"{sum(1 for x in ar if x <= 0.5)}/{len(ar)} |")
+            f"{asp} | {err} | {flat} |")
 
     L.append("\n## aspect_ratio per object (bold = ≤0.5, i.e. >2× too flat)\n")
-    L.append("| Object | true aspect | " + " | ".join(LABEL[p] for p in PIPELINES) + " |")
-    L.append("|---|--:|" + "--:|" * len(PIPELINES))
+    L.append("| Object | true aspect | " + " | ".join(LABEL.get(p,p) for p in pipelines) + " |")
+    L.append("|---|--:|" + "--:|" * len(pipelines))
     for obj in sorted({r["object_id"] for r in agg_rows}):
         rs = {r["pipeline"]: r for r in agg_rows if r["object_id"] == obj}
         first = next((r for r in rs.values() if r.get("gt_aspect")), None)
         cells = []
-        for p in PIPELINES:
+        for p in pipelines:
             v = rs.get(p, {}).get("aspect_ratio")
             cells.append("—" if v is None else (f"**{v:.2f}**" if v <= 0.5 else f"{v:.2f}"))
         L.append(f"| {obj} | {first['gt_aspect'] if first else '—'} | " + " | ".join(cells) + " |")
