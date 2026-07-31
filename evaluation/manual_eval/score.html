@@ -95,6 +95,7 @@
 
 <header>
   <h1>Blinded scoring</h1>
+  <span class="pill" id="setname"></span>
   <a href="results.html" style="color:var(--dim);font-size:13px;text-decoration:none;border:1px solid var(--line);padding:6px 10px;border-radius:7px">Results ↗</a>
   <a href="live.html" style="color:var(--dim);font-size:13px;text-decoration:none;border:1px solid var(--line);padding:6px 10px;border-radius:7px">Live compare →</a>
   <div class="objnav" id="nav"></div>
@@ -162,19 +163,25 @@
 <script type="importmap">
 { "imports": { "three": "./vendor/three.module.js" } }
 </script>
-<script src="objects.js"></script>
+<script>document.write('<scr'+'ipt src="objects'+(new URLSearchParams(location.search).get("set")==="b2"?"_b2":"")+'.js"><\/scr'+'ipt>');</script>
 <script type="module">
 import * as THREE from 'three';
 import { GLTFLoader } from './vendor/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from './vendor/jsm/controls/OrbitControls.js';
 
+/* Two scoring sets. ?set=b2 loads the 23-object batch (9 pipelines, slots A-I);
+   default is the 10-object benchmark (7 pipelines, slots A-G). Each set has its
+   own objects list, key and model directory, and its own saved scores. */
+const SET = new URLSearchParams(location.search).get("set") === "b2" ? "b2" : "";
+const SFX = SET ? "_b2" : "";
 const OBJECTS = window.__OBJECTS__;
-const SLOTS = ["A","B","C","D","E","F","G"];
+const SLOTS = SET === "b2" ? ["A","B","C","D","E","F","G","H","I"]
+                           : ["A","B","C","D","E","F","G"];
 const DEFECTS = [
   ["floaters","floaters"], ["holes","holes"], ["flat_collapse","flat collapse"],
   ["janus_duplicate","duplicate/janus"], ["front_only_texture","front-only texture"],
 ];
-const KEYST = "htx3d_manual_scores_v1";
+const KEYST = "htx3d_manual_scores_v1" + SFX;
 let data = JSON.parse(localStorage.getItem(KEYST) || "{}");
 
 /* Reveal mode — presentation only. Off by default; blinding is the whole point
@@ -367,7 +374,7 @@ $("#zoom").onclick = () => $("#zoom").close();
 function draw(){
   const o = OBJECTS[idx];
   $("#title").innerHTML = `${o.replace(/_/g," ")} <small>object ${idx+1} of ${OBJECTS.length}</small>`;
-  const ref = `blind_panels/${o}__INPUT.png`;
+  const ref = `blind_panels${SFX}/${o}__INPUT.png`;
   $("#refimg").src = ref;
   $("#refimg").onclick = () => zoom(ref);
 
@@ -448,7 +455,7 @@ function draw(){
     if (webgl){
       const v = makeView(view);
       views.push(v);
-      loadInto(v, `blind_models/${o}__${s}.glb`, msg);
+      loadInto(v, `blind_models${SFX}/${o}__${s}.glb`, msg);
       rb.onclick = () => {
         if (!v.home) return;
         v.camera.position.copy(v.home.p);
@@ -458,7 +465,7 @@ function draw(){
       };
     } else {
       const im = document.createElement("img");
-      im.src = `blind_panels/${o}__${s}.png`;
+      im.src = `blind_panels${SFX}/${o}__${s}.png`;
       im.onclick = () => zoom(im.src);
       view.appendChild(im);
       msg.textContent = "";
@@ -490,7 +497,7 @@ $("#exp").onclick = () => {
       `${done} of ${total} rows scored. Export anyway?\n\nPartial sheets analyse fine — the report states coverage.`)) return;
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([csv()], {type:"text/csv"}));
-  a.download = "scores_cj.csv";
+  a.download = SET ? "scores_b2_cj.csv" : "scores_cj.csv";
   a.click();
 };
 $("#sync").onclick = e => {
@@ -521,7 +528,7 @@ document.onkeydown = e => {
 
 async function setReveal(on){
   if (on && !KEY){
-    try { KEY = await fetch("key.json").then(r => r.json()); }
+    try { KEY = await fetch(`key${SFX}.json`).then(r => r.json()); }
     catch(e){ alert("Could not load key.json — names unavailable."); return; }
   }
   revealed = on;
@@ -544,7 +551,9 @@ $("#reveal").onclick = () => {
   if (confirm(msg)) setReveal(true);
 };
 
-if (revealed) setReveal(true); else draw();
+if (revealed) setReveal(true); else $("#setname").textContent = SET === "b2"
+  ? "set: batch 2 — 23 objects x 9" : "set: benchmark — 10 objects x 7";
+draw();
 </script>
 </body>
 </html>

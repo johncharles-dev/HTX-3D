@@ -142,10 +142,24 @@ def main():
                          "to analyse the model-based pass SEPARATELY. Human and "
                          "VLM scores must never be pooled.")
     ap.add_argument("--out", default=None, help="output .md path")
+    ap.add_argument("--key", default=None,
+                    help="blinding key CSV (default: blind_key.csv; use "
+                         "blind_key_b2.csv for the batch-2 set)")
+    ap.add_argument("--slots", default=None,
+                    help="comma-separated slot letters (default: derived from the key)")
     args = ap.parse_args()
 
     rng = random.Random(0)
+    global KEY_PATH, SLOTS
+    if args.key:
+        KEY_PATH = Path(args.key)
     key = load_key()
+    # slots and pipelines come from whichever key was loaded, so a 9-pipeline set
+    # analyses identically to the 7-pipeline one
+    SLOTS = (args.slots.split(",") if args.slots
+             else sorted({s for (_, s) in key}))
+    global PIPELINES
+    PIPELINES = sorted(set(key.values()))
     recs, warnings = load_scores(key, args.pattern)
     is_vlm = "vlm" in args.pattern
     out_path = Path(args.out) if args.out else (
@@ -164,7 +178,8 @@ def main():
     else:
         L = ["# Manual (human) evaluation — blinded montage scoring\n"]
     L.append(f"{'Judges' if is_vlm else 'Raters'}: **{len(raters)}** "
-             f"({', '.join(raters)}) · objects scored: **{len(objs)}/14** · "
+             f"({', '.join(raters)}) · objects scored: "
+             f"**{len(objs)}/{len({o for (o, _) in key})}** · "
              f"pipelines: **{len(pipes)}**\n")
 
     # ---- 1. coverage -------------------------------------------------------
