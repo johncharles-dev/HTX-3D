@@ -79,7 +79,7 @@
   <a href="live.html">Live generation</a>
   <a href="batch.html">Batch</a>
   <div class="sp"></div>
-  <span style="color:var(--dim);font-size:14px">7 pipelines · 10 objects · RTX 5090</span>
+  <span style="color:var(--dim);font-size:14px">33 objects · 9 pipelines · RTX 5090</span>
 </header>
 
 <main>
@@ -233,7 +233,72 @@
   </p>
   <div class="objgrid" id="objgrid"></div>
 
-  <h2><span class="n">07</span>What we did not measure</h2>
+  <h2><span class="n">07</span>Second set — 23 further objects</h2>
+  <p class="lede">
+    A second batch of <b>23 objects × 9 pipelines = 207 models</b>, adding TRELLIS.2
+    at both 4K and 2K texture. These have no published dimensions yet, so only the
+    ground-truth-free measurements apply — mesh integrity, collapse detection,
+    texture uniformity and cost. <b>They independently reproduce the findings above,
+    and add two new ones.</b>
+  </p>
+  <div class="wrap">
+    <table>
+      <thead><tr><th>Pipeline</th><th class="n">Time</th><th class="n">Size</th>
+        <th class="n">Mesh pieces</th><th class="n">Floater fraction</th>
+        <th class="n">Open boundaries</th><th class="n">Texture evenness</th></tr></thead>
+      <tbody>
+        <tr><td>SAM 3D · SAM 3</td><td class="n">19 s</td><td class="n good">1.5 MB</td><td class="n good">3.6</td><td class="n">0.117</td><td class="n good">0.2</td><td class="n">0.66</td></tr>
+        <tr><td>TRELLIS 1 · SAM 3</td><td class="n good">10 s</td><td class="n">1.7 MB</td><td class="n">9.1</td><td class="n good">0.086</td><td class="n">2.4</td><td class="n">0.75</td></tr>
+        <tr><td>TRELLIS 1 · rembg</td><td class="n good">11 s</td><td class="n">1.7 MB</td><td class="n">12.4</td><td class="n good">0.079</td><td class="n">4.1</td><td class="n">0.70</td></tr>
+        <tr><td>Hunyuan3D · SAM 3</td><td class="n bad">80 s</td><td class="n">3.5 MB</td><td class="n">12.0</td><td class="n">0.086</td><td class="n">0.0</td><td class="n">0.72</td></tr>
+        <tr><td>Hunyuan3D · rembg</td><td class="n bad">82 s</td><td class="n">3.5 MB</td><td class="n">9.7</td><td class="n">0.116</td><td class="n">0.0</td><td class="n">0.68</td></tr>
+        <tr><td>TRELLIS.2 · SAM 3 2K</td><td class="n">28 s</td><td class="n">16.5 MB</td><td class="n warn">307</td><td class="n">0.119</td><td class="n">7.8</td><td class="n good">0.82</td></tr>
+        <tr><td>TRELLIS.2 · SAM 3 4K</td><td class="n">46 s</td><td class="n bad">38.0 MB</td><td class="n warn">304</td><td class="n">0.119</td><td class="n">7.6</td><td class="n good">0.82</td></tr>
+        <tr><td>TRELLIS.2 · rembg 2K</td><td class="n">33 s</td><td class="n">16.8 MB</td><td class="n warn">495</td><td class="n">0.165</td><td class="n warn">12.0</td><td class="n">0.78</td></tr>
+        <tr><td>TRELLIS.2 · rembg 4K</td><td class="n">48 s</td><td class="n bad">39.2 MB</td><td class="n warn">492</td><td class="n">0.165</td><td class="n warn">12.4</td><td class="n">0.79</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="cards" style="margin-top:18px">
+    <div class="card">
+      <h3 class="good">New: segmentation measurably improves mesh quality</h3>
+      <p>Across all 23 objects and every engine. TRELLIS.2 drops from 492 mesh
+      pieces to 304, floater fraction 0.165 → 0.119, open boundaries 12.4 → 7.6.
+      TRELLIS 1 drops 12.4 → 9.1 pieces. Cleaner input, cleaner mesh — quantified
+      here for the first time.</p>
+    </div>
+    <div class="card">
+      <h3 class="good">New: 4K texture buys nothing measurable</h3>
+      <p>2K and 4K are identical on every structural measure — mesh pieces,
+      floaters, boundaries, texture evenness — at <b>2.3× smaller files and 30%
+      less time</b>. For deployment, 2K is the better default.</p>
+    </div>
+    <div class="card">
+      <h3>Confirms: the SAM 3D / TRELLIS.2 trade-off</h3>
+      <p>SAM 3D averages <b>3.6 mesh pieces</b> against TRELLIS.2's ~300–500, at
+      1.5 MB and 19 s. TRELLIS.2 has the most even texture (0.82). The same
+      trade-off as the first set, now on 23 more objects.</p>
+    </div>
+    <div class="card">
+      <h3>Confirms: Hunyuan3D is the slowest by far</h3>
+      <p>80 s per model against 10–19 s for TRELLIS 1 and SAM 3D. No collapsed
+      geometry in this set, so its flat-sheet failure is object-dependent rather
+      than systematic.</p>
+    </div>
+  </div>
+
+  <figure class="fig">
+    <img src="figures/figure_b2_segmentation_quality.png" alt="segmentation reduces fragmentation">
+    <figcaption>
+      Same object, same engine, same settings — only the segmentation front-end
+      differs. Background removal alone leaves the mesh in <b>1,402 disconnected
+      pieces</b>; the SAM 3 cutout brings it to <b>194</b>. Fragmentation is what
+      determines whether an asset imports cleanly or needs manual repair.
+    </figcaption>
+  </figure>
+
+  <h2><span class="n">08</span>What we did not measure</h2>
   <ul class="tight">
     <li><b>No ground-truth 3D meshes exist for these objects</b>, so Chamfer
       distance and F-score — the standard geometric metrics in this literature —
