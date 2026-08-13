@@ -91,6 +91,9 @@ export default function App() {
   const [galleryExports, setGalleryExports] = useState<ExportFile[]>([]);
   const [galleryAutoScale, setGalleryAutoScale] = useState<import('./types').AutoScaleMetadata | null>(null);
   const [editedGlbUrl, setEditedGlbUrl] = useState<string | null>(null);
+  // After a logo bake, downloads should come from the new baked gallery item
+  // (all formats), not the original pre-bake model. Null = no bake active.
+  const [bakedExports, setBakedExports] = useState<ExportFile[] | null>(null);
   const [cleanupStatus, setCleanupStatus] = useState<string | null>(null);
   const [cleanupUndoUrl, setCleanupUndoUrl] = useState<string | null>(null);
   const [gallerySubTab, setGallerySubTab] = useState<'generated' | 'edited'>('generated');
@@ -311,6 +314,7 @@ export default function App() {
     if (!activeModelResult?.result) return;
     const res = activeModelResult.result;
     setEditedGlbUrl(null);
+    setBakedExports(null);
     setCleanupUndoUrl(null);
     setSourceModel(res.model);
     setSourceSeed(res.seed);
@@ -364,6 +368,7 @@ export default function App() {
     setModelResults([]);
     setActiveResultModel(null);
     setEditedGlbUrl(null);
+    setBakedExports(null);
     setCleanupUndoUrl(null);
     if (item) {
       setSourceModel(item.model);
@@ -384,8 +389,12 @@ export default function App() {
   // -- Computed --------------------------------------------
   const hasResults = modelResults.length > 0;
   const baseExports = activeResult?.exports || galleryExports;
-  // If the model was edited (eraser/cleanup), replace the GLB export URL with the edited blob
-  const displayExports = editedGlbUrl
+  // After a logo bake, serve every download from the baked gallery item (all
+  // formats carry the logo). Otherwise, if the model was edited (eraser/cleanup),
+  // replace just the GLB export URL with the edited blob.
+  const displayExports = bakedExports
+    ? bakedExports
+    : editedGlbUrl
     ? baseExports.map((exp) =>
         exp.format === 'glb'
           ? { ...exp, url: editedGlbUrl, filename: 'edited_model.glb' }
@@ -854,6 +863,9 @@ export default function App() {
                     setViewerFormat('glb');
                     setSourceTaskId(item.task_id);
                   }
+                  // Serve all downloads (GLB/OBJ/PLY/STL) from the baked item so
+                  // they carry the logo, not the original pre-bake files.
+                  setBakedExports(item.exports);
                   setGalleryRefreshKey((k) => k + 1);
                 }}
               />

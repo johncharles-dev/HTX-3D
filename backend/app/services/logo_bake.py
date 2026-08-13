@@ -15,6 +15,8 @@ frame, so the two agree without a display <Center> offset.
 from __future__ import annotations
 
 import io
+import os
+import zipfile
 import logging
 from typing import Any
 
@@ -63,8 +65,8 @@ def bake_logos(
     placements: list[dict],
     smudge: bool = True,
     target_resolution: int = 4096,
-) -> bytes:
-    """Project each placement's logo onto the mesh albedo and return a new GLB.
+) -> trimesh.Trimesh:
+    """Project each placement's logo onto the mesh albedo and return the mesh.
 
     placements: list of dicts with keys px,py,pz (position), nx,ny,nz (normal),
     size (footprint in model units), rotation (radians, in-plane).
@@ -189,7 +191,75 @@ def bake_logos(
     albedo = np.clip(comp, 0, 255).astype(np.uint8)
 
     _set_base_image(mesh, Image.fromarray(albedo, "RGB"))
-    result = mesh.export(file_type="glb")
     coverage = int(mask.sum())
     logger.info("Logo bake: %d placements, %d texels covered, smudge=%s", len(placements), coverage, smudge)
-    return result
+    return mesh
+
+
+def write_baked_formats(mesh: trimesh.Trimesh, out_dir: str, formats: list[str]) -> list[dict]:
+    """Write the baked mesh to each requested format inside out_dir.
+
+    Returns export descriptors: [{format, filename, path, size_bytes}].
+
+    Format capabilities for a textured decal:
+      - glb: textured PBR — carries the logo faithfully.
+      - obj: zip of .obj + .mtl + texture PNG — carries the logo faithfully.
+      - ply: mesh PLY with per-vertex colours sampled from the baked texture.
+             Approximate — fidelity is bounded by the mesh's vertex density, so a
+             small/crisp logo on a coarse mesh will read soft.
+      - stl: geometry only. The STL format cannot store colour or texture, so the
+             logo is NOT present; exported for parity only.
+    """
+    os.makedirs(out_dir, exist_ok=True)
+    exports: list[dict] = []
+    seen: set[str] = set()
+    for raw in formats:
+        f = str(raw).lower()
+        if f in seen:
+            continue
+        seen.add(f)
+        try:
+            if f == "glb":
+                path = os.path.join(out_dir, "model.glb")
+                with open(path, "wb") as fh:
+                    fh.write(mesh.export(file_type="glb"))
+                filename = "model.glb"
+            elif f == "obj":
+                obj_dir = os.path.join(out_dir, "obj")
+                os.makedirs(obj_dir, exist_ok=True)
+                # Writing to a path makes trimesh emit .obj + .mtl + texture PNG.
+                mesh.export(os.path.join(obj_dir, "model.obj"))
+                path = os.path.join(out_dir, "model_obj.zip")
+                with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as zf:
+                    for name in sorted(os.listdir(obj_dir)):
+                        zf.write(os.path.join(obj_dir, name), name)
+                filename = "model_obj.zip"
+            elif f == "ply":
+                colored = mesh.copy()
+                try:
+                    # Sample the baked texture into per-vertex colours (PLY has no UVs).
+                    colored.visual = mesh.visual.to_color()
+                except Exception:
+                    logger.warning("PLY vertex-colour conversion failed; exporting geometry only")
+                path = os.path.join(out_dir, "model.ply")
+                with open(path, "wb") as fh:
+                    fh.write(colored.export(file_type="ply"))
+                filename = "model.ply"
+            elif f == "stl":
+                # STL is geometry only — the logo texture cannot be represented.
+                path = os.path.join(out_dir, "model.stl")
+                with open(path, "wb") as fh:
+                    fh.write(mesh.export(file_type="stl"))
+                filename = "model.stl"
+            else:
+                logger.warning("Unknown export format %r — skipping", raw)
+                continue
+            exports.append({
+                "format": f,
+                "filename": filename,
+                "path": path,
+                "size_bytes": os.path.getsize(path),
+            })
+        except Exception:
+            logger.exception("Failed to export baked format %r", raw)
+    return exports

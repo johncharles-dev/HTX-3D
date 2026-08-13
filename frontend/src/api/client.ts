@@ -260,6 +260,7 @@ export async function bakeLogo(
   targetResolution = 4096,
   sourceModel?: string | null,
   sourceSeed?: number | null,
+  formats: string[] = ['glb'],
 ): Promise<GalleryItem> {
   const form = new FormData();
   form.append('file', glb, 'base_model.glb');
@@ -267,6 +268,7 @@ export async function bakeLogo(
   form.append('placements', JSON.stringify(placements));
   form.append('smudge', String(smudge));
   form.append('target_resolution', String(targetResolution));
+  form.append('formats', JSON.stringify(formats));
   if (sourceModel) form.append('source_model', sourceModel);
   if (sourceSeed != null) form.append('seed', String(sourceSeed));
   const resp = await fetch(`${API_BASE}/logo/bake`, { method: 'POST', body: form });

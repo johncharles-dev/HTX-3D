@@ -27,6 +27,7 @@ async def bake_logo(
     placements: str = Form(...),
     smudge: bool = Form(True),
     target_resolution: int = Form(4096),
+    formats: str = Form('["glb"]'),
     label: Optional[str] = Form("Logo"),
     source_model: Optional[str] = Form(None),
     seed: Optional[int] = Form(0),
@@ -47,7 +48,16 @@ async def bake_logo(
         raise HTTPException(400, "placements must be a non-empty list")
 
     try:
-        baked_glb = bake_logos(
+        format_list = json.loads(formats)
+        if not isinstance(format_list, list) or not format_list:
+            format_list = ["glb"]
+    except json.JSONDecodeError:
+        format_list = ["glb"]
+    # GLB is always produced (it's the viewer format and the highest-fidelity export).
+    format_list = ["glb"] + [f for f in format_list if str(f).lower() != "glb"]
+
+    try:
+        baked_mesh = bake_logos(
             glb_data, logo_data, placement_list,
             smudge=smudge, target_resolution=target_resolution,
         )
@@ -57,10 +67,14 @@ async def bake_logo(
         logger.exception("Logo bake failed")
         raise HTTPException(500, f"Logo bake failed: {e}")
 
-    entry = task_manager.save_edited_to_gallery(
-        baked_glb, label=label or "Logo",
-        source_model=source_model, seed=seed or 0,
-    )
+    try:
+        entry = task_manager.save_baked_to_gallery(
+            baked_mesh, formats=format_list, label=label or "Logo",
+            source_model=source_model, seed=seed or 0,
+        )
+    except Exception as e:
+        logger.exception("Saving baked model failed")
+        raise HTTPException(500, f"Saving baked model failed: {e}")
     task_id = entry["task_id"]
     exports = [ExportFile(
         format=exp["format"],

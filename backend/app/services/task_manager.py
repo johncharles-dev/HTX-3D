@@ -437,6 +437,14 @@ class TaskManager:
             _img = task["params"].get("image_path")
             _orig = task["params"].get("original_image_path")
             entry["segmentation"] = "sam3" if (_img and _orig and _img != _orig) else "rembg"
+            # Requested texture size. Also unrecoverable afterwards, and it varies
+            # per engine: TRELLIS.2 treats <=1024 as "auto" and substitutes 4096
+            # (trellis2.py:76-80), so the same request yields different output
+            # resolutions per engine. Evaluation needs the request recorded to tell
+            # a 2K run from a 4K one.
+            _tex = task["params"].get("texture_size")
+            if _tex:
+                entry["texture_size"] = int(_tex)
         # Add source info for edited/retexture/quick_adjust tasks
         if task_type in ("retexture", "quick_adjust"):
             entry["source_model"] = "hunyuan-image-to-3d"

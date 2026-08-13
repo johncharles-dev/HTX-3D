@@ -293,7 +293,10 @@ export default function ModelViewer({ url, format = 'glb', autoRotate = true, ex
     setLogoBaking(true);
     try {
       const { glb, placements } = await logoBakeRef.current();
-      const item = await bakeLogo(glb, logoFile, placements, logoSmudge, logoHiRes ? 8192 : 4096, sourceModel, sourceSeed);
+      // Bake the logo into every format the source model offers, so OBJ/PLY
+      // downloads carry it too (STL is geometry-only and can't hold a texture).
+      const bakeFormats = Array.from(new Set(['glb', ...exports.map((e) => e.format)]));
+      const item = await bakeLogo(glb, logoFile, placements, logoSmudge, logoHiRes ? 8192 : 4096, sourceModel, sourceSeed, bakeFormats);
       setLogoActive(false);
       setLogoCount(0);
       setLogoSelected(false);
@@ -304,7 +307,7 @@ export default function ModelViewer({ url, format = 'glb', autoRotate = true, ex
     } finally {
       setLogoBaking(false);
     }
-  }, [logoFile, logoSmudge, logoHiRes, sourceModel, sourceSeed, onLogoBaked]);
+  }, [logoFile, logoSmudge, logoHiRes, sourceModel, sourceSeed, exports, onLogoBaked]);
 
   const handleLogoUndo = useCallback(() => {
     if (logoCount <= 0) return;
