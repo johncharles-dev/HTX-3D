@@ -1,0 +1,324 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>HTX-3D — generated model gallery</title>
+<style>
+  :root{--bg:#0f1116;--panel:#171a22;--line:#262b36;--fg:#e6e9ef;--dim:#8b95a7;--accent:#6ea8ff}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--fg);
+    font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  /* one canvas behind everything; each cell gets a scissored viewport */
+  #gl{position:fixed;inset:0;width:100vw;height:100vh;z-index:0;pointer-events:none}
+  header{position:sticky;top:0;z-index:30;background:rgba(15,17,22,.97);
+    border-bottom:1px solid var(--line);padding:10px 16px;display:flex;
+    gap:10px;align-items:center;flex-wrap:wrap}
+  h1{font-size:15px;margin:0;font-weight:650}
+  .count{color:var(--dim);font-size:12.5px}
+  button{background:var(--panel);color:var(--fg);border:1px solid var(--line);
+    border-radius:7px;padding:5px 11px;font-size:12.5px;cursor:pointer}
+  button.on{background:#1d3a5c;border-color:var(--accent);color:#cfe4ff}
+  input[type=search]{background:var(--panel);border:1px solid var(--line);
+    color:var(--fg);border-radius:7px;padding:5px 10px;font-size:12.5px;min-width:180px}
+  #grid{position:relative;z-index:10;display:grid;gap:12px;padding:14px 16px 60px;
+    grid-template-columns:repeat(auto-fill,minmax(240px,1fr))}
+  .card{background:rgba(23,26,34,.55);border:1px solid var(--line);border-radius:10px;
+    overflow:hidden;transition:border-color .12s}
+  .card:hover{border-color:var(--accent)}
+  /* transparent hole punched through to the canvas underneath */
+  .view{aspect-ratio:1;position:relative;cursor:grab;background:transparent}
+  .view .msg{position:absolute;inset:0;display:flex;align-items:center;
+    justify-content:center;color:#4a5364;font-size:11.5px;pointer-events:none}
+  .meta{padding:7px 9px;font-size:11.5px;color:var(--dim);display:flex;
+    justify-content:space-between;gap:6px;background:var(--panel)}
+  .meta b{color:var(--fg);font-weight:600}
+  .seg{border-radius:5px;padding:1px 6px;font-size:10.5px;font-weight:600;
+    letter-spacing:.2px;white-space:nowrap}
+  .seg.sam3{background:#12313f;color:#7fd4f0;border:1px solid #1d5468}
+  .seg.rembg{background:#3a2c14;color:#e6bf72;border:1px solid #5c471f}
+  .seg.none{background:transparent;color:#414a5a;border:1px solid #232833}
+  .meta a{color:var(--dim);text-decoration:none}
+  .meta a:hover{color:var(--accent)}
+  #sentinel{height:80px;position:relative;z-index:10}
+  .hint{color:var(--dim);font-size:12px;padding:0 16px 10px;position:relative;z-index:10}
+</style>
+
+<canvas id="gl"></canvas>
+
+<header>
+  <h1>HTX-3D gallery</h1>
+  <span class="count" id="count"></span>
+  <span id="filters"></span>
+  <span style="color:#39404e">|</span>
+  <span id="segfilters"></span>
+  <input type="search" id="q" placeholder="id, engine, seg, seed…">
+  <span style="flex:1"></span>
+  <button id="sizeBtn">cell size</button>
+  <button id="syncBtn">sync rotate</button>
+  <label class="count" style="display:flex;align-items:center;gap:6px">
+    light <input type="range" id="lit" min="0.6" max="2.4" step="0.05" value="1.35"
+                 style="width:96px;vertical-align:middle">
+    <span id="litv" style="width:30px;display:inline-block">1.35</span>
+  </label>
+</header>
+
+<div class="hint">Live meshes — drag any cell to rotate it. Models load as they
+scroll into view and unload when they leave, so the page stays responsive.</div>
+
+<div id="grid"></div>
+<div id="sentinel"></div>
+
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from './vendor/jsm/loaders/GLTFLoader.js';
+import { OrbitControls } from './vendor/jsm/controls/OrbitControls.js';
+import { RoomEnvironment } from './vendor/jsm/environments/RoomEnvironment.js';
+
+const $ = s => document.querySelector(s);
+const SRC = 'gallery_src';
+const PAGE = 24;          // cells appended per scroll batch
+const MAX_LOADED = 60;    // GLBs kept in memory; furthest are evicted
+const SIZES = [240, 180, 330];
+
+let ALL = [], view = [], shown = 0, engine = null, query = '', sizeIx = 0, syncing = false;
+/* RoomEnvironment stands in for the app's 'studio' HDR and reads a little
+   darker; this lifts it back. Adjustable live from the header. */
+let ENV_BOOST = 1.35;
+const cells = [];         // {el, scene, camera, controls, root, item, loaded}
+
+const renderer = new THREE.WebGLRenderer({ canvas: $('#gl'), antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+/* Lighting mirrors the main tool's viewer (ModelViewer.tsx +
+   DEFAULT_VIEWER_SETTINGS), so a model looks the same here as in the app:
+     tone mapping   ACES filmic, exposure 1   (react-three-fiber default)
+     ambient        0.3  #ffffff              (planarLightIntensity)
+     directional    1.0  at (0, 5, 5)         (spotlightIntensity × 2.5)
+     directional    0.21 at (-3, 3, -3)       (planarLightIntensity × 0.7)
+     hemisphere     0.24 #b1e1ff / #b97a20    (planarLightIntensity × 0.8)
+     environment    'studio' preset
+   The studio HDR ships from a CDN the app fetches at runtime and we have no
+   network here, so RoomEnvironment stands in — same role, slightly softer. */
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+const pmrem = new THREE.PMREMGenerator(renderer);
+const ENV = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+pmrem.dispose();
+
+const loader = new GLTFLoader();
+ALL = await (await fetch('gallery_manifest.json')).json();
+
+// ---- filters --------------------------------------------------------------
+const fbox = $('#filters');
+const mkBtn = (label, val) => {
+  const b = document.createElement('button');
+  b.textContent = label; b.dataset.val = val ?? '';
+  b.onclick = () => { engine = val; paint(); refresh(); };
+  fbox.appendChild(b);
+};
+mkBtn('all', null);
+[...new Set(ALL.map(o => o.engine))].sort().forEach(e => mkBtn(e, e));
+
+// second group: segmentation front-end
+const sbox = $('#segfilters');
+let segFilter = null;
+const mkSeg = (label, val) => {
+  const b = document.createElement('button');
+  b.textContent = label; b.dataset.seg = val ?? '';
+  b.onclick = () => { segFilter = val; paint(); refresh(); };
+  sbox.appendChild(b);
+};
+mkSeg('any', null); mkSeg('sam3', 'sam3'); mkSeg('rembg', 'rembg');
+
+const paint = () => {
+  [...fbox.children].forEach(
+    b => b.classList.toggle('on', (b.dataset.val || null) === engine));
+  [...sbox.children].forEach(
+    b => b.classList.toggle('on', (b.dataset.seg || null) === segFilter));
+};
+paint();
+
+$('#q').oninput = e => { query = e.target.value.toLowerCase().trim(); refresh(); };
+$('#sizeBtn').onclick = () => {
+  sizeIx = (sizeIx + 1) % SIZES.length;
+  $('#grid').style.gridTemplateColumns = `repeat(auto-fill,minmax(${SIZES[sizeIx]}px,1fr))`;
+};
+$('#syncBtn').onclick = e => {
+  syncing = !syncing; e.target.classList.toggle('on', syncing);
+};
+$('#lit').oninput = e => {
+  ENV_BOOST = Number(e.target.value);
+  $('#litv').textContent = ENV_BOOST.toFixed(2);
+  for (const c of cells) c.scene.environmentIntensity = ENV_BOOST;
+  localStorage.setItem('gal_light', ENV_BOOST);
+};
+const savedLight = Number(localStorage.getItem('gal_light'));
+if (savedLight){
+  ENV_BOOST = savedLight;
+  $('#lit').value = savedLight; $('#litv').textContent = savedLight.toFixed(2);
+}
+
+// ---- cell lifecycle -------------------------------------------------------
+function makeCell(o){
+  const card = document.createElement('div');
+  card.className = 'card';
+  const dim = o.longest_m ? `${o.longest_m} m` : (o.gen_s ? `${o.gen_s}s` : '');
+  const seg = o.seg
+    ? `<span class="seg ${o.seg}">${o.seg}</span>`
+    : `<span class="seg none">—</span>`;
+  card.innerHTML =
+    `<div class="view"><div class="msg">…</div></div>
+     <div class="meta"><b>${o.engine}</b>${seg}
+       <a href="${SRC}/${o.id}/model.glb" download title="download .glb">${dim || 'glb'} ↓</a>
+     </div>`;
+  const el = card.querySelector('.view');
+
+  const scene = new THREE.Scene();
+  scene.environment = ENV;
+  scene.environmentIntensity = ENV_BOOST;
+  scene.add(new THREE.AmbientLight(0xffffff, 0.3));
+  const key = new THREE.DirectionalLight(0xffffff, 1.0); key.position.set(0, 5, 5);
+  scene.add(key);
+  const fill = new THREE.DirectionalLight(0xffffff, 0.21); fill.position.set(-3, 3, -3);
+  scene.add(fill);
+  scene.add(new THREE.HemisphereLight(0xb1e1ff, 0xb97a20, 0.24));
+  const camera = new THREE.PerspectiveCamera(40, 1, 0.01, 200);
+  camera.position.set(0.95, 0.55, 1.85);
+  const controls = new OrbitControls(camera, el);
+  controls.enableDamping = true; controls.dampingFactor = 0.09;
+  controls.minDistance = 0.5; controls.maxDistance = 8;
+
+  const cell = { el, card, scene, camera, controls, root: null, item: o, loaded: false, msg: card.querySelector('.msg') };
+  controls.addEventListener('change', () => { if (syncing) propagate(cell); });
+  io.observe(el);
+  el._cell = cell;
+  cells.push(cell);
+  return card;
+}
+
+function loadCell(c){
+  if (c.loaded) return;
+  c.loaded = true;
+  c.msg.textContent = 'loading…';
+  loader.load(`${SRC}/${c.item.id}/model.glb`, g => {
+    const root = g.scene;
+    root.traverse(n => {
+      const ms = Array.isArray(n.material) ? n.material : (n.material ? [n.material] : []);
+      for (const m of ms){
+        if (m.metalness !== undefined && !m.metalnessMap) m.metalness = 0;
+        if (m.side !== THREE.DoubleSide) m.side = THREE.DoubleSide;
+        m.needsUpdate = true;
+      }
+    });
+    const box = new THREE.Box3().setFromObject(root);
+    const size = box.getSize(new THREE.Vector3());
+    const ctr = box.getCenter(new THREE.Vector3());
+    const s = 1 / Math.max(size.x, size.y, size.z, 1e-6);
+    root.scale.setScalar(s); root.position.sub(ctr.multiplyScalar(s));
+    c.scene.add(root); c.root = root;
+    c.msg.textContent = '';
+  }, xhr => {
+    if (xhr.total) c.msg.textContent = Math.round(100 * xhr.loaded / xhr.total) + '%';
+  }, () => { c.msg.textContent = 'failed'; });
+}
+
+function unloadCell(c){
+  if (!c.root) { c.loaded = false; return; }
+  c.root.traverse(o => {
+    if (o.geometry) o.geometry.dispose();
+    const ms = Array.isArray(o.material) ? o.material : (o.material ? [o.material] : []);
+    for (const m of ms){
+      for (const k of Object.keys(m)) if (m[k] && m[k].isTexture) m[k].dispose();
+      m.dispose();
+    }
+  });
+  c.scene.remove(c.root); c.root = null; c.loaded = false; c.msg.textContent = '…';
+}
+
+const io = new IntersectionObserver(entries => {
+  for (const e of entries){
+    const c = e.target._cell;
+    if (!c) continue;
+    if (e.isIntersecting) loadCell(c);
+  }
+  evict();
+}, { rootMargin: '400px' });
+
+function evict(){
+  const live = cells.filter(c => c.loaded);
+  if (live.length <= MAX_LOADED) return;
+  const h = innerHeight;
+  live.map(c => {
+    const r = c.el.getBoundingClientRect();
+    return { c, d: r.top > h ? r.top - h : (r.bottom < 0 ? -r.bottom : 0) };
+  }).sort((a, b) => b.d - a.d)
+    .slice(0, live.length - MAX_LOADED)
+    .forEach(x => { if (x.d > 0) unloadCell(x.c); });
+}
+
+// ---- synced rotation ------------------------------------------------------
+let busy = false;
+function propagate(src){
+  if (busy) return;
+  busy = true;
+  const off = new THREE.Vector3().subVectors(src.camera.position, src.controls.target);
+  for (const c of cells){
+    if (c === src || !c.root) continue;
+    c.camera.position.copy(c.controls.target).add(off);
+    c.controls.update();
+  }
+  busy = false;
+}
+
+// ---- grid + infinite scroll ----------------------------------------------
+function refresh(){
+  cells.forEach(c => { io.unobserve(c.el); unloadCell(c); });
+  cells.length = 0;
+  view = ALL.filter(o =>
+    (!engine || o.engine === engine) &&
+    (!segFilter || o.seg === segFilter) &&
+    (!query || (o.id + ' ' + o.engine + ' ' + (o.seg ?? '') + ' ' + (o.seed ?? ''))
+                 .toLowerCase().includes(query)));
+  $('#grid').innerHTML = ''; shown = 0;
+  $('#count').textContent = `${view.length} models`;
+  more();
+}
+function more(){
+  const frag = document.createDocumentFragment();
+  const end = Math.min(shown + PAGE, view.length);
+  for (let i = shown; i < end; i++) frag.appendChild(makeCell(view[i]));
+  $('#grid').appendChild(frag);
+  shown = end;
+}
+new IntersectionObserver(es => {
+  if (es[0].isIntersecting && shown < view.length) more();
+}, { rootMargin: '700px' }).observe($('#sentinel'));
+
+// ---- render loop: scissor one canvas into every visible cell --------------
+function loop(){
+  requestAnimationFrame(loop);
+  const w = innerWidth, h = innerHeight;
+  if (renderer.domElement.width !== Math.floor(w * renderer.getPixelRatio()) ||
+      renderer.domElement.height !== Math.floor(h * renderer.getPixelRatio())){
+    renderer.setSize(w, h, false);
+  }
+  renderer.setScissorTest(true);
+  for (const c of cells){
+    if (!c.root) continue;
+    const r = c.el.getBoundingClientRect();
+    if (r.bottom < 0 || r.top > h || r.right < 0 || r.left > w) continue;
+    const bottom = h - r.bottom;
+    renderer.setViewport(r.left, bottom, r.width, r.height);
+    renderer.setScissor(r.left, bottom, r.width, r.height);
+    c.camera.aspect = r.width / r.height;
+    c.camera.updateProjectionMatrix();
+    c.controls.update();
+    renderer.render(c.scene, c.camera);
+  }
+  renderer.setScissorTest(false);
+}
+loop();
+
+refresh();
+</script>

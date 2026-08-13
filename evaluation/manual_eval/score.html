@@ -168,6 +168,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from './vendor/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from './vendor/jsm/controls/OrbitControls.js';
+import { RoomEnvironment } from './vendor/jsm/environments/RoomEnvironment.js';
 
 /* Two scoring sets. ?set=b2 loads the 23-object batch (9 pipelines, slots A-I);
    default is the 10-object benchmark (7 pipelines, slots A-G). Each set has its
@@ -219,11 +220,25 @@ try {
   renderer.toneMappingExposure = 1.15;
 } catch(e){ webgl = false; console.warn("WebGL unavailable, falling back to stills", e); }
 
+/* Image-based lighting, shared by every view.
+   Without it a metallic material has nothing to reflect and renders black —
+   and metalness is NOT uniform across the pipelines being compared (TRELLIS 1
+   and SAM 3D omit metallicFactor, so glTF's 1.0 default makes them fully
+   metallic). Punctual lights alone would darken those two pipelines only,
+   biasing the blinded scores. This matches the gallery viewer's <Environment>. */
+let envTexture = null;
+if (renderer){
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  envTexture = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  pmrem.dispose();
+}
+
 const loader = new GLTFLoader();
 let views = [];
 
 function makeView(el){
   const scene = new THREE.Scene();
+  scene.environment = envTexture;
   scene.add(new THREE.HemisphereLight(0xffffff, 0x333844, 2.2));
   const key = new THREE.DirectionalLight(0xffffff, 2.0); key.position.set(2,3,4);
   scene.add(key);
@@ -309,11 +324,40 @@ function frameModel(v, obj){
   v.home = {p:v.camera.position.clone(), t:v.controls.target.clone()};
 }
 
+/* Undo an export artifact, so materials are comparable across pipelines.
+   TRELLIS 1 and SAM 3D predict albedo only and their exporters omit
+   metallicFactor; glTF then defaults it to 1.0, which reads as polished metal.
+   Where a material carries no metalnessMap there is no PBR intent to preserve,
+   so metalness goes to 0 and the model is judged on albedo and geometry —
+   which is what the rubric asks for. Engines that DO emit a
+   metallicRoughnessTexture (Hunyuan, TRELLIS.2) keep their real materials. */
+function normalizeMaterials(root){
+  root.traverse(o => {
+    const mats = Array.isArray(o.material) ? o.material : (o.material ? [o.material] : []);
+    for (const m of mats){
+      if (m.metalness !== undefined && !m.metalnessMap){
+        m.metalness = 0;
+        m.needsUpdate = true;
+      }
+      /* Every pipeline exports doubleSided:false. Backface culling makes a
+         CLOSED underside look wide open when viewed from below — the boundary
+         metrics show a median of 12 boundary edges, so these bases are not
+         actually open. Render both sides so a hole in the viewer is a real
+         hole. Flat sheets stay detectable: they still go hairline edge-on. */
+      if (m.side !== THREE.DoubleSide){
+        m.side = THREE.DoubleSide;
+        m.needsUpdate = true;
+      }
+    }
+  });
+}
+
 function loadInto(v, url, msgEl){
   disposeRoot(v);
   msgEl.textContent = "loading…";
   loader.load(url, gltf => {
     v.root = gltf.scene;
+    normalizeMaterials(v.root);
     v.scene.add(v.root);
     frameModel(v, v.root);
     if (syncing) v.base = poseOf(v);

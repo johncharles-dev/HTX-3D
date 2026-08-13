@@ -45,8 +45,8 @@ ENGINE_FROM_MODEL = {
     "sam3d-image-to-3d": "sam3d",
 }
 
-FIELDS = ["object_id", "display_name", "pipeline", "engine", "seg_mode", "seg_verified",
-          "task_id", "image_md5", "image_file", "gen_time_s", "auto_longest_m",
+FIELDS = ["object_id", "display_name", "pipeline", "engine", "seg_mode", "texture_size",
+          "seg_verified", "task_id", "image_md5", "image_file", "gen_time_s", "auto_longest_m",
           "auto_confidence", "longest_m", "middle_m", "shortest_m",
           "gt_confidence", "gt_source"]
 
@@ -115,6 +115,7 @@ def cmd_scan(args) -> None:
         rows.append({
             "object_id": "", "display_name": "",
             "pipeline": f"{eng}_{sm}", "engine": eng, "seg_mode": sm,
+            "texture_size": it.get("texture_size") or "",
             "task_id": it["task_id"], "image_md5": md5(img), "image_file": img.name,
             "gen_time_s": it.get("generation_time_seconds") or "",
             "auto_longest_m": round(dims["longest_m"], 3) if dims.get("longest_m") else "",
@@ -123,6 +124,18 @@ def cmd_scan(args) -> None:
             "gt_confidence": "", "gt_source": "",
             "seg_verified": "yes" if trusted else "NO-CHECK-ME",
         })
+
+    # If the same engine+segmentation was run at more than one texture size,
+    # they are distinct pipelines for evaluation and must not collapse into one
+    # label. Only then is the suffix added, so ordinary runs keep clean names.
+    tex_by_pipe = defaultdict(set)
+    for r in rows:
+        if r["texture_size"]:
+            tex_by_pipe[r["pipeline"]].add(int(r["texture_size"]))
+    for r in rows:
+        sizes = tex_by_pipe.get(r["pipeline"], set())
+        if len(sizes) > 1 and r["texture_size"]:
+            r["pipeline"] = f'{r["pipeline"]}_{int(r["texture_size"])//1024}k'
 
     # same photo => same object; pre-fill a placeholder id so grouping is visible
     by_hash = defaultdict(list)

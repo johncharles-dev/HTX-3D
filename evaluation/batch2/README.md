@@ -19,7 +19,14 @@ Object ids `B2_01..B2_23` match the blinded scoring set
   TRELLIS 1 12.4 → 9.1 components.
 - **4K texture buys nothing measurable** over 2K: identical on every structural
   measure, 2.3× larger files, 30% slower.
-- **SAM 3D remains the cleanest topology** (3.6 components vs TRELLIS.2 ~300–500).
+- **SAM 3D has the cleanest topology, but that is simplification, not fidelity.**
+  3.6 components vs TRELLIS.2's ~300–500, and 0.2 boundary loops — but on the
+  lowest polygon budget of any pipeline (15.5k faces vs TRELLIS.2's ~194k) and
+  the weakest blinded human texture score (2.53/5, last of nine). It seals every
+  surface because it produces simplified forms, so watertightness here should not
+  be read as reconstruction quality. Caveat: face counts also reflect per-engine
+  decimation defaults, so the component count, boundary loops and human scores
+  are the load-bearing evidence.
 - **No collapsed geometry in 207 models**, versus 2/20 Hunyuan SAM 3 runs on the
   benchmark set — its flat-sheet failure is object-dependent, not systematic.
 
