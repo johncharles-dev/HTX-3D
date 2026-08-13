@@ -68,3 +68,8 @@ evaluation/manual_eval/_serve/vendor/
 
 # Claude Code local config — keep out of the project
 .claude/
+*.bak
+docs/presentation/preview/
+docs/presentation/**/*.mp4
+docs/presentation/*.pptx
+docs/*.docx
