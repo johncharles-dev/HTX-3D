@@ -26,6 +26,14 @@ SAM3D_OBJECTS_DIR = os.environ.get(
     "SAM3D_OBJECTS_DIR",
     str(BASE_DIR / "engines" / "sam3d_objects"),
 )
+# Extra search location for the SAM 3D Objects pipeline.yaml, used when the backend runs
+# outside the container and the weights sit somewhere non-standard. Empty by default;
+# inside the container the weights arrive at /app/weights/sam3d-objects-hf via the compose
+# mount and this is not needed.
+#
+# NOT the compose mount source — that is SAM3D_HF_DIR, which is read on the host by
+# docker-compose.yml and never passed into the container. The two are not interchangeable.
+SAM3D_HF_PATH = os.environ.get("SAM3D_HF_PATH", "")
 SAM3_DIR = os.environ.get(
     "SAM3_DIR",
     str(BASE_DIR / "engines" / "sam3"),
@@ -36,8 +44,15 @@ SAM3_BPE_PATH = os.environ.get(
 )
 
 # TRELLIS.2 runs as a host-side microservice (it needs the host's sm120 torch/FA2 stack).
-# The container reaches the host over the docker bridge gateway. Override via env if needed.
-TRELLIS2_SERVICE_URL = os.environ.get("TRELLIS2_SERVICE_URL", "http://172.18.0.1:8710")
+# The container reaches it at host.docker.internal, which docker-compose.yml maps to the
+# host gateway via `extra_hosts` — required on Linux Docker, where that name does not
+# resolve by default. Running the backend outside the container instead needs
+# TRELLIS2_SERVICE_URL=http://localhost:8710.
+TRELLIS2_SERVICE_URL = os.environ.get("TRELLIS2_SERVICE_URL", "http://host.docker.internal:8710")
+# Timeout (seconds) for the non-fatal startup reachability check only. Kept short because
+# it only has to tell "not running" from "running", and every backend start pays it while
+# TRELLIS.2 is not yet deployed. The load path uses its own, longer timeout.
+TRELLIS2_PROBE_TIMEOUT = float(os.environ.get("TRELLIS2_PROBE_TIMEOUT", "2"))
 
 # GPU / Hardware
 def detect_gpu():

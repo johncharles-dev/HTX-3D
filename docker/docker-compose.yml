@@ -11,16 +11,21 @@ services:
       - ../weights:/app/weights
       # Gallery storage (generated 3D models)
       - ../gallery:/app/gallery
-      # SAM 3D Objects model weights (12GB, not in git)
-      - /data/models/sam-3d-objects/hf:/app/weights/sam3d-objects-hf:ro
+      # SAM 3D Objects model weights (12GB, not in git).
+      #
+      # SAM3D_HF_DIR is the HOST directory to mount from. It is read here, on the host,
+      # at `up` time and is NOT passed into the container. Do not confuse it with
+      # SAM3D_HF_PATH, which is an extra search path the *backend* reads and is only
+      # needed when running outside the container. See docker/.env.example.
+      - ${SAM3D_HF_DIR:-../weights/sam3d-objects-hf}:/app/weights/sam3d-objects-hf:ro
       # HuggingFace cache (SAM3 model weights, etc.)
-      - /home/cj/.cache/huggingface:/root/.cache/huggingface
+      - ${HF_CACHE_DIR:-${HOME}/.cache/huggingface}:/root/.cache/huggingface
       # Torch hub cache (DINOv2 weights — 1.1GB, avoid re-downloading)
-      - /home/cj/.cache/torch:/root/.cache/torch
+      - ${TORCH_CACHE_DIR:-${HOME}/.cache/torch}:/root/.cache/torch
       # Hunyuan3D model cache
-      - /home/cj/.cache/hy3dgen:/root/.cache/hy3dgen
+      - ${HY3DGEN_CACHE_DIR:-${HOME}/.cache/hy3dgen}:/root/.cache/hy3dgen
       # rembg model cache
-      - /home/cj/.u2net:/root/.u2net
+      - ${U2NET_CACHE_DIR:-${HOME}/.u2net}:/root/.u2net
     environment:
       - XFORMERS_DISABLED=1
       - ATTN_BACKEND=sdpa

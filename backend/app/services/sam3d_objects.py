@@ -17,6 +17,7 @@ import torch
 from PIL import Image
 
 from .base import BaseEngine
+from ..config import SAM3D_HF_PATH
 
 logger = logging.getLogger(__name__)
 
@@ -56,9 +57,16 @@ class Sam3DObjectsEngine(BaseEngine):
         search_paths = [
             os.path.join(self.sam3d_dir, "checkpoints", "hf", "pipeline.yaml"),
             os.path.join(weights_dir or "", "sam3d-objects-hf", "pipeline.yaml"),
-            "/data/models/sam-3d-objects/hf/pipeline.yaml",
-            "/app/weights/sam3d-objects-hf/pipeline.yaml",
         ]
+        # Operator-supplied location, for running outside the container (see config.py).
+        if SAM3D_HF_PATH:
+            search_paths.append(os.path.join(SAM3D_HF_PATH, "pipeline.yaml"))
+        # Where the compose mount lands the weights inside the container.
+        search_paths.append("/app/weights/sam3d-objects-hf/pipeline.yaml")
+        # In the container weights_dir is /app/weights, so the second entry collapses to
+        # the same string as the fallback. Dedupe (order-preserving) so the error below
+        # does not list the same path twice and read like a bug.
+        search_paths = list(dict.fromkeys(search_paths))
         config_path = None
         for path in search_paths:
             if os.path.exists(path):

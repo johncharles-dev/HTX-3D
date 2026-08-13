@@ -196,7 +196,17 @@ first `/generate` so the service starts instantly.
 ### 3.7 Point HTX-3D at the service
 
 The container reaches the host via `TRELLIS2_SERVICE_URL` (see `docker/docker-compose.yml`
-and `backend/app/config.py`). Default is `http://host.docker.internal:8710`.
+and `backend/app/config.py`). `http://host.docker.internal:8710` is both the value
+`docker-compose.yml` sets explicitly **and** the code default in `config.py`, so the two
+agree. On Linux Docker that hostname only resolves because the compose file maps it to the
+host gateway via `extra_hosts` — do not remove that entry.
+
+A backend running **outside** the container needs `TRELLIS2_SERVICE_URL=http://localhost:8710`
+instead, since `host.docker.internal` does not resolve there.
+
+The backend probes `/health` at startup and logs a warning naming the resolved URL if the
+service is unreachable. The check is non-fatal: the other five engines start normally when
+TRELLIS.2 is not deployed.
 
 ---
 

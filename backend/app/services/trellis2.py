@@ -2,8 +2,9 @@
 
 TRELLIS.2 cannot run inside this container (it needs the host's torch 2.10+cu128 / from-source
 FlashAttention-2 stack for Blackwell sm120). Instead the 4B model runs as an HTTP service on the
-host (see /home/cj/TRELLIS.2/service/trellis2_service.py), and this engine forwards the image to it
-and writes back the returned GLB. To the rest of the backend it behaves like any other engine.
+host (see services/trellis2/ in this repo for the service and its setup), and this engine forwards
+the image to it and writes back the returned GLB. To the rest of the backend it behaves like any
+other engine.
 
 The heavy call (run + GLB export in the service) happens in export_mesh(), because that is where
 texture_size / target_face_count arrive; generate_from_image() only stashes the request.
@@ -21,6 +22,10 @@ from ..config import TRELLIS2_SERVICE_URL
 
 logger = logging.getLogger(__name__)
 
+# Health-check timeout on the load path, where the host may be mid-generation and slow to
+# answer. The startup reachability check overrides this with TRELLIS2_PROBE_TIMEOUT.
+LOAD_PROBE_TIMEOUT_S = 5.0
+
 
 class Trellis2Engine(BaseEngine):
     """Proxy to the host TRELLIS.2-4B microservice."""
@@ -32,19 +37,34 @@ class Trellis2Engine(BaseEngine):
         self.service_url = (service_url or TRELLIS2_SERVICE_URL).rstrip("/")
         self._weights_dir = None  # for task-manager swap compatibility
 
+    def probe(self, timeout: float = LOAD_PROBE_TIMEOUT_S) -> dict:
+        """Health-check the host service and return its /health payload.
+
+        Deliberately does NOT set self.loaded. TaskManager.register_engine() derives the
+        active engine from that flag and the swap logic keys off it, so a startup
+        reachability check must not flip it. Raises RuntimeError naming the resolved URL,
+        because a wrong TRELLIS2_SERVICE_URL otherwise fails as a hang or a connection to
+        an unrelated host — neither of which is diagnosable from the logs.
+
+        The default timeout suits the load path, where the host may be busy. The startup
+        check passes the shorter TRELLIS2_PROBE_TIMEOUT instead.
+        """
+        try:
+            r = requests.get(f"{self.service_url}/health", timeout=timeout)
+            r.raise_for_status()
+            return r.json()
+        except Exception as e:
+            raise RuntimeError(
+                f"TRELLIS.2 host service not reachable at {self.service_url}: {e}. "
+                "Start it on the host and check TRELLIS2_SERVICE_URL — setup steps are in "
+                "services/trellis2/README.md."
+            ) from e
+
     def load(self, weights_dir: str = None, device: str = "cuda") -> None:
         # No local weights — just verify the host service is reachable.
         if self.loaded:
             return
-        try:
-            r = requests.get(f"{self.service_url}/health", timeout=5)
-            r.raise_for_status()
-            logger.info(f"TRELLIS.2 service reachable at {self.service_url}: {r.json()}")
-        except Exception as e:
-            raise RuntimeError(
-                f"TRELLIS.2 host service not reachable at {self.service_url} "
-                f"(start it with /home/cj/TRELLIS.2/service/run_service.sh): {e}"
-            )
+        logger.info(f"TRELLIS.2 service reachable at {self.service_url}: {self.probe()}")
         self.loaded = True
 
     def unload(self) -> None:

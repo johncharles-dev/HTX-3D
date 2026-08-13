@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
-from .config import CORS_ORIGINS, TRELLIS_ENGINE_DIR, HUNYUAN_ENGINE_DIR, SAM3D_OBJECTS_DIR, WEIGHTS_DIR, GALLERY_DIR, detect_gpu
+from .config import CORS_ORIGINS, TRELLIS_ENGINE_DIR, HUNYUAN_ENGINE_DIR, SAM3D_OBJECTS_DIR, WEIGHTS_DIR, GALLERY_DIR, TRELLIS2_PROBE_TIMEOUT, detect_gpu
 from .routers import generate, gallery, segment, logo
 from .services.trellis import TrellisEngine
 from .services.hunyuan import HunyuanEngine
@@ -56,6 +56,18 @@ async def lifespan(app: FastAPI):
     trellis2 = Trellis2Engine()
     tm.register_engine(trellis2)
     logger.info("TRELLIS.2 engine registered (proxies to host microservice)")
+
+    # Non-fatal reachability check, so a wrong TRELLIS2_SERVICE_URL surfaces at startup
+    # instead of at first generation. probe() does not set engine.loaded, so this cannot
+    # disturb the task manager's engine-swap bookkeeping.
+    try:
+        health = trellis2.probe(timeout=TRELLIS2_PROBE_TIMEOUT)
+        logger.info(f"TRELLIS.2 service reachable at {trellis2.service_url}: {health}")
+    except Exception as e:
+        logger.warning(
+            f"{e} TRELLIS.2 generations will fail until this is fixed; "
+            "the other engines are unaffected."
+        )
 
     # Initialize SAM3 segmentation service (loaded on-demand per session)
     sam3_service = SAM3Service()
