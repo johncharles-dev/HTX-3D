@@ -1,0 +1,19 @@
+[Unit]
+Description=TRELLIS.2 image-to-3D microservice (host side, for HTX-3D)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# systemd does not expand variables in User= or ExecStart=. The installer must set
+# both to real values for the target machine — see services/trellis2/README.md.
+User=trellis2
+EnvironmentFile=-/etc/default/trellis2-service
+ExecStart=/opt/trellis2/service/run_service.sh
+Restart=on-failure
+RestartSec=5
+# Keep the model resident; give it time to load on first request
+TimeoutStartSec=120
+
+[Install]
+WantedBy=multi-user.target
