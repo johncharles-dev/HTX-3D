@@ -1,5 +1,10 @@
 # Dependency resolutions — working image, 20 July 2026
 
+> **Status: historical record.** For what is pinned now and why — including the measured
+> drift and the difference between benchmarked and merely-observed pins — see
+> [`dependency-pins.md`](dependency-pins.md). This file remains the raw source those pins
+> were recovered from.
+
 **What this is.** The Docker image built on 2026-07-20 is the only build of this stack
 ever demonstrated to serve the application. Several of its dependencies are installed
 from **unpinned** git tips, so a rebuild today can resolve to different commits and
@@ -48,9 +53,12 @@ metadata, not from the image, not from the container.
 | `diff-gaussian-rasterization` | `file:///tmp/extensions/mip-splatting/submodules/...` | `autonomousvision/mip-splatting` (default branch) |
 | `custom-rasterizer` | `file:///app/engines/hunyuan/.../custom_rasterizer` | Vendored in this repo — **not** a drift risk |
 
-**Fixing this for the future:** have the build echo `git rev-parse HEAD` for each clone
-before installing, so the commits land in the build log. `services/trellis2/build_extensions_blackwell.sh`
-already does this via its `clone_ext` helper; the Dockerfile does not.
+**Fixed on 2026-08-14:** the Dockerfile now echoes `RESOLVED <name> <commit>` for each of
+these clones before installing, so every future build records what it used. That closes
+the gap going forward but cannot recover the July commits — they remain lost. The three
+are now pinned to values observed on 2026-08-14 instead; see
+[`dependency-pins.md`](dependency-pins.md) for why those are weaker guarantees than the
+`pytorch3d` and `moge` pins.
 
 ## Already pinned in the Dockerfile — no drift risk
 

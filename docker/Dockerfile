@@ -93,15 +93,36 @@ COPY backend/engines/sam3d_objects/ ./engines/sam3d_objects/
 # PTX fallback produces garbage results on newer GPUs (telltale sign: 66 billion GB OOM).
 
 # 1. nvdiffrast - differentiable rasterization
+#
+# PROVENANCE OF THE THREE PINS BELOW — read before changing them.
+#
+# These are pinned to the commits observed in the --no-cache build of 2026-08-14.
+# That is "what we could observe", NOT "what we benchmarked". The commits used for the
+# 20 July image — the one that produced the 3.79 evaluation result and all 207 Batch 2
+# runs — are UNRECOVERABLE: they were installed from a local path, so pip recorded only
+# a file:// URL, and /tmp/extensions is deleted at the end of the build.
+#
+# So these pins guarantee reproducibility from 2026-08-14 onward. They do NOT guarantee
+# a match with the benchmarked stack, and must not be described as if they do.
+# See docs/reference/dependency-pins.md for the basis of each pin.
+#
+# The echo lines remain so every future build records what it actually used.
 RUN git clone https://github.com/NVlabs/nvdiffrast.git /tmp/extensions/nvdiffrast \
+    && git -C /tmp/extensions/nvdiffrast checkout -q 253ac4fcea7de5f396371124af597e6cc957bfae \
+    && echo "RESOLVED nvdiffrast $(git -C /tmp/extensions/nvdiffrast rev-parse HEAD)" \
     && pip install --no-build-isolation /tmp/extensions/nvdiffrast
 
 # 2. diffoctreerast - octree rasterization
 RUN git clone --recurse-submodules https://github.com/JeffreyXiang/diffoctreerast.git /tmp/extensions/diffoctreerast \
+    && git -C /tmp/extensions/diffoctreerast checkout -q b09c20b84ec3aace4729e6e18a613112320eca3a \
+    && git -C /tmp/extensions/diffoctreerast submodule update --init --recursive \
+    && echo "RESOLVED diffoctreerast $(git -C /tmp/extensions/diffoctreerast rev-parse HEAD)" \
     && pip install --no-build-isolation /tmp/extensions/diffoctreerast
 
 # 3. diff-gaussian-rasterization - Gaussian splatting renderer (from mip-splatting)
 RUN git clone https://github.com/autonomousvision/mip-splatting.git /tmp/extensions/mip-splatting \
+    && git -C /tmp/extensions/mip-splatting checkout -q dda02ab5ecf45d6edb8c540d9bb65c7e451345a9 \
+    && echo "RESOLVED mip-splatting $(git -C /tmp/extensions/mip-splatting rev-parse HEAD)" \
     && pip install --no-build-isolation /tmp/extensions/mip-splatting/submodules/diff-gaussian-rasterization/
 
 # 4. spconv (CUDA 12.6 forward compat -- no cu128 build exists)
@@ -133,13 +154,21 @@ RUN pip install --no-cache-dir \
     "psutil"
 
 # 9. SAM 3D Objects dependencies (pytorch3d + hydra + runtime deps)
+#
+# moge and pytorch3d are pinned to the commits resolved by the 20 July 2026 image —
+# the stack that produced the 3.79 evaluation result and all 207 Batch 2 runs. Unlike
+# the three CUDA extensions above, these ARE the benchmarked commits: pip recorded them
+# in the image's own metadata, so they were recoverable.
+#
+# Both had drifted by 2026-08-14 (moge -> 925b8ed8, pytorch3d -> 3143b3ba). Unpinning
+# them would mean the reported evaluation numbers describe a build that no longer exists.
 RUN pip install --no-cache-dir \
     "hydra-core==1.3.2" \
-    "moge @ git+https://github.com/microsoft/MoGe.git" \
+    "moge @ git+https://github.com/microsoft/MoGe.git@07444410f1e33f402353b99d6ccd26bd31e469e8" \
     "gsplat==1.5.0" \
     loguru optree astor lightning
 RUN pip install --no-cache-dir \
-    "pytorch3d @ git+https://github.com/facebookresearch/pytorch3d.git"
+    "pytorch3d @ git+https://github.com/facebookresearch/pytorch3d.git@b6a77ad7aaf41ed90fca80ce6a2bac3c462a7881"
 
 # 10. Pin versions back after SAM3D deps may have upgraded them
 # - huggingface-hub <1.0 required by TRELLIS transformers
