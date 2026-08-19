@@ -305,16 +305,25 @@ def render_glb_silhouette(glb_path: str, K: np.ndarray, image_size: Tuple[int, i
 # View alignment — shape IoU (bbox-cropped + resized)
 # ----------------------------------------------------------------------------
 
+def _crop_resize_mask(m: np.ndarray, target: int = 128) -> np.ndarray:
+    """Crop a binary mask to its bounding box and resize to target^2.
+
+    This is what makes _shape_iou position- and scale-invariant: both inputs are
+    normalised into the same box before they are compared. Shared with the debug overlay
+    so the visualisation shows exactly the arrays the IoU is computed from, rather than a
+    reimplementation that could drift from it.
+    """
+    ys, xs = np.where(m)
+    sub = m[ys.min():ys.max()+1, xs.min():xs.max()+1].astype(np.uint8) * 255
+    im = Image.fromarray(sub).resize((target, target), Image.NEAREST)
+    return np.array(im) > 128
+
+
 def _shape_iou(a: np.ndarray, b: np.ndarray, target: int = 128) -> float:
     """IoU between two binary masks ignoring position: crop each to its bbox, resize to target^2, compare."""
     if not a.any() or not b.any():
         return 0.0
-    def _crop_resize(m):
-        ys, xs = np.where(m)
-        sub = m[ys.min():ys.max()+1, xs.min():xs.max()+1].astype(np.uint8) * 255
-        im = Image.fromarray(sub).resize((target, target), Image.NEAREST)
-        return np.array(im) > 128
-    aa, bb = _crop_resize(a), _crop_resize(b)
+    aa, bb = _crop_resize_mask(a, target), _crop_resize_mask(b, target)
     inter = (aa & bb).sum()
     union = (aa | bb).sum()
     return float(inter) / float(union) if union > 0 else 0.0
@@ -374,21 +383,52 @@ def bake_scale_into_glb(glb_path: str, scale: float, out_path: Optional[str] = N
 # ----------------------------------------------------------------------------
 
 def _save_debug_overlay(image_path: str, image_mask: np.ndarray, rendered_silh: np.ndarray,
-                        out_png: str) -> None:
-    """Save a side-by-side debug PNG: input | rendered overlay | matched silhouettes."""
+                        out_png: str, iou: Optional[float] = None) -> None:
+    """Save a side-by-side debug PNG: input | overlay | raw arrays | shape-IoU inputs.
+
+    Panels 2 and 3 draw the arrays at native scale, where the rendered silhouette is much
+    smaller than the image mask. That is BY DESIGN, not a fault: the GLB is unit-normalised
+    and rendered at the scene's object distance, and solve_scale() derives the metric scale
+    from precisely that size ratio. Orientation is solved before scale is known, so the
+    IoU that drives view selection must ignore scale entirely.
+
+    Panel 4 therefore shows what _shape_iou actually compares — both masks cropped to their
+    bounding boxes and resized to a common 128x128 box. Read alignment quality there, not
+    from the native-scale panels.
+    """
     try:
         import matplotlib.pyplot as plt
         rgb = np.array(Image.open(image_path).convert("RGB"))
-        fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+        fig, axes = plt.subplots(1, 4, figsize=(24, 5))
         axes[0].imshow(rgb); axes[0].set_title("input"); axes[0].axis("off")
         axes[1].imshow(rgb)
         axes[1].imshow(np.ma.masked_where(~rendered_silh, rendered_silh),
                        cmap="autumn", alpha=0.5)
-        axes[1].set_title("rendered GLB silhouette over input"); axes[1].axis("off")
+        axes[1].set_title("unit-scale GLB silhouette over input\n"
+                          "(small by design — scale is solved separately)")
+        axes[1].axis("off")
         ov = np.zeros((*image_mask.shape, 3), dtype=np.uint8)
         ov[image_mask] = (0, 200, 0)        # green = image mask
         ov[rendered_silh] = ov[rendered_silh] // 2 + np.array([100, 0, 0], dtype=np.uint8)  # +red = render
-        axes[2].imshow(ov); axes[2].set_title("image-mask (green) vs render (red)"); axes[2].axis("off")
+        axes[2].imshow(ov)
+        axes[2].set_title("raw arrays at native scale: mask (green) vs render (red)\n"
+                          "NOT a spatial overlap — the IoU ignores position and scale")
+        axes[2].axis("off")
+        # Panel 4: literally the arrays _shape_iou compares, via the same helper.
+        if image_mask.any() and rendered_silh.any():
+            a_n, b_n = _crop_resize_mask(image_mask), _crop_resize_mask(rendered_silh)
+            ovn = np.zeros((*a_n.shape, 3), dtype=np.uint8)
+            ovn[a_n] = (0, 200, 0)
+            ovn[b_n] = ovn[b_n] // 2 + np.array([100, 0, 0], dtype=np.uint8)
+            axes[3].imshow(ovn)
+            title = ("shape-IoU input: each cropped to bbox, resized 128x128\n"
+                     "position- and scale-invariant by design")
+            if iou is not None:
+                title += f"  —  IoU = {iou:.3f}"
+            axes[3].set_title(title)
+        else:
+            axes[3].set_title("shape-IoU input: unavailable (empty mask)")
+        axes[3].axis("off")
         plt.tight_layout()
         plt.savefig(out_png, dpi=70, bbox_inches="tight")
         plt.close(fig)
@@ -494,7 +534,8 @@ def auto_scale(glb_path: str, image_path: str, *, in_place: bool = True,
                 confidence = "low"
 
         if debug_png:
-            _save_debug_overlay(image_path, mask_refined, best["silhouette"], debug_png)
+            _save_debug_overlay(image_path, mask_refined, best["silhouette"], debug_png,
+                                iou=best["iou"])
 
         out.update({
             "auto_scaled": True,
