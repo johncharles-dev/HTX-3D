@@ -7,10 +7,12 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      # Model weights (download once, persist across rebuilds)
-      - ../weights:/app/weights
+      # Model weights (download once, persist across rebuilds).
+      # Defaults sit beside the repo. Override to put them on a data volume — the
+      # gallery in particular grows without bound as generations accumulate.
+      - ${WEIGHTS_HOST_DIR:-../weights}:/app/weights
       # Gallery storage (generated 3D models)
-      - ../gallery:/app/gallery
+      - ${GALLERY_HOST_DIR:-../gallery}:/app/gallery
       # SAM 3D Objects model weights (12GB, not in git).
       #
       # SAM3D_HF_DIR is the HOST directory to mount from. It is read here, on the host,

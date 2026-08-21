@@ -86,7 +86,23 @@ class HunyuanEngine(BaseEngine):
         from textureGenPipeline import Hunyuan3DPaintConfig
         conf = Hunyuan3DPaintConfig(max_num_view, resolution)
         # Set paths relative to engine directory
-        conf.realesrgan_ckpt_path = os.path.join(self.engine_dir, "hy3dpaint", "ckpt", "RealESRGAN_x4plus.pth")
+        realesrgan_ckpt = os.path.join(self.engine_dir, "hy3dpaint", "ckpt", "RealESRGAN_x4plus.pth")
+        # Fail here rather than at paint time. This checkpoint is gitignored (67 MB), so a
+        # fresh clone builds an image without it and the texture stage would otherwise die
+        # only after a user has waited through a full generation.
+        if not os.path.isfile(realesrgan_ckpt):
+            raise FileNotFoundError(
+                f"Hunyuan3D texture upscaler weights missing: {realesrgan_ckpt}\n"
+                f"This file is not committed to the repository (67 MB). Fetch it with:\n"
+                f"    python scripts/download_models.py --model realesrgan\n"
+                f"or download it directly:\n"
+                f"    wget https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/"
+                f"RealESRGAN_x4plus.pth -P {os.path.dirname(realesrgan_ckpt)}\n"
+                f"Note: inside the container this path is baked into the image at build "
+                f"time, so the file must be present on the build host before 'docker "
+                f"compose build'. The other engines are unaffected."
+            )
+        conf.realesrgan_ckpt_path = realesrgan_ckpt
         conf.multiview_cfg_path = os.path.join(self.engine_dir, "hy3dpaint", "cfgs", "hunyuan-paint-pbr.yaml")
         conf.custom_pipeline = os.path.join(self.engine_dir, "hy3dpaint", "hunyuanpaintpbr")
         self._paint_conf = conf
