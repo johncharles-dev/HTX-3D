@@ -76,6 +76,18 @@ ENV TORCH_CUDA_ARCH_LIST="8.0;8.6;8.9;10.0;12.0"
 ENV CUDA_HOME=/usr/local/cuda
 ENV PATH="${CUDA_HOME}/bin:${PATH}"
 
+# Cap build parallelism for every extension compiled below.
+#
+# Without this, torch.utils.cpp_extension defaults to one job per core, which on a
+# many-core host launches dozens of concurrent nvcc processes — each compiling against
+# five GPU architectures. The peak is memory-bound, not CPU-bound, and it OOMs: under
+# WSL2, where the VM gets roughly half the host's RAM by default, the kill lands
+# 20-30 minutes into the build with no useful error.
+#
+# 8 is a ceiling, not a target. Lower it to 4 on a machine with under 16 GB available
+# to the build. Do not raise it: the gain is small and the failure is expensive.
+ENV MAX_JOBS=8
+
 # Copy TRELLIS engine source
 COPY backend/engines/trellis/ ./engines/trellis/
 
