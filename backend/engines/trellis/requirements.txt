@@ -1,5 +1,5 @@
 # TRELLIS Blackwell - Pinned Dependencies
-# Target: Ubuntu 24.04, Python 3.11, CUDA 12.8, RTX 5090 (compute 12.0)
+# Target: Ubuntu 24.04, Python 3.11, CUDA 12.8, RTX 5080 (compute 12.0)
 
 # Core ML - install from https://download.pytorch.org/whl/cu128
 torch==2.7.0+cu128

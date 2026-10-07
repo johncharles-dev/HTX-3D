@@ -109,8 +109,8 @@ weights/  gallery/    Gitignored — see docker/.env.example
 
 ## Hardware
 
-Developed and benchmarked on an **RTX 5090** (Blackwell sm_120, 31.4 GB, driver 590.48.01,
-CUDA 12.8). CUDA extensions build for compute 8.0, 8.6, 8.9, 10.0 and 12.0.
+Developed and tested on an **RTX 5080** and benchmarked on an **RTX 5090** (Blackwell sm_120,
+31.4 GB, driver 590.48.01, CUDA 12.8). CUDA extensions build for compute 8.0, 8.6, 8.9, 10.0 and 12.0.
 
 Peak VRAM observed is ~8.7 GB for TRELLIS.2, so 12 GB is workable and 24 GB comfortable —
 but only the 5090 configuration has been measured.
@@ -183,7 +183,7 @@ See [`docs/reference/dependency-pins.md`](docs/reference/dependency-pins.md).
 
 - **Metric auto-scale:** longest-dimension error on manufacturer-spec objects fell from 77.5% to 24.6% MAPE after the Tier 1 refinements (n=30 rows; [`BEFORE_AFTER.md`](evaluation/auto_scale_benchmark/results_tier1/BEFORE_AFTER.md)).
 - **Benchmark:** 98 models (7 pipelines × 14 objects, 10 reported) scored on dimensional accuracy, mesh integrity and multi-view metrics. Pipeline MAPE ranges from 23.5% to 35.2%, and no pair differs significantly (paired Wilcoxon, p<0.05; bootstrap 95% CIs over objects, 20,000 draws).
-- **Blinded human scoring:** 171 judgements (19 objects × 9 pipelines, one rater). TRELLIS.2 scored highest at 3.79/5, again with no significant pairwise difference.
+- **Blinded human scoring:** 171 judgements (19 objects × 9 pipelines, one rater). TRELLIS.2 scored highest at 3.79/5, again with no significant pairwise difference. **The human pass was not perfectly blind.** SAM 3D Objects output is recognisable on sight from its characteristically low polygon budget. Two of 171 scores were knowingly entered with the engine identifiable.
 - **Weakest pipeline:** Hunyuan3D with rembg has about 3× the proportion error of every other pipeline (0.85 vs 0.30–0.40) and is the only one producing collapsed geometry.
 
 Full results: [`evaluation/FINAL_EVALUATION.md`](evaluation/FINAL_EVALUATION.md) · method, corrections and caveats: [`evaluation/FINDINGS_AND_HANDOVER.md`](evaluation/FINDINGS_AND_HANDOVER.md)

@@ -205,7 +205,7 @@ def main() -> None:
     agg_rows = [r for r in rows if not (ex and ex in r["object_id"])]
     n_obj = len({r["object_id"] for r in agg_rows})
     dropped = sorted({r["object_id"] for r in rows if ex and ex in r["object_id"]})
-    L = [f"# Mesh defect metrics — 7 pipelines × {n_obj} objects\n",
+    L = [f"# Mesh defect metrics — {len(pipelines)} pipelines × {n_obj} objects\n",
          "Ground-truth-free, computed from the GLBs alone. Orientation-independent",
          "(bbox axes are sorted), so unlike the SSIM/PSNR/LPIPS columns these are",
          "unaffected by the fixed-camera pose bug.\n",
