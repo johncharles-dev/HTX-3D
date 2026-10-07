@@ -1,4 +1,4 @@
-# Mesh defect metrics — 7 pipelines × 23 objects
+# Mesh defect metrics — 9 pipelines × 23 objects
 
 Ground-truth-free, computed from the GLBs alone. Orientation-independent
 (bbox axes are sorted), so unlike the SSIM/PSNR/LPIPS columns these are

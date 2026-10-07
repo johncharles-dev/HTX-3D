@@ -7,7 +7,7 @@ _All pipelines were re-scored uniformly with the current `auto_scale` algorithm;
 ## Headline
 
 - **TRELLIS.2 (rembg)** reconstructs all 14 objects with **24.6% mean size error** on high-confidence objects, against 19.5% (TRELLIS 1) and 19.4% (SAM-3D). These three are **not statistically distinguishable** at this sample size — see §2.1; only Hunyuan · rembg (35.1%) separates from the field.
-- **Fast & light:** mean **24s/object** end-to-end, peak VRAM **7.8 GB / 32 GB** — 4× faster than Hunyuan (~75s), comparable to SAM-3D.
+- **Fast & light:** mean **24s/object** end-to-end, peak VRAM **7.8 GB / 32 GB** — 3.1× faster than Hunyuan (~75s), comparable to SAM-3D.
 - **Best-in-class on the hardest HTX geometry:** Terrex APC, EOD robot and the APICS booth/barrier objects — where thin structures or non-standard shapes break the other engines. (On the coast-guard boat it matches SAM-3D: 31.0% vs 30.8%.)
 - **Visual fidelity** (geometry + PBR texture) is the clearest differentiator; see montages.
 
@@ -36,6 +36,8 @@ Metric = mean absolute % error on the object's longest real-world dimension (low
 | Hunyuan · rembg | 40.6% | 35.1% | 33.6% | 0.52 | 29% | 71% |
 | Hunyuan · sam3 | 33.5% | 27.6% | 24.4% | 0.52 | 36% | 86% |
 | SAM-3D · sam3 | 30.2% | 19.4% | 18.9% | 0.55 | 50% | 86% |
+
+_TRELLIS 1 · rembg reads 19.6% in [`BEFORE_AFTER.md`](../auto_scale_benchmark/results_tier1/BEFORE_AFTER.md) and [`FINDINGS_AND_HANDOVER.md`](../FINDINGS_AND_HANDOVER.md): that is the 2026-06-06 auto-scale run; this table is the later uniform re-score (see note at top)._
 
 ![per-pipeline MAPE](charts/per_pipeline.png)
 

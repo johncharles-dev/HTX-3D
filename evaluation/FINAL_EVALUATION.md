@@ -125,6 +125,8 @@ Paired bootstrap 95% CIs, resampling objects, 20k draws.
 | TRELLIS.2 · SAM 3 | 29.1% | [22.4, 36.9] | 27.7% | 30% |
 | Hunyuan3D · rembg | 35.2% | [22.0, 49.4] | 35.1% | 30% |
 
+_TRELLIS 1 · rembg high-conf reads 19.6% in `auto_scale_benchmark/results_tier1/BEFORE_AFTER.md` and `FINDINGS_AND_HANDOVER.md` — a different run (2026-06-06); this table uses the re-scored `trellis2_benchmark/results.csv` (§6)._
+
 Paired Wilcoxon signed-rank across all 21 pipeline pairs finds **no significant
 difference at p<0.05**. The ordering above is real but not statistically
 supported, and should not be presented as a ranking.
@@ -145,7 +147,7 @@ silent failures.
 | TRELLIS.2 | 24 s (18.8 gen + 5.6 export) | 7.8 / 32 GB | ~50k |
 | Hunyuan3D | 74.9 s | — | 38.4k (40k cap) |
 
-Hunyuan3D is 4–7× slower than the alternatives. TRELLIS.2 was exported at
+Hunyuan3D is 3.1–7.2× slower than the alternatives. TRELLIS.2 was exported at
 texture 1024 / ~50k faces for parity; it natively supports 4K / 1M faces.
 
 ### 3.3 Mesh integrity
