@@ -181,6 +181,8 @@ See [`docs/reference/dependency-pins.md`](docs/reference/dependency-pins.md).
 
 ## Results
 
+305 models in total: 98 benchmark models and 207 batch-2 models ([`batch2/README.md`](evaluation/batch2/README.md)).
+
 - **Metric auto-scale:** longest-dimension error on manufacturer-spec objects fell from 77.5% to 24.6% MAPE after the Tier 1 refinements (n=30 rows; [`BEFORE_AFTER.md`](evaluation/auto_scale_benchmark/results_tier1/BEFORE_AFTER.md)).
 - **Benchmark:** 98 models (7 pipelines × 14 objects, 10 reported) scored on dimensional accuracy, mesh integrity and multi-view metrics. Pipeline MAPE ranges from 23.5% to 35.2%, and no pair differs significantly (paired Wilcoxon, p<0.05; bootstrap 95% CIs over objects, 20,000 draws).
 - **Blinded human scoring:** 171 judgements (19 objects × 9 pipelines, one rater). TRELLIS.2 scored highest at 3.79/5, again with no significant pairwise difference. **The human pass was not perfectly blind.** SAM 3D Objects output is recognisable on sight from its characteristically low polygon budget. Two of 171 scores were knowingly entered with the engine identifiable.
