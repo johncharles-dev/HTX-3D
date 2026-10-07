@@ -1,5 +1,5 @@
 # TRELLIS Blackwell - Pinned Dependencies
-# Target: Ubuntu 24.04, Python 3.11, CUDA 12.8, RTX 5080 (compute 12.0)
+# Target: Ubuntu 24.04, Python 3.11, CUDA 12.8, RTX 5090 (compute 12.0)
 
 # Core ML - install from https://download.pytorch.org/whl/cu128
 torch==2.7.0+cu128
@@ -19,7 +19,7 @@ flash-attn==2.8.3
 spconv-cu126==2.3.8
 
 # 3D libraries
-# kaolin: NO cu128 wheel for torch>=2.6; use cu124 via forward compat
+# kaolin: NO cu128 wheel for torch>=2.6; use the cu126 wheel via forward compat
 #   pip install kaolin==0.18.0 -f https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.7.0_cu126.html
 kaolin==0.18.0
 open3d==0.19.0

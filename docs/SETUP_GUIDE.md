@@ -319,8 +319,8 @@ pip install spconv-cu126==2.3.8                    # no cu128 build; cu126 works
 pip install kaolin==0.18.0 -f https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.7.0_cu126.html
 ```
 
-> Do **not** install `flash-attn` for the container stack — SDPA is the supported backend
-> and flash-attn crashes on Blackwell. (TRELLIS.2 is the exception; it needs FA2 and lives
+> Do **not** install `flash-attn` for the container stack — SDPA is the supported backend,
+> and the Docker image ships without flash-attn. (TRELLIS.2 is the exception; it needs FA2 and lives
 > in its own environment.)
 
 The list above covers **TRELLIS only**. Hunyuan3D, SAM 3 and SAM 3D Objects each need
