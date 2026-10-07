@@ -120,6 +120,37 @@ but only the 5090 configuration has been measured.
 > generation time recorded in this repository was measured on the 575 W card and must be
 > re-benchmarked. See [`services/trellis2/README.md`](services/trellis2/README.md).
 
+## Blackwell / RTX 50 series support
+
+Upstream TRELLIS installs PyTorch 2.4 against CUDA 11.8 and sets no CUDA
+architecture list. This repository moves the stack to PyTorch 2.7.0 on CUDA 12.8,
+whose builds include `sm_120`, and compiles the CUDA extensions from source with
+`TORCH_CUDA_ARCH_LIST="8.0;8.6;8.9;10.0;12.0"`.
+
+Upstream's sparse-attention modules accept only `xformers` or `flash_attn`.
+This repository adds a PyTorch SDPA path to them, so the container image ships
+without either library. That is why the container sets `ATTN_BACKEND=sdpa`
+(the local-development command sets it too):
+TRELLIS defaults to `flash_attn`, and without the variable it fails at import
+with `No module named 'flash_attn'`. `XFORMERS_DISABLED=1` is read by the DINOv2
+encoder that TRELLIS loads through `torch.hub`, stopping it from importing xformers.
+
+- Built from source for `sm_120`: nvdiffrast, diffoctreerast,
+  diff-gaussian-rasterization, pytorch3d, and Hunyuan3D's rasteriser.
+- Pinned: `spconv-cu126==2.3.8` (do not install `cumm-cu128`) and
+  `kaolin==0.18.0` from the torch-2.7.0/cu126 index; the build files note
+  that neither publishes a CUDA 12.8 build.
+- Both variables are set in `docker/Dockerfile`, `docker/docker-compose.yml`,
+  and as defaults in `backend/app/services/trellis.py` before TRELLIS is imported.
+- `scripts/preflight.sh` checks for compute capability 12.0 and driver 570+.
+- TRELLIS.2 runs as a separate service with FlashAttention-2 built from source
+  for `sm_120`; see `services/trellis2/README.md`.
+
+fp16 dtype handling and the model-offloading approach are adapted from Igor
+Aherne's [trellis-stable-projectorz](https://github.com/IgorAherne/trellis-stable-projectorz);
+the FlexiCubes module is his [flexicubes-stable-projectorz](https://github.com/IgorAherne/flexicubes-stable-projectorz)
+fork with a float32 accumulation fix added.
+
 ## Licensing
 
 Not all components are permissively licensed. Full audit in
@@ -147,6 +178,15 @@ extensions are pinned to commits *observed on 2026-08-14*, because the originals
 unrecoverable — they were installed from a local path, so pip recorded no commit. A
 current build does not exactly reproduce the benchmarked geometry.
 See [`docs/reference/dependency-pins.md`](docs/reference/dependency-pins.md).
+
+## Results
+
+- **Metric auto-scale:** longest-dimension error on manufacturer-spec objects fell from 77.5% to 24.6% MAPE after the Tier 1 refinements (n=30 rows; [`BEFORE_AFTER.md`](evaluation/auto_scale_benchmark/results_tier1/BEFORE_AFTER.md)).
+- **Benchmark:** 98 models (7 pipelines × 14 objects, 10 reported) scored on dimensional accuracy, mesh integrity and multi-view metrics. Pipeline MAPE ranges from 23.5% to 35.2%, and no pair differs significantly (paired Wilcoxon, p<0.05; bootstrap 95% CIs over objects, 20,000 draws).
+- **Blinded human scoring:** 171 judgements (19 objects × 9 pipelines, one rater). TRELLIS.2 scored highest at 3.79/5, again with no significant pairwise difference.
+- **Weakest pipeline:** Hunyuan3D with rembg has about 3× the proportion error of every other pipeline (0.85 vs 0.30–0.40) and is the only one producing collapsed geometry.
+
+Full results: [`evaluation/FINAL_EVALUATION.md`](evaluation/FINAL_EVALUATION.md) · method, corrections and caveats: [`evaluation/FINDINGS_AND_HANDOVER.md`](evaluation/FINDINGS_AND_HANDOVER.md)
 
 ## Documentation
 
