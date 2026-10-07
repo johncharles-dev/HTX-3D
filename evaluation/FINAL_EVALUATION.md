@@ -85,7 +85,7 @@ is **real-world dimensions** from manufacturer and standard specifications.
 | Performance | gen time, peak VRAM, faces, file size | ✅ |
 | Mesh integrity | components, floater fraction, boundary loops, aspect vs. spec | ✅ new |
 | Multi-view | silhouette coverage (collapse), texture one-sidedness | ✅ new |
-| Perceptual | blinded human scoring, geometry + texture 1–5 | ⏳ pending |
+| Perceptual | blinded human scoring, geometry + texture 1–5 | ⏳ 0/98 benchmark models scored · ✅ batch 2 scored: 171 judgements, 19 objects × 9 pipelines, one rater ([report](manual_eval/manual_eval_report_b2.md)) |
 
 ### Metrics dropped, and why
 
@@ -229,13 +229,20 @@ genuinely different colours.
 - **Auto-scale is the accuracy bottleneck.** It estimates size from a single
   photograph via monocular depth; even the best pipeline sits near 20% MAPE. That
   is a depth-estimation limit, not a mesh-quality limit.
-- **Perceptual quality is not yet measured.** The blinded human scoring pass is
-  built and pending (§5).
+- **Perceptual quality is not measured on the benchmark set.** The 98 benchmark
+  models remain unscored (§5). Blinded human scoring was subsequently completed for
+  batch 2 — 171 judgements, 19 objects, 9 pipelines, one rater — see
+  [`manual_eval/manual_eval_report_b2.md`](manual_eval/manual_eval_report_b2.md).
+  **The human pass was not perfectly blind.** SAM 3D Objects output is recognisable on sight
+  from its characteristically low polygon budget. Two of 171 scores were knowingly entered with
+  the engine identifiable.
 
 ## 5 · Not yet done
 
 1. **Blinded human scoring** — harness complete, 0/98 scored. Needs ~45 min of a
    human rater; defect flags are now automated so only the two 1–5 scores remain.
+   (Batch 2 was scored separately: 171 judgements, 19 objects, 9 pipelines, one
+   rater — [`manual_eval/manual_eval_report_b2.md`](manual_eval/manual_eval_report_b2.md).)
 2. **Uni3D-I / ULIP-I** — needs no GT mesh and is the only metric family shared by
    Hunyuan 2.1, SAM 3D and Step1X, so it buys comparability with published
    tables. Do not expect it to separate these seven: SAM 3D's own paper reports
